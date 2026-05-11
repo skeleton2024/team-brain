@@ -12,6 +12,11 @@ TeamMind is a zero-backend MVP for a company-specific context agent. It helps an
 - Result loop: record execution outcome, update memory, and generate new actions.
 - Built-in demo data.
 
+## Product Docs
+
+- [PRD.md](./PRD.md)
+- [PROJECT_FUNCTION_STRUCTURE.md](./PROJECT_FUNCTION_STRUCTURE.md)
+
 ## Run Locally
 
 ```bash
