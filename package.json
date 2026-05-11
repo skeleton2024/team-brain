@@ -1,0 +1,12 @@
+{
+  "name": "teammind",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TeamMind MVP - a company context agent workspace for early startup teams.",
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 4173",
+    "start": "python -m http.server 4173",
+    "smoke": "node scripts/smoke-test.mjs"
+  }
+}
