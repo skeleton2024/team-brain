@@ -1077,3 +1077,147 @@ REC-02 新增 reconcileMemories pipeline
 原因：
 
 TeamMind 的价值不是“生成更多内容”，而是“建立可信的公司记忆”。如果记忆不可信，行动和 Brief 都不会可信。
+
+## 13. 使用指南
+
+本节给创始人、队友和新的 Codex 对话框使用。目标是减少重复解释，让后续开发能围绕同一个产品上下文推进。
+
+### 13.1 新队友如何进入项目
+
+建议阅读顺序：
+
+```text
+README.md
+-> PRD.md
+-> PROJECT_FUNCTION_STRUCTURE.md
+-> DATA_MODEL.md
+-> docs/issues/README.md
+-> 当前要开发的 issue spec
+```
+
+每份文档的作用：
+
+- `PRD.md`：产品方向、阶段目标、优先级和不做什么。
+- `PROJECT_FUNCTION_STRUCTURE.md`：代码结构、模块边界、每类功能应该改哪里。
+- `DATA_MODEL.md`：核心对象、字段、状态流转和关系。
+- `docs/issues/`：可以直接开发的 issue 规格。
+
+### 13.2 新 Codex 对话框如何使用
+
+开启新对话时，可以直接这样说：
+
+```text
+请先阅读 PRD.md、PROJECT_FUNCTION_STRUCTURE.md、DATA_MODEL.md 和 docs/issues/README.md。
+然后实现 docs/issues/MEM-01-memory-status-source-references.md。
+要求保持 TeamMind 的核心闭环，不要改成聊天产品，完成后运行 node scripts/smoke-test.mjs。
+```
+
+如果要做其他 issue，把最后一行换成对应文件即可。例如：
+
+```text
+然后实现 docs/issues/CTX-03-context-memory-source-links.md。
+```
+
+### 13.3 Issue 开发方式
+
+后续开发以 issue 为单位，而不是以“随便优化一下”为单位。
+
+每个 issue 开始前先确认：
+
+- 它属于哪个功能领域？
+- 它改善闭环的哪一步？
+- 它涉及哪些数据模型？
+- 它改哪些文件？
+- 它明确不做什么？
+- 它如何验收？
+
+推荐流程：
+
+```text
+选择 issue
+-> 阅读 issue spec
+-> 对照 DATA_MODEL.md
+-> 修改相关模块
+-> 更新 demo 或 migration
+-> 运行 smoke test
+-> 更新文档
+-> commit / push
+```
+
+### 13.4 当前最建议先做的 issue
+
+如果只能选一个，先做：
+
+```text
+MEM-01-memory-status-source-references.md
+```
+
+原因：
+
+TeamMind 的第一价值不是生成行动，而是建立可信公司记忆。没有记忆状态和来源引用，用户就不知道哪些内容能信、哪些只是 AI 草稿。
+
+如果可以做一组，建议按这个顺序：
+
+```text
+1. CTX-01-context-metadata.md
+2. CTX-03-context-memory-source-links.md
+3. MEM-01-memory-status-source-references.md
+4. MEM-02-edit-company-memory.md
+5. MEM-03-memory-status-transitions.md
+6. MEM-04-memory-detail-panel.md
+7. REC-01-extract-memories-pipeline.md
+8. REC-02-reconcile-memories-pipeline.md
+```
+
+这组完成后，TeamMind 才会从“看起来像 Demo”进入“可以让真实团队测试记忆可信度”的阶段。
+
+### 13.5 开发时不要做的事
+
+即使看起来很诱人，也暂时不要做：
+
+- 不要先接 Gmail、Slack、Notion、GitHub、Linear/Jira。
+- 不要先做聊天入口。
+- 不要做 prompt 市场。
+- 不要做自动发送或自动执行。
+- 不要为了炫技重写成复杂框架。
+- 不要一次性大重构所有文件。
+
+判断标准：
+
+```text
+如果这个改动不能让记忆更可信、行动更准确、Brief 更可执行、结果回流更有效，
+那它就不是 v0.2 的优先事项。
+```
+
+### 13.6 每次合并前检查
+
+每次提交或合并前，至少检查：
+
+```text
+node scripts/smoke-test.mjs
+```
+
+并确认：
+
+- 页面可以打开。
+- 上下文输入仍能生成记忆和行动。
+- 行动仍能生成 Brief。
+- 结果回流仍能写入结果。
+- 新增字段有默认值或 migration。
+- Demo 数据能展示新能力。
+- 文档没有和代码明显冲突。
+
+### 13.7 给队友的沟通方式
+
+讨论开发任务时，建议使用这种格式：
+
+```text
+我要做 MEM-02。
+它属于 Company Memory。
+目标是让用户编辑 AI 生成的记忆。
+涉及 render.js、main.js、store.js、types.js。
+不做多人协作和版本历史。
+验收标准以 docs/issues/MEM-02-edit-company-memory.md 为准。
+```
+
+这样每个人都能知道当前任务解决的是哪个产品问题，而不是只看到一堆文件改动。

@@ -1,47 +1,78 @@
 # TeamMind 项目功能结构文档
 
-本文档面向队友和 AI 协作者，帮助快速理解当前 MVP 的技术栈、文件结构、功能边界、数据流和未来扩展点。
+版本：v0.2 开发指南  
+状态：给队友和 AI 协作者使用的架构上下文  
+仓库：`skeleton2024/team-brain`  
+最后更新：2026-05-11
 
-## 1. 项目定位
+## 0. 阅读顺序
 
-TeamMind 是一个公司专属上下文 Agent 工作台。当前版本是零后端静态 MVP，重点跑通：
+新队友或新的 Codex 对话框进入项目时，建议按这个顺序阅读：
 
 ```text
-上下文输入 -> 公司记忆 -> 下一步行动 -> 行动 Brief -> 结果回流 -> 新记忆和新行动
+README.md
+-> PRD.md
+-> PROJECT_FUNCTION_STRUCTURE.md
+-> DATA_MODEL.md
+-> docs/issues/README.md
+-> 当前要实现的 issue spec
 ```
 
-它不是聊天机器人，不以对话流为主；也不是 prompt 生成器，不只输出一次性文本。它的核心资产是项目内持续积累的结构化公司记忆和行动闭环。
+`PRD.md` 回答“为什么做、先做什么”。  
+`PROJECT_FUNCTION_STRUCTURE.md` 回答“代码应该放在哪里、模块边界是什么”。  
+`DATA_MODEL.md` 回答“数据对象长什么样、状态怎么流转”。  
+`docs/issues/` 回答“某个具体 issue 怎么开发、怎么验收”。
 
-## 2. 技术栈
+## 1. 产品边界
 
-当前 MVP：
+TeamMind 是面向早期创业团队的公司专属上下文 Agent。核心闭环是：
+
+```text
+上下文输入
+-> 公司记忆提取
+-> 公司记忆校准
+-> Top 3 下一步行动
+-> 行动 Brief
+-> 结果回流
+-> 公司记忆更新
+```
+
+开发时必须保持这个产品边界：
+
+- 不是聊天机器人。
+- 不是 prompt 模板工具。
+- 不是普通知识库问答。
+- 不自动发送邮件、Slack、Gmail。
+- 不自动承诺谈判条件。
+- 不自动修改、提交或 merge 代码。
+- 所有外部动作先生成草稿或 Brief，由人确认。
+
+## 2. 当前技术栈
+
+当前 v0.1/v0.2 过渡阶段：
 
 - 前端：HTML、CSS、原生 JavaScript。
 - 模块系统：ES Modules。
 - 状态管理：应用内 JavaScript state。
 - 持久化：浏览器 localStorage。
-- 本地预览：Python `http.server`。
-- 测试方式：Node smoke test。
-- 部署方式：任意静态托管服务。
+- 本地运行：Python `http.server` 或 `npm run dev`。
+- 测试：Node smoke test。
+- 部署：任意静态托管服务。
 - 仓库：GitHub 私有仓库 `skeleton2024/team-brain`。
 
-当前不依赖：
+当前暂不引入：
 
 - React/Vue/Svelte。
-- 后端服务。
+- 后端 API。
 - 数据库。
+- 鉴权。
 - LLM API。
 - 外部 SaaS 集成。
 - 构建工具。
 
-选择原因：
+这样做的原因不是长期坚持原生 JS，而是为了先把核心产品闭环和数据模型跑稳。等 v0.2 的记忆、行动、Brief、结果回流变得可信，再替换 UI 框架、数据库和 AI provider。
 
-- 启动快，适合 MVP 演示。
-- 无需 API Key、数据库或鉴权。
-- 对队友和 AI 都容易阅读。
-- 后续可逐层替换为真实 LLM、数据库和集成适配器。
-
-## 3. 文件结构
+## 3. 当前文件结构
 
 ```text
 team-brain/
@@ -49,7 +80,19 @@ team-brain/
   README.md
   PRD.md
   PROJECT_FUNCTION_STRUCTURE.md
+  DATA_MODEL.md
   package.json
+  docs/
+    issues/
+      README.md
+      CTX-01-context-metadata.md
+      CTX-03-context-memory-source-links.md
+      MEM-01-memory-status-source-references.md
+      MEM-02-edit-company-memory.md
+      MEM-03-memory-status-transitions.md
+      MEM-04-memory-detail-panel.md
+      REC-01-extract-memories-pipeline.md
+      REC-02-reconcile-memories-pipeline.md
   scripts/
     smoke-test.mjs
   src/
@@ -66,7 +109,80 @@ team-brain/
       render.js
 ```
 
-## 4. 文件职责
+## 4. v0.2 目标架构
+
+v0.2 不重写产品，而是基于现有代码拆清楚边界。
+
+目标结构：
+
+```text
+UI Layer
+  src/ui/render.js
+
+App Controller
+  src/main.js
+
+Domain Orchestrator
+  src/domain/agentEngine.js
+
+Domain Pipelines
+  src/domain/pipelines/extractMemories.js
+  src/domain/pipelines/reconcileMemories.js
+  src/domain/pipelines/planActions.js
+  src/domain/pipelines/composeBrief.js
+  src/domain/pipelines/processResult.js
+
+Domain Types and Schemas
+  src/domain/types.js
+  src/domain/schemas.js
+
+Services
+  src/services/store.js
+  src/services/agentProvider.js
+  src/services/repositories/localProjectRepository.js
+
+Data
+  src/data/demo.js
+```
+
+### 4.1 分层规则
+
+UI Layer：
+
+- 只负责展示和收集用户输入。
+- 不做记忆提取、行动判断、Brief 生成。
+- 不直接读写 localStorage。
+
+App Controller：
+
+- 负责事件绑定、状态切换、调用 domain 和 services。
+- 可以做轻量编排。
+- 不写复杂业务推理。
+
+Domain Orchestrator：
+
+- 保留产品闭环入口。
+- 对外提供 `absorbContext()`、`generateBrief()`、`recordActionResult()`。
+- 调用各 pipeline。
+- 不关心 UI 细节。
+
+Domain Pipelines：
+
+- 每个 pipeline 负责一个明确的 Agent 能力。
+- 输入和输出必须是结构化对象。
+- 未来接 LLM 时，pipeline 仍然负责 schema 校验、fallback 和安全规则。
+
+Services：
+
+- 负责持久化、AI provider、未来外部系统 adapter。
+- 不承载产品判断。
+
+Data：
+
+- 提供 demo 项目和测试样本。
+- demo 数据必须覆盖核心闭环。
+
+## 5. 当前模块职责
 
 ### `index.html`
 
@@ -80,71 +196,41 @@ team-brain/
 
 ### `src/main.js`
 
-应用状态和交互入口。
+应用控制器。
 
 职责：
 
-- 读取本地状态。
-- 渲染 UI。
-- 绑定表单和按钮事件。
-- 处理项目创建、项目切换、上下文吸收、Brief 生成、结果回流、Demo 重置和 JSON 导出。
-- 调用 domain 层的 Agent 引擎。
-- 调用 store 层保存状态。
+- 读取和保存状态。
+- 调用渲染函数。
+- 绑定按钮、表单和选择事件。
+- 调用 domain 层完成上下文吸收、Brief 生成、结果回流。
+- 管理当前选中的项目和行动。
 
-关键函数：
+不应该放在这里：
 
-- `render()`
-- `bindEvents()`
-- `handleCreateProject()`
-- `handleAbsorbContext()`
-- `handleRecordResult()`
-- `updateActiveProject()`
-- `setState()`
-- `exportState()`
+- 记忆提取规则。
+- 行动优先级算法。
+- Brief 模板生成。
+- localStorage 细节。
 
-### `src/styles.css`
+### `src/domain/agentEngine.js`
 
-完整界面样式。
+当前本地 Agent 引擎。v0.1 里它同时承担了提取、行动、Brief、回流。v0.2 应逐步把它拆成 orchestrator。
 
-职责：
+当前对外入口：
 
-- 工作台布局。
-- 侧边栏项目列表。
-- 顶部闭环计数。
-- 上下文输入表单。
-- 记忆分组。
-- 行动列表。
-- Brief 面板。
-- 结果回流表单。
-- 响应式布局。
+```text
+absorbContext(project, input)
+generateBrief(project, actionId)
+recordActionResult(project, actionId, resultInput)
+```
 
-设计方向：
+v0.2 目标：
 
-- 工作台优先，不做营销页。
-- 信息密度适中，适合 60 秒演示。
-- 使用低干扰视觉风格，让行动和记忆成为主角。
-
-### `src/data/demo.js`
-
-内置 Demo 数据。
-
-职责：
-
-- 提供 `DEMO_PROJECT`。
-- 初始化项目 `Northstar Copilot`。
-- 预置上下文、记忆和行动。
-- 支持首次打开和重置 Demo。
-
-Demo 覆盖：
-
-- 客户顾虑。
-- 风险点。
-- 产品决策。
-- 工程阻塞。
-- 团队限制。
-- 客户 follow-up。
-- Coding Brief。
-- 产品路线整理。
+- 保留这三个入口，避免 UI 层大改。
+- 把内部逻辑迁移到 `src/domain/pipelines/*`。
+- 每次 pipeline 运行产生 `AgentRun`。
+- 每个 AI 或规则输出都能追溯 sourceReferences。
 
 ### `src/domain/types.js`
 
@@ -154,490 +240,434 @@ Demo 覆盖：
 
 - 上下文类型。
 - 记忆类型。
+- 记忆状态。
 - 行动类型。
-- 优先级标签。
-- 风险标签。
 - 行动状态。
 - 结果状态。
+- 风险和优先级标签。
 
-适合新增类型的位置：
+v0.2 要求：
 
-- 新增上下文类型：改 `CONTEXT_TYPES`。
-- 新增记忆类型：改 `MEMORY_TYPES`。
-- 新增行动类型：改 `ACTION_TYPES`。
-- 新增结果状态：改 `RESULT_OUTCOMES`。
+- 只放稳定枚举、标签、常量。
+- 不放业务函数。
+- 新增字段时同步更新 `DATA_MODEL.md`。
 
-### `src/domain/agentEngine.js`
+### `src/domain/schemas.js`
 
-本地 Agent 引擎。当前是 deterministic rule engine，未来可替换为真实 LLM provider。
+v0.2 计划新增。
 
 职责：
 
-- 从文本中提取公司记忆。
-- 根据记忆生成行动建议。
-- 根据行动生成 Brief。
-- 根据执行结果生成新记忆和新行动。
-- 控制高风险动作只输出草稿和人工确认项。
+- 定义结构化输出校验。
+- 校验 Memory、Action、Brief、ActionResult、AgentRun。
+- 阻止非法 AI 输出写入 state。
 
-对外导出：
+第一版可以手写轻量校验函数，不必马上引入 Zod。
 
-- `absorbContext(project, input)`
-- `generateBrief(project, actionId)`
-- `recordActionResult(project, actionId, resultInput)`
+### `src/domain/pipelines/extractMemories.js`
 
-内部核心模块：
+v0.2 计划新增。
 
-- `MEMORY_RULES`：关键词到记忆类型的规则。
-- `ACTION_BY_MEMORY_TYPE`：记忆类型到行动模板的映射。
-- `extractMemories()`：文本切分和记忆提取。
-- `proposeActions()`：根据新记忆生成行动。
-- `buildBrief()`：生成结构化 Brief。
-- `proposeResultActions()`：根据结果回流生成后续行动。
+职责：
 
-未来替换建议：
+- 从 `ContextItem` 中提取候选 `MemoryItem`。
+- 每条 memory 必须包含 `sourceReferences`。
+- 输出候选记忆，不直接改 state。
 
-- 保留三个对外函数签名。
-- 把内部规则替换为 `AgentProvider`。
-- 让 LLM 返回结构化 JSON。
-- 增加 schema 校验。
-- 保留安全规则作为 LLM 输出后的 guardrail。
+### `src/domain/pipelines/reconcileMemories.js`
+
+v0.2 计划新增。
+
+职责：
+
+- 比较候选记忆和已有记忆。
+- 判断 `new`、`duplicate`、`update`、`conflict`、`outdate`。
+- 输出 reconciliation result，由 orchestrator 决定如何写入 state。
+
+### `src/domain/pipelines/planActions.js`
+
+v0.2 计划新增。
+
+职责：
+
+- 基于当前可信记忆生成最多 Top 3 actions。
+- 每个 action 必须包含 `whyNow` 和 `evidenceMemoryIds`。
+- 高风险 action 必须包含人工确认清单。
+
+### `src/domain/pipelines/composeBrief.js`
+
+v0.2 计划新增。
+
+职责：
+
+- 根据 action type 生成不同 Brief schema。
+- 输出可执行、可审核、可编辑的 Brief。
+- 不执行外部动作。
+
+### `src/domain/pipelines/processResult.js`
+
+v0.2 计划新增。
+
+职责：
+
+- 处理行动结果回流。
+- 判断哪些记忆被确认、更新、废弃或产生冲突。
+- 生成必要的后续行动。
 
 ### `src/services/store.js`
 
-本地持久化服务。
+当前本地持久化服务。
 
 职责：
 
-- 创建初始状态。
-- 从 localStorage 读取状态。
-- 保存状态到 localStorage。
-- 重置 Demo。
-- 创建项目。
-- 创建 ID。
+- 初始化 demo state。
+- 从 localStorage 读取 state。
+- 保存 state。
+- 创建项目和 ID。
 
-关键常量：
+v0.2 要求：
 
-- `STORAGE_KEY = "teammind.mvp.state.v1"`
+- 增加 `schemaVersion`。
+- 支持旧数据迁移。
+- 逐步把 localStorage 细节移到 repository。
 
-未来替换建议：
+### `src/services/repositories/localProjectRepository.js`
 
-- 保留函数接口。
-- localStorage 可替换为 Supabase、Postgres 或 API client。
-- `makeProject()` 后续可加入 owner、members、permissions、integrations。
+v0.2 计划新增。
+
+职责：
+
+- 封装本地项目读写。
+- 暴露 repository 方法。
+- 为未来 Supabase/Postgres 替换留接口。
+
+目标接口：
+
+```text
+getState()
+saveState(state)
+createProject(input)
+updateProject(project)
+addContext(projectId, context)
+updateMemory(projectId, memory)
+addAction(projectId, action)
+addBrief(projectId, brief)
+addResult(projectId, result)
+```
+
+### `src/services/agentProvider.js`
+
+v0.2 计划新增。
+
+职责：
+
+- 封装 AI provider。
+- 第一版是 mock/rule provider。
+- 未来可接 OpenAI API。
+- provider 只服务 pipeline，不直接驱动 UI。
+
+目标接口：
+
+```text
+extractMemories(input)
+reconcileMemories(input)
+planActions(input)
+composeBrief(input)
+processResult(input)
+```
 
 ### `src/ui/render.js`
 
-纯 UI 渲染层。
+纯渲染层。
 
 职责：
 
-- 根据 state 生成 HTML 字符串。
-- 渲染侧边栏。
-- 渲染顶部项目信息。
-- 渲染闭环 pipeline。
-- 渲染上下文输入。
-- 渲染公司记忆。
-- 渲染行动列表。
-- 渲染行动 Brief。
-- 渲染结果回流表单。
+- 根据 state 输出 HTML。
+- 渲染项目、上下文、记忆、行动、Brief、结果回流。
+- 提供必要的 `data-*` 属性给 `main.js` 绑定事件。
 
-原则：
+不应该放在这里：
 
-- 不直接修改状态。
-- 不调用 localStorage。
-- 不包含业务推理逻辑。
-- 只根据输入 state 输出 UI。
+- localStorage。
+- 记忆提取。
+- action ranking。
+- Brief 内容生成。
+- AI 调用。
+
+### `src/data/demo.js`
+
+Demo 数据。
+
+职责：
+
+- 提供可演示的项目。
+- 覆盖真实使用场景。
+- 每次数据模型升级时同步更新。
+
+v0.2 demo 至少覆盖：
+
+- 一条客户访谈。
+- 一条投资人问题。
+- 一条工程进展。
+- 一条创始人笔记。
+- 已确认记忆。
+- 待确认记忆。
+- 有来源引用的记忆。
+- 至少一个 Brief。
+- 至少一个结果回流。
 
 ### `scripts/smoke-test.mjs`
 
-核心闭环烟雾测试。
+核心闭环测试。
 
 职责：
 
-- 导入 Demo 项目。
-- 模拟吸收上下文。
-- 生成行动。
-- 生成 Brief。
-- 回流结果。
-- 检查上下文、记忆、行动、Brief 和结果数量是否有效。
+- 模拟上下文输入。
+- 验证能生成记忆。
+- 验证能生成行动。
+- 验证能生成 Brief。
+- 验证结果回流能写入结果和新记忆。
 
-运行方式：
+每个 issue 完成后至少运行：
 
 ```bash
 node scripts/smoke-test.mjs
 ```
 
-## 5. 功能模块结构
+## 6. 功能领域
 
-### 5.1 项目空间
+### 6.1 Context Intake
 
-用户入口：
+目标：让每段上下文成为可追溯证据。
 
-- 左侧项目列表。
-- 新项目输入框。
+负责内容：
 
-数据对象：
+- 原始文本。
+- 上下文类型。
+- 发生时间。
+- 参与人。
+- 标签。
+- 重要程度。
+- 与 memory 的 source link。
 
-- `Project`
+主要文件：
 
-主要状态：
+- `src/main.js`
+- `src/ui/render.js`
+- `src/domain/types.js`
+- `src/domain/pipelines/extractMemories.js`
+- `src/data/demo.js`
 
-- `state.activeProjectId`
-- `state.projects`
+### 6.2 Company Memory
 
-主要交互：
+目标：让公司记忆成为核心资产。
 
-- 创建项目。
-- 切换项目。
-- 每个项目独立保存上下文、记忆、行动、Brief 和结果。
+负责内容：
 
-### 5.2 上下文输入
+- 记忆类型。
+- 记忆状态。
+- 置信度。
+- 来源引用。
+- 人工编辑。
+- 记忆详情。
+- 与 action/result 的关联。
 
-用户入口：
+主要文件：
 
-- “上下文输入”面板。
+- `src/domain/types.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/services/store.js`
 
-输入字段：
+### 6.3 Memory Reconciliation
 
-- 类型 `kind`。
-- 标题 `title`。
-- 正文 `body`。
+目标：处理公司认知变化。
 
-处理流程：
+负责内容：
 
-```text
-form submit
--> handleAbsorbContext()
--> absorbContext(project, input)
--> extractMemories()
--> proposeActions()
--> saveState()
--> render()
-```
+- 新记忆。
+- 重复记忆。
+- 更新旧记忆。
+- 冲突判断。
+- 过期判断。
 
-输出：
+主要文件：
 
-- 新 Context。
-- 新 Memory。
-- 新 Action。
+- `src/domain/pipelines/extractMemories.js`
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/domain/agentEngine.js`
 
-### 5.3 公司记忆
+### 6.4 Action Planning
 
-用户入口：
+目标：生成少量高价值下一步行动。
 
-- “公司记忆”面板。
+负责内容：
 
-展示方式：
+- Top 3 actions。
+- whyNow。
+- evidenceMemoryIds。
+- owner/deadline suggestion。
+- blockedBy。
+- expectedArtifact。
+- humanConfirmationChecklist。
 
-- 按记忆类型分组。
-- 每组展示标题、详情、来源和置信度。
+主要文件：
 
-记忆类型：
+- `src/domain/pipelines/planActions.js`
+- `src/domain/types.js`
+- `src/ui/render.js`
 
-- `customer_concern`
-- `investor_question`
-- `product_decision`
-- `engineering_blocker`
-- `team_constraint`
-- `risk`
-- `opportunity`
-- `fact`
-- `result_learning`
+### 6.5 Brief Composer
 
-### 5.4 下一步行动
+目标：把 action 变成真实可执行 Brief。
 
-用户入口：
+负责内容：
 
-- “下一步行动”面板。
+- customer_followup Brief。
+- investor_reply Brief。
+- coding_brief Brief。
+- 可编辑保存。
+- 风险和人工确认。
 
-行动状态：
+主要文件：
 
-- `pending`：待处理。
-- `briefed`：已生成 Brief。
-- `done`：已回流。
+- `src/domain/pipelines/composeBrief.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/services/store.js`
 
-展示信息：
+### 6.6 Result Feedback
 
-- 行动类型。
-- 状态。
-- 标题。
-- 生成理由。
-- 优先级。
-- 风险等级。
+目标：让执行结果改变记忆和下一步行动。
 
-处理流程：
+负责内容：
 
-```text
-Memory[]
--> proposeActions()
--> Action[]
--> UI action list
-```
+- 行动结果。
+- whatChanged。
+- newEvidence。
+- followUpNeeded。
+- relatedMemoryUpdates。
+- action history。
 
-### 5.5 行动 Brief
+主要文件：
 
-用户入口：
+- `src/domain/pipelines/processResult.js`
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/ui/render.js`
+- `src/main.js`
 
-- 点击行动卡片。
-- 点击“生成 Brief”。
+### 6.7 Agent Runs
 
-处理流程：
+目标：让 AI/规则运行可审计。
 
-```text
-click generate brief
--> generateBrief(project, actionId)
--> buildBrief()
--> saveState()
--> render()
-```
+负责内容：
 
-Brief 结构：
+- pipeline 运行记录。
+- input/output summary。
+- provider/model。
+- success/failed。
+- error。
 
-- 目标 `goal`。
-- 已知背景 `background`。
-- 建议策略 `strategy`。
-- 草稿内容 `draft`。
-- 风险提醒 `risks`。
-- 成功标准 `successCriteria`。
-- 人工确认清单 `checklist`。
+主要文件：
 
-安全原则：
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/*`
+- `src/services/store.js`
+- `src/ui/render.js`
 
-- Brief 只生成草稿。
-- 对外发送前必须人工确认。
-- 高风险事项需要负责人确认。
+## 7. Issue 开发流程
 
-### 5.6 结果回流
-
-用户入口：
-
-- Brief 面板下方的“结果回流”表单。
-
-输入字段：
-
-- 结果摘要 `summary`。
-- 结果状态 `outcome`。
-
-处理流程：
+以后开发不要直接说“优化记忆”或“加点 AI”。应该用 issue 驱动：
 
 ```text
-form submit
--> handleRecordResult()
--> recordActionResult(project, actionId, resultInput)
--> extractMemories(result summary)
--> proposeResultActions()
--> original action marked done
--> saveState()
--> render()
+选择一个 issue spec
+-> 阅读 PRD 相关章节
+-> 阅读 DATA_MODEL 对应对象
+-> 确认涉及模块
+-> 小步修改代码
+-> 更新 demo/migration
+-> 运行 smoke test
+-> 更新文档
 ```
 
-输出：
+每个 issue 必须回答：
 
-- 新 Result。
-- 新 result_learning Memory。
-- 可能的新风险、客户顾虑、工程阻塞等记忆。
-- 新后续行动。
+- 它属于哪个功能领域？
+- 它改善了闭环的哪一步？
+- 它改变了哪些数据结构？
+- 它的 UI 入口在哪里？
+- 它不做哪些事情？
+- 它如何验收？
 
-### 5.7 Demo 与导出
+## 8. 当前建议开发顺序
 
-Demo：
-
-- 首次打开自动载入。
-- 可点击“重置 Demo”恢复初始数据。
-
-导出：
-
-- 点击“导出 JSON”下载当前 state。
-- 方便调试、分享和未来迁移。
-
-## 6. 数据流
-
-完整主链路：
+Milestone 1 建议顺序：
 
 ```text
-User input text
--> src/main.js handleAbsorbContext()
--> src/domain/agentEngine.js absorbContext()
--> Context created
--> Memory extracted
--> Action proposed
--> src/services/store.js saveState()
--> src/ui/render.js renderApp()
+1. CTX-01 增加上下文元数据
+2. CTX-03 建立上下文和记忆来源引用
+3. MEM-01 增加 memory status 和 sourceReferences
+4. MEM-02 支持编辑公司记忆
+5. MEM-03 支持记忆状态切换
+6. MEM-04 增加记忆详情面板
+7. REC-01 拆出 extractMemories pipeline
+8. REC-02 新增 reconcileMemories pipeline
 ```
 
-Brief 链路：
+理由：
 
-```text
-User selects action
--> generateBrief()
--> source memories resolved
--> Brief sections created
--> action status becomes briefed
--> UI updates
-```
+- 先让原始上下文更完整。
+- 再让记忆可以追溯。
+- 再让用户能修正和确认记忆。
+- 最后处理新增、重复、冲突、过期。
 
-结果回流链路：
+## 9. 本地运行和验证
 
-```text
-User records result
--> recordActionResult()
--> Result created
--> result learning memory created
--> follow-up actions proposed
--> original action becomes done
--> UI updates
-```
-
-## 7. 当前规则引擎说明
-
-当前 `agentEngine` 使用关键词分类，不调用外部模型。
-
-示例：
-
-- 出现“客户、用户、担心、隐私、权限、数据”等，倾向生成客户顾虑。
-- 出现“投资人、融资、估值、市场、壁垒”等，倾向生成投资人问题。
-- 出现“工程、技术、bug、API、部署、GitHub、Slack”等，倾向生成工程阻塞。
-- 出现“风险、合规、承诺、自动发送、敏感”等，倾向生成风险点。
-
-优点：
-
-- 可离线运行。
-- 输出稳定。
-- 方便演示。
-- 方便调试。
-
-限制：
-
-- 语义理解有限。
-- 对长文本的结构化能力有限。
-- 无法进行复杂推理。
-- 无法引用历史上下文做深层判断。
-
-## 8. 未来扩展接口
-
-### 8.1 LLM Provider
-
-建议新增：
-
-```text
-src/services/agentProvider.js
-```
-
-职责：
-
-- 封装 OpenAI 或其他模型调用。
-- 接收项目上下文、历史记忆和用户输入。
-- 返回结构化 JSON。
-
-需要保留：
-
-- `absorbContext(project, input)`
-- `generateBrief(project, actionId)`
-- `recordActionResult(project, actionId, resultInput)`
-
-### 8.2 数据库
-
-当前：
-
-- localStorage。
-
-未来：
-
-- Supabase。
-- Postgres。
-- SQLite。
-- 自建 API。
-
-建议优先替换 `src/services/store.js`，不要让 UI 直接依赖数据库。
-
-### 8.3 向量检索
-
-未来新增：
-
-- Memory embedding。
-- Context chunk embedding。
-- Project-level retrieval。
-- Brief 生成时检索相关历史。
-
-建议位置：
-
-```text
-src/services/retrievalService.js
-```
-
-### 8.4 外部集成
-
-未来可增加 adapters：
-
-```text
-src/integrations/
-  githubAdapter.js
-  notionAdapter.js
-  slackAdapter.js
-  gmailAdapter.js
-  linearAdapter.js
-```
-
-安全要求：
-
-- 第一阶段只读。
-- 写入动作必须草稿优先。
-- 发送、承诺、merge、关闭 issue 等高风险动作必须二次确认。
-
-### 8.5 多成员与权限
-
-未来数据模型可扩展：
-
-- `workspaceId`
-- `ownerId`
-- `members`
-- `roles`
-- `permissions`
-- `auditLogs`
-
-权限原则：
-
-- 默认项目私有。
-- 外部集成按项目授权。
-- 高风险行动需要负责人确认。
-
-## 9. AI 协作提示
-
-AI 修改本项目时应遵守：
-
-- 不要把产品改成聊天机器人。
-- 不要把主界面改成 prompt 输入器。
-- 优先维护闭环：上下文、记忆、行动、Brief、结果回流。
-- 不要自动执行外部动作。
-- 保留人工确认清单。
-- 新功能先考虑是否能增强闭环。
-- UI 层不要塞业务推理逻辑。
-- 存储逻辑集中在 `services/store.js`。
-- Agent 逻辑集中在 `domain/agentEngine.js` 或未来 provider。
-- 修改后运行 `node scripts/smoke-test.mjs`。
-
-## 10. 本地运行
-
-推荐：
-
-```bash
-python -m http.server 4173
-```
-
-或者：
+本地运行：
 
 ```bash
 npm run dev
 ```
 
-打开：
+或：
+
+```bash
+python -m http.server 4173
+```
+
+浏览器打开：
 
 ```text
 http://127.0.0.1:4173
 ```
 
-验证：
+核心验证：
 
 ```bash
 node scripts/smoke-test.mjs
 ```
+
+如果本地页面打不开，优先检查：
+
+- 本地服务是否还在运行。
+- 端口是不是 `4173`。
+- 浏览器地址是不是 `http://127.0.0.1:4173`。
+- VPN 通常不影响 `127.0.0.1`，除非代理软件劫持 localhost。
+
+## 10. AI 协作者守则
+
+AI 协作者进入本项目后必须遵守：
+
+- 先读 `PRD.md`、本文件、`DATA_MODEL.md` 和当前 issue spec。
+- 不要把产品改成聊天界面。
+- 不要优先接 Gmail、Slack、Notion、GitHub 等集成。
+- 不要把业务推理放进 UI。
+- 不要把 Agent 判断放进 store。
+- 不要新增不可追溯的 AI 输出。
+- 不要自动执行高风险外部动作。
+- 每个代码改动都要对应 issue 编号。
+- 数据模型变化必须同步更新 `DATA_MODEL.md`。
+- 行为变化必须同步更新 PRD 或 issue spec。
+- 完成后运行 smoke test。
+
