@@ -1,406 +1,1079 @@
 # TeamMind PRD
 
-版本：v0.1 MVP  
-状态：可演示原型  
+版本：v0.2 可使用/可测试版本  
+状态：下一阶段开发基准  
+仓库：`skeleton2024/team-brain`  
 最后更新：2026-05-11
 
-## 1. 产品概述
+## 0. 这份 PRD 的目的
 
-TeamMind 是面向早期创业团队的公司专属上下文 Agent。它不以普通聊天为中心，也不是 prompt 生成器，而是把团队分散在会议纪要、客户反馈、投资人问题、工程进展和创始人笔记中的信息，持续整理为公司记忆、下一步行动、可执行 Brief 和执行结果回流后的新记忆。
+这份 PRD 不再把 TeamMind 定义为一个“可演示 Demo”。v0.1 已经证明了基础闭环，但它产生的内容还不够有价值。v0.2 的目标是让 TeamMind 开始被真实团队使用和测试。
+
+后续开发以 issue 为导向。每个 issue 必须对应一个功能领域，并回答：
+
+```text
+这个改动是否让 TeamMind 更懂公司？
+是否让公司记忆更可信？
+是否让下一步行动更有判断力？
+是否让 Brief 更可执行？
+是否让结果回流真的更新团队认知？
+```
+
+## 1. 产品定位
+
+TeamMind 是面向早期创业团队的公司专属上下文 Agent。它不是聊天机器人，不是 prompt 生成器，也不是普通知识库问答工具。
+
+TeamMind 的核心任务是：
+
+```text
+把团队分散的上下文
+转成可追溯的公司记忆
+再转成少量高价值行动
+再生成可执行 Brief
+最后通过执行结果回流更新公司认知
+```
 
 核心闭环：
 
 ```text
-输入团队上下文
-→ 提取公司记忆
-→ 生成下一步行动
-→ 生成行动 Brief
-→ 记录执行结果
-→ 更新公司记忆
+Context Intake
+-> Memory Extraction
+-> Memory Reconciliation
+-> Top 3 Action Planning
+-> Scenario Brief
+-> Result Feedback
+-> Memory Update
 ```
 
-## 2. 背景与问题
+## 2. 当前 v0.1 评估
 
-早期团队通常没有完整的知识管理和运营流程，重要信息散落在会议、聊天、客户访谈、投资人问答和工程任务中。团队成员经常遇到这些问题：
+### 2.1 v0.1 已经做对的地方
 
-- 关键判断和事实没有沉淀，几天后很难复盘为什么做某个决定。
-- 客户顾虑、投资人问题、工程阻塞和团队限制混在一起，难以转成明确行动。
-- 创始人知道下一步大概该做什么，但没有时间写成可交付给队友的 Brief。
-- 行动执行后，结果没有回流，导致团队记忆断裂。
-- AI 工具常停留在聊天或一次性生成文本，无法稳定支持团队闭环。
+现有代码已经形成了正确的基础分层：
 
-TeamMind 的第一版目标是用最小产品跑通“上下文到行动再到回流”的闭环，让团队能在 60 秒内理解产品价值。
+```text
+src/main.js
+应用状态和交互编排
 
-## 3. 目标用户
+src/domain/agentEngine.js
+上下文 -> 记忆 -> 行动 -> Brief -> 结果回流
 
-第一版优先服务：
+src/services/store.js
+本地存储
 
-- 2-10 人早期创业团队。
-- AI-native 小团队。
-- 独立开发者团队。
-- 学生创业项目组。
-- 正在准备融资、客户访谈或产品开发的小团队。
+src/ui/render.js
+页面渲染
 
-## 4. 产品目标
+src/domain/types.js
+类型和标签
+```
 
-MVP 要达成：
+其中最值得保留的是三个核心函数：
 
-- 用户可以创建或切换一个项目空间。
-- 用户可以粘贴原始上下文。
-- 系统可以提取结构化公司记忆。
-- 系统可以根据记忆生成下一步行动。
-- 用户点击行动后可以生成行动 Brief。
-- 用户执行后可以填写结果。
-- 系统可以根据结果生成新记忆和新行动。
-- Demo 数据可以支持 60 秒完整演示。
+```text
+absorbContext(project, input)
+generateBrief(project, actionId)
+recordActionResult(project, actionId, resultInput)
+```
 
-MVP 不追求：
+这三个函数代表 TeamMind 的产品闭环，不应改成聊天式架构。
 
-- 完整知识库。
-- 多人协同。
-- 真实外部工具执行。
-- 高精度 LLM 推理。
-- 复杂权限和组织管理。
+### 2.2 v0.1 不足
 
-## 5. 产品原则
+v0.1 目前只能作为产品形状验证，不能作为可使用产品：
 
-- 不做普通聊天机器人，主界面围绕工作流而不是聊天框。
-- 不做 prompt 仓库，输出必须绑定公司记忆和具体行动。
-- 外部动作只生成草稿或建议，不自动执行。
-- 邮件不自动发送。
-- 谈判不自动承诺。
-- 代码任务不自动修改、提交或 merge。
-- 所有高风险行动必须保留人工确认清单。
-- 第一版优先稳定演示闭环，不提前实现复杂集成。
+- 记忆是规则切分的摘要，不够可信。
+- 行动建议是模板，不像真实判断。
+- Brief 是通用模板，不像具体工作产物。
+- 结果回流没有真正更新旧记忆，只是追加新文本。
+- 没有来源引用，用户无法验证 AI 为什么这么判断。
+- 没有记忆状态，用户无法确认、废弃或纠正 AI 生成内容。
+- 没有 Agent 运行记录，未来接 AI 后难以调试。
+- localStorage 可继续用于 v0.2 原型，但不能承载多人和云端使用。
 
-## 6. MVP 功能范围
+## 3. v0.2 产品目标
 
-### 6.1 项目空间
+v0.2 的目标不是接更多 API，而是把核心能力做实。
 
-用户可以创建项目，用项目代表一个团队、产品或创业项目。
+必须做到：
 
-当前能力：
+- 用户输入真实团队上下文后，系统能生成可追溯的公司记忆。
+- 用户能编辑、确认、废弃和查看记忆来源。
+- 新上下文进入后，系统能判断是新增、重复、更新、冲突还是让旧记忆过期。
+- 系统只给出少量高价值行动，优先 Top 3。
+- 每个行动都能说明为什么现在做、依据是什么、产出是什么。
+- Brief 必须按场景生成，不同类型行动有不同结构。
+- 结果回流必须影响记忆和后续行动，而不是只存一段结果文本。
+- 开发者和 AI 能通过 issue 明确知道每次改动属于哪个功能领域。
 
-- 创建项目。
-- 切换项目。
-- 查看项目阶段和更新时间。
-- 每个项目独立保存上下文、记忆、行动、Brief 和结果。
+可以暂缓：
 
-验收标准：
+- Gmail、Slack、Notion、GitHub、Linear/Jira 等外部集成。
+- 多团队权限。
+- 复杂文件上传。
+- 向量数据库。
+- 自动发送邮件。
+- 自动承诺谈判结果。
+- 自动修改、提交或 merge 代码。
 
-- 用户创建新项目后，项目出现在左侧列表。
-- 切换项目后，工作台数据随项目变化。
-- 刷新页面后，本地项目数据仍保留。
+## 4. v0.2 核心架构
 
-### 6.2 上下文输入
+v0.2 继续基于现有代码演进，但要把 `agentEngine.js` 拆成明确 pipeline。
 
-用户可以输入原始文本，并选择上下文类型。
+目标架构：
 
-支持类型：
+```text
+UI Layer
+  src/ui/render.js
 
-- 会议纪要。
-- 客户反馈。
-- 投资人问题。
-- 工程进展。
-- 创始人笔记。
-- 其他上下文。
+App Controller
+  src/main.js
 
-验收标准：
+Domain Pipelines
+  src/domain/pipelines/extractMemories.js
+  src/domain/pipelines/reconcileMemories.js
+  src/domain/pipelines/planActions.js
+  src/domain/pipelines/composeBrief.js
+  src/domain/pipelines/processResult.js
 
-- 用户输入标题、类型和正文后，可以点击“吸收上下文”。
-- 系统生成新的上下文记录。
-- 系统同步生成公司记忆和下一步行动。
+Domain Types
+  src/domain/types.js
+  src/domain/schemas.js
 
-### 6.3 公司记忆提取
+Services
+  src/services/repositories/localProjectRepository.js
+  src/services/agentProvider.js
+  src/services/store.js
 
-系统从原始文本中提取结构化记忆。
+Data
+  src/data/demo.js
+```
 
-记忆类型：
+### 4.1 架构原则
 
-- 客户顾虑。
-- 投资人问题。
-- 产品决策。
-- 工程阻塞。
-- 团队限制。
-- 风险点。
-- 机会。
-- 公司事实。
-- 结果学习。
+- 产品主线仍然是闭环，不引入聊天作为核心模型。
+- UI 层不放业务推理。
+- store 层不放 Agent 逻辑。
+- Agent pipeline 输出必须是结构化对象。
+- 每个 AI 结果必须能追溯输入、来源和运行记录。
+- 所有外部动作默认只生成草稿，不自动执行。
+- v0.2 可以继续 localStorage，但必须先抽象 repository，为 Supabase/Postgres 做准备。
 
-每条记忆包含：
+## 5. 功能领域和 Issue Backlog
 
-- 类型。
-- 标题。
-- 详情。
-- 来源。
-- 置信度。
-- 创建时间。
+后续开发按功能领域拆 issue。每个 issue 都应包含目标、涉及模块、不做范围和验收标准。
 
-验收标准：
+### 5.1 Context Intake 上下文输入
 
-- 输入含有客户、投资人、产品、工程、团队、风险或机会关键词的文本后，系统能生成对应分类。
-- 记忆在“公司记忆”面板中按类型聚合展示。
-- 新记忆不会明显重复已有记忆。
+目标：让每段上下文成为可追溯的原始证据，而不是一次性文本。
 
-### 6.4 行动建议生成
+现状：
 
-系统根据新增记忆生成下一步行动。
+- 用户只能输入类型、标题、正文。
+- 记忆来源只有简单 source 字段。
 
-行动类型：
+目标数据结构：
 
-- 客户 follow-up。
-- 投资人回复。
-- Coding Brief。
-- 产品路线整理。
-- 谈判准备。
-- 风险确认。
-- 执行计划。
-- 结果复盘。
+```text
+ContextItem
+  id
+  kind
+  title
+  body
+  occurredAt
+  participants
+  tags
+  importance
+  createdAt
+  sourceReferences
+```
 
-每个行动包含：
+#### CTX-01 增加上下文元数据
 
-- 类型。
-- 标题。
-- 生成理由。
-- 优先级。
-- 风险等级。
-- 预期产出。
-- 来源记忆。
-- 状态。
-- 是否需要人工确认。
+涉及模块：
 
-验收标准：
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
 
-- 新上下文被吸收后，系统至少生成一个相关行动。
-- 行动展示优先级和风险等级。
-- 已完成并回流的行动进入已回流状态。
+功能：
 
-### 6.5 行动 Brief 生成
-
-用户点击某个行动后，可以生成详细执行 Brief。
-
-Brief 必须包含：
-
-- 目标。
-- 已知背景。
-- 建议策略。
-- 草稿内容。
-- 风险提醒。
-- 成功标准。
-- 人工确认清单。
+- 上下文输入支持发生日期、参与人、标签、重要程度。
+- Demo 数据同步升级。
 
 验收标准：
 
-- 用户选择行动后能看到行动详情。
-- 点击“生成 Brief”后，Brief 面板展示完整结构。
-- 高风险动作包含人工确认和不可自动执行提醒。
+- 用户可以录入上述字段。
+- 刷新页面后字段仍存在。
+- smoke test 通过。
 
-### 6.6 结果回流
+#### CTX-02 增加上下文详情视图
 
-用户执行行动后，可以填写结果并回流给系统。
+涉及模块：
 
-结果状态：
+- `src/ui/render.js`
+- `src/main.js`
 
-- 正向进展。
-- 需要观察。
-- 出现阻塞。
+功能：
 
-回流后系统应：
-
-- 保存执行结果。
-- 生成结果学习类记忆。
-- 从结果中提取新的记忆。
-- 根据结果生成新的下一步行动。
-- 将原行动标记为已回流。
+- 用户能查看一条上下文原文。
+- 能看到这条上下文提取出了哪些记忆和行动。
 
 验收标准：
 
-- 用户填写结果后，结果数量增加。
-- 公司记忆出现新的结果学习。
-- 行动队列出现新的后续行动。
+- 点击上下文可以进入详情。
+- 详情里能看到原文、元数据、关联记忆。
 
-### 6.7 Demo 数据
+#### CTX-03 建立上下文和记忆的来源引用
 
-系统内置 Demo 项目 `Northstar Copilot`。
+涉及模块：
 
-Demo 应覆盖：
+- `src/domain/types.js`
+- `src/domain/pipelines/extractMemories.js`
 
-- 客户顾虑。
-- 风险点。
-- 产品决策。
-- 工程阻塞。
-- 团队限制。
-- 客户 follow-up 行动。
-- Coding Brief 行动。
-- 产品路线行动。
+功能：
+
+- 每条 Memory 必须带 `sourceReferences`。
+- source reference 至少包含 `contextId` 和原文片段。
 
 验收标准：
 
-- 用户第一次打开应用就能看到完整初始数据。
-- 用户可以点击行动并生成 Brief。
-- 用户可以填写结果并看到新记忆和新行动。
-- 用户可以重置 Demo。
+- 查看记忆时能看到它来自哪条上下文。
+- 用户能回到原始上下文验证。
 
-## 7. 关键用户故事
+### 5.2 Company Memory 公司记忆
 
-- 作为创始人，我想粘贴一段客户访谈记录，让系统自动找出客户顾虑和下一步 follow-up。
-- 作为工程负责人，我想把工程进展转成 Coding Brief，方便队友执行。
-- 作为融资中的团队，我想把投资人问题沉淀成记忆，并生成回复草稿。
-- 作为团队成员，我想记录行动结果，让项目记忆持续更新。
-- 作为演示者，我想打开页面就能用 Demo 数据展示完整闭环。
+目标：让记忆成为 TeamMind 的核心资产。
 
-## 8. 60 秒 Demo 路径
+现状：
 
-1. 打开 TeamMind，展示 `Northstar Copilot` 项目。
-2. 指出顶部闭环计数：上下文、公司记忆、下一步行动、Brief、结果回流。
-3. 展示公司记忆分类，包括客户顾虑、产品决策、工程阻塞和风险点。
-4. 点击一个行动，例如“回应客户顾虑”。
-5. 点击“生成 Brief”，展示目标、背景、策略、草稿和人工确认清单。
-6. 在结果回流里填写客户反馈。
-7. 提交后展示新记忆和新行动出现。
+- 记忆不可编辑。
+- 不能确认、废弃、标记冲突。
+- 没有版本和来源片段。
 
-## 9. 数据模型
+目标数据结构：
 
-### Project
+```text
+MemoryItem
+  id
+  type
+  title
+  content
+  confidence
+  status: draft | confirmed | outdated | disputed | archived
+  sourceReferences
+  createdBy: ai | human
+  createdAt
+  updatedAt
+  lastVerifiedAt
+```
 
-- `id`：项目 ID。
-- `name`：项目名。
-- `stage`：项目阶段。
-- `contexts`：上下文列表。
-- `memories`：公司记忆列表。
-- `actions`：行动列表。
-- `briefs`：行动 Brief 列表。
-- `results`：结果回流列表。
+#### MEM-01 增加 memory status 和 sourceReferences
 
-### Context
+涉及模块：
 
-- `id`
-- `kind`
-- `title`
-- `body`
-- `createdAt`
-- `memoryIds`
-- `actionIds`
+- `src/domain/types.js`
+- `src/domain/pipelines/extractMemories.js`
+- `src/ui/render.js`
 
-### Memory
+功能：
 
-- `id`
-- `type`
-- `title`
-- `detail`
-- `source`
-- `confidence`
-- `createdAt`
+- Memory 增加状态和来源引用。
+- 默认 AI 生成的记忆为 `draft`。
 
-### Action
+验收标准：
 
-- `id`
-- `type`
-- `title`
-- `rationale`
-- `priority`
-- `riskLevel`
-- `expectedOutput`
-- `sourceMemoryIds`
-- `status`
-- `requiresHumanConfirmation`
-- `briefId`
-- `resultId`
-- `createdAt`
+- 新提取的记忆显示为待确认。
+- 记忆卡片展示来源数量。
 
-### Brief
+#### MEM-02 支持编辑公司记忆
 
-- `id`
-- `actionId`
-- `title`
-- `sections`
-- `createdAt`
+涉及模块：
 
-### Result
+- `src/ui/render.js`
+- `src/main.js`
+- `src/services/store.js`
 
-- `id`
-- `actionId`
-- `outcome`
-- `summary`
-- `memoryIds`
-- `actionIds`
-- `createdAt`
+功能：
 
-## 10. 技术方案
+- 用户可以编辑标题、类型、内容、状态。
 
-第一版采用零后端静态 Web MVP：
+验收标准：
 
-- HTML。
-- CSS。
-- 原生 ES Modules JavaScript。
-- localStorage 本地持久化。
-- Python `http.server` 本地预览。
-- GitHub 私有仓库存储代码。
+- 保存后状态更新。
+- 刷新后仍保留。
+- 编辑不会破坏关联 action。
+
+#### MEM-03 支持确认、过期、有争议、归档
+
+涉及模块：
+
+- `src/domain/types.js`
+- `src/ui/render.js`
+- `src/main.js`
+
+功能：
+
+- 记忆支持状态切换。
+- confirmed 记忆在行动生成中权重更高。
+- outdated 和 archived 默认不参与新行动生成。
+
+验收标准：
+
+- 用户可以从 UI 切换状态。
+- 行动生成优先引用 confirmed 记忆。
+
+#### MEM-04 增加记忆详情面板
+
+涉及模块：
+
+- `src/ui/render.js`
+- `src/main.js`
+
+功能：
+
+- 展示记忆详情。
+- 展示来源上下文。
+- 展示相关行动和结果。
+
+验收标准：
+
+- 用户能从记忆跳到来源上下文。
+- 用户能看到这条记忆影响过哪些行动。
+
+### 5.3 Memory Reconciliation 记忆更新
+
+目标：让系统处理“公司认知变化”，而不是一直追加摘要。
+
+现状：
+
+- 新上下文只会新增记忆。
+- 只有简单去重。
+
+目标能力：
+
+```text
+new
+duplicate
+update
+conflict
+outdate
+```
+
+#### REC-01 拆出 extractMemories pipeline
+
+涉及模块：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/extractMemories.js`
+
+功能：
+
+- 从 `agentEngine.js` 拆出提取逻辑。
+- 保持 `absorbContext()` 对外行为不变。
+
+验收标准：
+
+- smoke test 通过。
+- `agentEngine.js` 更像 orchestrator。
+
+#### REC-02 新增 reconcileMemories pipeline
+
+涉及模块：
+
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/domain/agentEngine.js`
+
+功能：
+
+- 新记忆进入前，与 existing memories 比较。
+- 输出新增、更新、冲突、重复、过期建议。
+
+验收标准：
+
+- 输入“客户已经不担心价格”时，如果旧记忆是“客户担心价格”，系统能提示旧记忆可能过期。
+
+#### REC-03 增加冲突记忆人工处理
+
+涉及模块：
+
+- `src/ui/render.js`
+- `src/main.js`
+
+功能：
+
+- 冲突记忆不自动覆盖。
+- 用户选择保留旧版、新版，或都保留为 disputed。
+
+验收标准：
+
+- 冲突出现时有明确 UI。
+- 用户选择后状态写入 store。
+
+### 5.4 Action Planning 行动规划
+
+目标：从“模板行动列表”升级为“Top 3 next moves”。
+
+现状：
+
+- 行动按记忆类型模板生成。
+- 行动缺少为什么现在做、依据、阻塞和预期产物。
+
+目标数据结构：
+
+```text
+ActionItem
+  id
+  type
+  title
+  whyNow
+  evidenceMemoryIds
+  priority
+  riskLevel
+  expectedArtifact
+  ownerSuggestion
+  deadlineSuggestion
+  blockedBy
+  humanConfirmationChecklist
+  status: pending | briefed | in_progress | done | archived
+  createdAt
+  updatedAt
+```
+
+#### ACT-01 升级 Action 数据模型
+
+涉及模块：
+
+- `src/domain/types.js`
+- `src/domain/pipelines/planActions.js`
+- `src/ui/render.js`
+- `src/data/demo.js`
+
+功能：
+
+- Action 增加 whyNow、evidence、owner、deadline、blockedBy、expectedArtifact。
+
+验收标准：
+
+- 行动卡片展示为什么现在做。
+- 行动详情展示依据记忆。
+
+#### ACT-02 行动生成改为 Top 3
+
+涉及模块：
+
+- `src/domain/pipelines/planActions.js`
+
+功能：
+
+- 每次规划最多输出 3 个最重要行动。
+- 优先使用 confirmed 记忆。
+- 高风险行动必须带人工确认清单。
+
+验收标准：
+
+- 不再生成一堆同质行动。
+- 每个行动必须有 evidenceMemoryIds。
+
+#### ACT-03 增加行动详情视图
+
+涉及模块：
+
+- `src/ui/render.js`
+- `src/main.js`
+
+功能：
+
+- 查看行动详情、来源记忆、风险、预期产物、阻塞项。
+
+验收标准：
+
+- 用户能理解为什么系统建议做这件事。
+
+#### ACT-04 增加行动状态流转
+
+涉及模块：
+
+- `src/domain/types.js`
+- `src/main.js`
+- `src/ui/render.js`
+
+功能：
+
+- 支持 pending、briefed、in_progress、done、archived。
+
+验收标准：
+
+- 用户可以把行动标记为执行中。
+- 回流结果后行动进入 done。
+
+### 5.5 Brief Composer 行动 Brief
+
+目标：Brief 必须成为真实可交付物，而不是通用说明。
+
+现状：
+
+- 所有行动共用一个模板。
+
+目标：
+
+- 不同 action type 使用不同 schema。
+- Brief 可以人工编辑。
+- Brief 保留版本和生成来源。
+
+#### BRF-01 拆出 composeBrief pipeline
+
+涉及模块：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/composeBrief.js`
+
+功能：
+
+- 从 `agentEngine.js` 拆出 Brief 生成。
+
+验收标准：
+
+- 行为不变。
+- smoke test 通过。
+
+#### BRF-02 增加 customer_followup Brief schema
+
+结构：
+
+```text
+background
+customerConcern
+replyStrategy
+draftMessage
+doNotPromise
+nextQuestions
+successCriteria
+humanConfirmationChecklist
+```
+
+验收标准：
+
+- 客户行动生成的 Brief 像一封可审核 follow-up 草稿。
+- 明确不自动发送。
+
+#### BRF-03 增加 investor_reply Brief schema
+
+结构：
+
+```text
+investorQuestion
+shortAnswer
+evidenceWeHave
+evidenceMissing
+suggestedWording
+doNotSay
+followUpMaterials
+founderConfirmationChecklist
+```
+
+验收标准：
+
+- 投资人回复能区分已验证事实和待补证据。
+
+#### BRF-04 增加 coding_brief Brief schema
+
+结构：
+
+```text
+goal
+background
+scope
+nonGoals
+acceptanceCriteria
+testPlan
+risks
+reviewChecklist
+```
+
+验收标准：
+
+- Coding Brief 可以直接交给开发者作为任务说明。
+- 明确不自动修改、提交或 merge 代码。
+
+#### BRF-05 Brief 支持人工编辑和保存
+
+涉及模块：
+
+- `src/ui/render.js`
+- `src/main.js`
+- `src/services/store.js`
+
+功能：
+
+- 用户可以编辑 Brief。
+- 保存后保留 editedAt。
+
+验收标准：
+
+- 刷新后编辑内容仍存在。
+
+### 5.6 Result Feedback 结果回流
+
+目标：执行结果必须改变公司记忆和下一步行动。
+
+现状：
+
+- 结果回流只追加结果学习。
+- 没有对应行动假设和成功标准。
+
+目标数据结构：
+
+```text
+ActionResult
+  id
+  actionId
+  outcome
+  summary
+  whatChanged
+  newEvidence
+  followUpNeeded
+  relatedMemoryUpdates
+  createdAt
+```
+
+#### RES-01 升级结果数据模型
+
+涉及模块：
+
+- `src/domain/types.js`
+- `src/ui/render.js`
+- `src/main.js`
+
+功能：
+
+- 结果表单增加 whatChanged、newEvidence、followUpNeeded。
+
+验收标准：
+
+- 用户能记录这次行动改变了什么判断。
+
+#### RES-02 回流时更新相关记忆状态
+
+涉及模块：
+
+- `src/domain/pipelines/processResult.js`
+- `src/domain/pipelines/reconcileMemories.js`
+
+功能：
+
+- 结果可以确认、更新或废弃旧记忆。
+
+验收标准：
+
+- 客户反馈改变旧判断时，系统能提示相关记忆应更新。
+
+#### RES-03 行动详情展示执行历史
+
+涉及模块：
+
+- `src/ui/render.js`
+
+功能：
+
+- 行动详情中展示 result history。
+
+验收标准：
+
+- 用户能看到行动从建议到回流的完整链路。
+
+### 5.7 Agent Runs 运行记录
+
+目标：未来接真实 AI 后可调试、可审计。
+
+目标数据结构：
+
+```text
+AgentRun
+  id
+  projectId
+  runType: extract | reconcile | plan | compose | process_result
+  inputSummary
+  outputSummary
+  provider
+  model
+  status: success | failed
+  error
+  createdAt
+```
+
+#### RUN-01 增加 agentRuns 数据结构
+
+涉及模块：
+
+- `src/domain/types.js`
+- `src/services/store.js`
+
+验收标准：
+
+- state 中存在 agentRuns。
+
+#### RUN-02 每次 pipeline 运行写入 AgentRun
+
+涉及模块：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/*`
+
+验收标准：
+
+- 吸收上下文、生成行动、生成 Brief、结果回流都会产生 run 记录。
+
+### 5.8 Store / Repository 存储层
+
+目标：继续支持本地原型，同时为真实数据库准备接口。
+
+现状：
+
+- `store.js` 直接读写 localStorage。
+
+目标：
+
+```text
+ProjectRepository
+  getState()
+  saveState(state)
+  createProject(input)
+  updateProject(project)
+  addContext(projectId, context)
+  updateMemory(projectId, memory)
+  addAction(projectId, action)
+  addBrief(projectId, brief)
+  addResult(projectId, result)
+```
+
+#### STR-01 抽象 ProjectRepository
+
+涉及模块：
+
+- `src/services/store.js`
+- `src/services/repositories/localProjectRepository.js`
+
+验收标准：
+
+- UI 和 domain 不直接知道 localStorage。
+- smoke test 通过。
+
+#### STR-02 增加 state migration version
+
+功能：
+
+- state 增加 `schemaVersion`。
+- 老数据可迁移到新结构。
+
+验收标准：
+
+- 旧 localStorage 数据不会导致白屏。
+
+### 5.9 AI Provider
+
+目标：接真实 AI，但不做聊天，不让 AI 控制产品流程。
+
+原则：
+
+- AI 只服务 pipeline。
+- AI 输出必须是结构化 JSON。
+- 写入状态前必须 schema 校验。
+- AI 失败时 fallback 到本地规则。
+
+目标接口：
+
+```text
+agentProvider.extractMemories(input)
+agentProvider.reconcileMemories(input)
+agentProvider.planActions(input)
+agentProvider.composeBrief(input)
+agentProvider.processResult(input)
+```
+
+#### AI-01 增加 mock agentProvider
+
+涉及模块：
+
+- `src/services/agentProvider.js`
+- `src/domain/pipelines/*`
+
+验收标准：
+
+- pipeline 可以通过 provider 调用。
+- 默认仍使用本地 mock。
+
+#### AI-02 增加 schema 校验
+
+涉及模块：
+
+- `src/domain/schemas.js`
+
+验收标准：
+
+- 非法 AI 输出不会写入 state。
+- UI 显示可恢复错误。
+
+#### AI-03 接入真实 LLM 的 extractMemories
+
+前提：
+
+- 已有 provider。
+- 已有 schema 校验。
+
+验收标准：
+
+- 输入真实客户访谈，能生成更准确的结构化记忆。
+- 每条记忆有 sourceReferences。
+
+#### AI-04 接入真实 LLM 的 planActions
+
+验收标准：
+
+- 输出最多 Top 3。
+- 每个行动有 whyNow 和 evidenceMemoryIds。
+
+#### AI-05 接入真实 LLM 的 composeBrief
+
+验收标准：
+
+- 不同类型行动生成不同 schema Brief。
+- 高风险事项保留人工确认。
+
+## 6. 开发里程碑
+
+### Milestone 1：让记忆可信
+
+目的：用户开始信任 TeamMind 保存的公司记忆。
+
+Issues：
+
+```text
+CTX-01
+CTX-03
+MEM-01
+MEM-02
+MEM-03
+MEM-04
+REC-01
+REC-02
+```
+
+通过标准：
+
+- 用户能编辑和确认记忆。
+- 每条记忆能追溯来源。
+- 新上下文能触发新增、重复、冲突或更新判断。
+
+### Milestone 2：让行动有判断
+
+目的：从模板行动升级为 Top 3 next moves。
+
+Issues：
+
+```text
+ACT-01
+ACT-02
+ACT-03
+ACT-04
+```
+
+通过标准：
+
+- 每个行动都能解释 whyNow。
+- 每个行动都有 evidence。
+- 行动数量受控，不超过 Top 3。
+
+### Milestone 3：让 Brief 真能交付
+
+目的：Brief 成为真实工作产物。
+
+Issues：
+
+```text
+BRF-01
+BRF-02
+BRF-03
+BRF-04
+BRF-05
+```
+
+通过标准：
+
+- 客户、投资人、工程行动生成不同 Brief。
+- Brief 可编辑。
+- Brief 能直接交给队友执行或审核。
+
+### Milestone 4：让结果回流改变公司认知
+
+目的：执行结果能更新记忆和后续行动。
+
+Issues：
+
+```text
+RES-01
+RES-02
+RES-03
+RUN-01
+RUN-02
+```
+
+通过标准：
+
+- 结果能确认、更新或废弃记忆。
+- 行动详情能看到执行历史。
+- Agent 运行可追溯。
+
+### Milestone 5：接入真实 AI
+
+目的：从规则原型升级为真实语义判断。
+
+Issues：
+
+```text
+AI-01
+AI-02
+AI-03
+AI-04
+AI-05
+```
+
+通过标准：
+
+- AI 输出结构化 JSON。
+- 输出通过 schema 校验。
+- 失败有 fallback。
+- 不引入聊天作为核心主线。
+
+### Milestone 6：准备真实上线
+
+目的：为云端、多人和真实测试准备。
+
+Issues：
+
+```text
+STR-01
+STR-02
+后续新增 Supabase/Auth/Deployment issues
+```
+
+通过标准：
+
+- 存储层已抽象。
+- 可以替换为 Supabase/Postgres。
+- 不需要重写 domain pipeline。
+
+## 7. Issue 模板
+
+后续每个 issue 应按这个结构写：
+
+```text
+标题：
+[MEM-02] 支持编辑公司记忆
+
+目标：
+让用户能修正 AI 提取错误，提高记忆可信度。
+
+涉及领域：
+Company Memory
+
+涉及模块：
+src/domain/types.js
+src/services/store.js
+src/ui/render.js
+src/main.js
+
+功能说明：
+用户可以编辑 memory title/type/content/status。
+
+不做范围：
+不做多人权限。
+不做云端同步。
+不接真实 AI。
+
+验收标准：
+1. 点击记忆可以进入编辑态。
+2. 保存后状态更新。
+3. 刷新页面后修改仍存在。
+4. smoke test 通过。
+```
+
+## 8. Definition of Done
+
+每个 issue 合并前必须满足：
+
+- 不破坏现有闭环。
+- `node scripts/smoke-test.mjs` 通过。
+- 新数据结构有 demo 数据或 migration。
+- UI 中能看见该功能的使用入口。
+- 高风险外部动作仍然只生成草稿或人工确认项。
+- 文档如有行为变化必须更新。
+
+## 9. 暂不做的事情
+
+v0.2 明确不做：
+
+- Gmail 发送。
+- Slack 自动发消息。
+- GitHub 自动改代码或 merge。
+- Notion 自动写入。
+- Linear/Jira 自动创建任务。
+- 复杂组织权限。
+- 完整 billing。
+- 聊天机器人主界面。
+- Prompt 模板市场。
 
 原因：
 
-- 最快完成可演示版本。
-- 无需数据库、登录、API Key 或部署后端。
-- 容易部署到 GitHub Pages、Vercel、Netlify 或 Cloudflare Pages。
-- 通过清晰模块边界，为未来接入真实 Agent、向量检索和外部工具预留空间。
+这些都是外部执行或渠道问题，不是 TeamMind 的核心价值。v0.2 的核心是让系统真正理解和更新公司上下文。
 
-## 11. 成功指标
+## 10. 成功标准
 
-MVP 阶段重点看定性信号：
+v0.2 成功不是“功能多”，而是一个真实早期团队愿意每周用它整理上下文。
 
-- 新用户能否在 60 秒内理解产品闭环。
-- 用户是否愿意粘贴真实团队上下文。
-- 用户是否觉得行动建议比普通聊天更有执行价值。
-- Brief 是否足够让团队成员接手执行。
-- 结果回流是否让用户感到“公司记忆在变聪明”。
+定性标准：
 
-可量化指标：
+- 用户愿意粘贴真实会议纪要和客户反馈。
+- 用户愿意编辑和确认系统生成的记忆。
+- 用户觉得 Top 3 action 比自己手动整理更清晰。
+- Brief 能被队友直接拿去执行或改写。
+- 结果回流后，用户能看到公司记忆真的变化。
 
-- 每个项目输入的上下文数量。
-- 每次上下文生成的记忆数量。
-- Brief 生成率。
-- 行动结果回流率。
-- Demo 完整跑通率。
+量化标准：
 
-## 12. 暂不实现
+- 每个项目至少录入 5 条真实上下文。
+- 至少 50% AI 记忆被用户确认或编辑。
+- 每个项目至少生成 3 个 Brief。
+- 至少 30% 行动有结果回流。
+- 用户愿意在下一周继续使用。
 
-- 登录和用户系统。
-- 多成员协作。
-- 团队权限管理。
-- 真实 LLM API。
-- 向量数据库。
-- GitHub、Notion、Slack、Gmail、Linear/Jira 集成。
-- 邮件发送。
-- 自动谈判承诺。
-- 自动代码修改、提交或 merge。
-- 复杂后台任务。
-- 付费系统。
+## 11. 对 AI 协作者的要求
 
-## 13. 后续路线
+AI 协作者修改本项目时必须遵守：
 
-### V0.2
+- 不要把 TeamMind 改成聊天产品。
+- 不要优先做外部集成。
+- 不要绕过人工确认。
+- 不要让 UI 层承载业务推理。
+- 不要让 store 层承载 Agent 判断。
+- 不要新增不可追溯的 AI 输出。
+- 每个改动必须对应一个 issue 编号。
+- 每个 issue 都必须说明所属功能领域。
+- 修改后必须运行 smoke test。
 
-- 接入真实 LLM provider。
-- 增加结构化输出校验。
-- 增加项目导入和导出。
-- 支持手动编辑记忆和行动。
+## 12. 当前最优先的下一步
 
-### V0.3
+建议立刻从 Milestone 1 开始：
 
-- 接入 Supabase 或 Postgres。
-- 增加用户登录。
-- 支持多项目云端同步。
-- 增加团队成员邀请。
+```text
+MEM-01 增加 memory status 和 sourceReferences
+MEM-02 支持编辑公司记忆
+CTX-03 建立上下文和记忆的来源引用
+REC-01 拆出 extractMemories pipeline
+REC-02 新增 reconcileMemories pipeline
+```
 
-### V0.4
+原因：
 
-- 接入 Slack、Notion、GitHub、Gmail 和 Linear/Jira。
-- 增加向量检索。
-- 增加 Agent 工具调用权限层。
-
-### V1.0
-
-- 公司级记忆图谱。
-- 多角色工作流。
-- 审批和审计日志。
-- 可部署给真实早期团队试用。
+TeamMind 的价值不是“生成更多内容”，而是“建立可信的公司记忆”。如果记忆不可信，行动和 Brief 都不会可信。
