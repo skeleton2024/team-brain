@@ -32,7 +32,7 @@ main
 
 当前没有单独的 `dev` 分支。`npm run dev` 只是本地开发服务器命令，不代表 GitHub 里已经有一个 `dev` 分支。
 
-推荐协作方式：
+默认推荐协作方式：
 
 ```text
 main
@@ -41,17 +41,17 @@ main
   <- PR from codex/MEM-01-memory-status-source-references
 ```
 
-也就是说，每个任务从 `main` 拉一个短生命周期分支，完成后通过 PR 合回 `main`。如果后续团队人数变多，可以再创建长期 `dev` 分支做集成，但当前阶段不建议先加复杂流程。
+重要 issue 建议从 `main` 拉一个短生命周期分支，完成后通过 PR 或明确提交合回 `main`。但这不是僵硬审批规则：多个强相关 issue 可以合并在同一个分支中开发，多人也可以共同使用一个开发分支。当前阶段不建议先加复杂流程；如果后续团队人数变多，可以再创建长期 `dev` 分支做集成。
 
 ## 3. 草稿版本怎么改
 
 可以改仓库里的草稿版本，但要区分三类内容：
 
 - 产品/需求草稿：例如 `PRD.md`、`docs/issues/*.md`。这类可以直接通过文档 PR 修改。
-- 代码草稿：例如某个 issue 的未完成实现。应该放在 issue 分支，不建议直接长期留在 `main`。
+- 代码草稿：例如某个 issue 的未完成实现。重要或不确定改动建议放在 issue/spike 分支，不建议长期把半成品留在 `main`。
 - 本地运行草稿：浏览器 localStorage 里的数据只存在本机，不会自动进入仓库；需要变成共享内容时，应写入 `src/data/demo.js` 或文档。
 
-当前仓库里的 `main` 是共享基准版本，不是个人草稿区。个人实验可以开分支，例如：
+当前仓库里的 `main` 是共享基准版本，不是个人长期草稿区。个人实验可以开分支，例如：
 
 ```text
 codex/spike-memory-reconciliation
@@ -102,6 +102,7 @@ Milestone 1：让公司记忆可信。
 ```text
 codex/ISSUE-ID-short-name
 name/ISSUE-ID-short-name
+spike/topic-name
 ```
 
 提交信息建议：
@@ -112,7 +113,7 @@ MEM-01 Add memory status badges
 REC-01 Extract memory pipeline
 ```
 
-每个 PR 尽量只对应一个 issue。不要在一个 PR 里同时做 UI 大改、数据模型大改和 pipeline 重构，除非 issue spec 明确不可拆。
+默认建议一个 PR 对应一个 issue，但允许多个强相关 issue 合并在一个分支或 PR 中开发。关键要求不是形式上完美拆分，而是每次改动都能说明目的、影响文件、验证结果和遗留风险。
 
 ## 7. 易冲突文件
 
@@ -179,6 +180,30 @@ Issue：
 ```
 
 ## 11. 开发日志
+
+### 2026-05-12
+
+负责人：Codex  
+Issue：AI 开发规范指南  
+分支：`main`  
+状态：已完成  
+改动文件：
+
+- `docs/AI_DEVELOPMENT_GUIDE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+- `README.md`
+
+验证结果：
+
+- 新增 AI 和开发者通用开发规范指南。
+- 明确 AI 每次开发需要阅读的上下文文档。
+- 将开发规则调整为“允许试错，但必须可审计、可追溯、可恢复”。
+- 将分支规则调整为默认建议，允许强相关任务合并开发。
+
+待决问题：
+
+- 后续是否要把 GitHub PR 模板也按本指南固化。
 
 ### 2026-05-12
 

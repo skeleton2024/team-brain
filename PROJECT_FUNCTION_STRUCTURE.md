@@ -11,6 +11,7 @@
 
 ```text
 README.md
+-> docs/AI_DEVELOPMENT_GUIDE.md
 -> PRD.md
 -> PROJECT_FUNCTION_STRUCTURE.md
 -> DATA_MODEL.md
@@ -19,6 +20,7 @@ README.md
 ```
 
 `PRD.md` 回答“为什么做、先做什么”。  
+`docs/AI_DEVELOPMENT_GUIDE.md` 回答“AI 和开发者每次开发前后怎么留下可追溯记录”。  
 `PROJECT_FUNCTION_STRUCTURE.md` 回答“代码应该放在哪里、模块边界是什么”。  
 `DATA_MODEL.md` 回答“数据对象长什么样、状态怎么流转”。  
 `docs/issues/` 回答“某个具体 issue 怎么开发、怎么验收”。
@@ -670,4 +672,3 @@ AI 协作者进入本项目后必须遵守：
 - 数据模型变化必须同步更新 `DATA_MODEL.md`。
 - 行为变化必须同步更新 PRD 或 issue spec。
 - 完成后运行 smoke test。
-
