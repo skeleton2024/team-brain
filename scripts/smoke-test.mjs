@@ -3,7 +3,7 @@ import {
   absorbContext,
   generateBrief,
   recordActionResult
-} from "../src/domain/agentEngine.js";
+} from "../src/domain/agentEngineWithSources.js";
 
 let project = structuredClone(DEMO_PROJECT);
 
@@ -46,11 +46,48 @@ if (!action) {
   throw new Error("Expected at least one open action.");
 }
 
+const resultSummary = "客户同意下周试点，但要求权限设置、删除机制和数据范围先确认。";
+
 project = generateBrief(project, action.id);
 project = recordActionResult(project, action.id, {
   outcome: "positive",
-  summary: "客户同意下周试点，但要求权限设置、删除机制和数据范围先确认。"
+  summary: resultSummary
 });
+
+const recordedResult = project.results[0];
+const resultContext = project.contexts.find(
+  (context) => context.title === `行动结果：${action.title}` && context.body === resultSummary
+);
+
+if (!recordedResult || !resultContext) {
+  throw new Error("Expected action result to be recorded as a source context.");
+}
+
+const resultMemories = project.memories.filter((memory) =>
+  recordedResult.memoryIds.includes(memory.id)
+);
+const resultMemoriesMissingSources = resultMemories.filter(
+  (memory) => !hasUsableSourceReference(memory, resultContext.id)
+);
+
+if (!resultMemories.length || resultMemoriesMissingSources.length) {
+  throw new Error(
+    `Expected result memories to reference ${resultContext.id}: ${resultMemoriesMissingSources
+      .map((memory) => memory.id)
+      .join(", ")}`
+  );
+}
+
+const allMemoriesMissingSources = project.memories.filter(
+  (memory) => !hasUsableSourceReference(memory)
+);
+if (allMemoriesMissingSources.length) {
+  throw new Error(
+    `Expected every memory to include a source reference: ${allMemoriesMissingSources
+      .map((memory) => memory.id)
+      .join(", ")}`
+  );
+}
 
 const summary = {
   contexts: project.contexts.length,
@@ -59,7 +96,8 @@ const summary = {
   briefs: project.briefs.length,
   results: project.results.length,
   openActions: project.actions.filter((item) => item.status !== "done").length,
-  sourceReferencedMemories: project.memories.filter(hasUsableSourceReference).length
+  sourceReferencedMemories: project.memories.filter(hasUsableSourceReference).length,
+  resultSourceContextId: resultContext.id
 };
 
 if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {
