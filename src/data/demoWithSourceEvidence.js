@@ -13,7 +13,7 @@ export const DEMO_PROJECT_WITH_SOURCE_EVIDENCE = {
 
     return {
       ...context,
-      body: `${context.body} ${RISK_QUOTE}${PRODUCT_QUOTE}`
+      body: `${context.body} ${RISK_QUOTE} ${PRODUCT_QUOTE}`
     };
   }),
   memories: DEMO_PROJECT.memories.map((memory) => {
