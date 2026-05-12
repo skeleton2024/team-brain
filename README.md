@@ -16,6 +16,10 @@ TeamMind is a zero-backend MVP for a company-specific context agent. It helps an
 
 - [PRD.md](./PRD.md)
 - [PROJECT_FUNCTION_STRUCTURE.md](./PROJECT_FUNCTION_STRUCTURE.md)
+- [DATA_MODEL.md](./DATA_MODEL.md)
+- [docs/TEAM_DEV_LOG.md](./docs/TEAM_DEV_LOG.md)
+- [docs/FILE_FUNCTION_NOTES.md](./docs/FILE_FUNCTION_NOTES.md)
+- [docs/issues/README.md](./docs/issues/README.md)
 
 ## Run Locally
 
