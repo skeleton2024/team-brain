@@ -191,6 +191,7 @@ export function absorbContext(project, input) {
 
   const memories = extractMemories(input.body, {
     source: context.title,
+    contextId: context.id,
     defaultType: inferTypeFromContext(input.kind)
   }).filter((memory) => !hasSimilarMemory(project.memories, memory));
 
@@ -265,6 +266,7 @@ export function recordActionResult(project, actionId, resultInput) {
     title: summarizeTitle(resultInput.summary, "执行结果已回流"),
     detail: resultInput.summary,
     source: `行动结果：${action.title}`,
+    sourceReferences: [],
     confidence: "high",
     createdAt: now
   };
@@ -300,13 +302,16 @@ function extractMemories(text, options) {
   const memories = fragments
     .map((fragment) => {
       const type = classifyFragment(fragment, options.defaultType);
+      const confidence = scoreConfidence(fragment, type);
+
       return {
         id: makeId("mem"),
         type,
         title: summarizeTitle(fragment, MEMORY_TYPES[type]?.label ?? "公司记忆"),
         detail: fragment,
         source: options.source,
-        confidence: scoreConfidence(fragment, type),
+        sourceReferences: buildSourceReferences(fragment, options, confidence),
+        confidence,
         createdAt: now
       };
     })
@@ -323,10 +328,41 @@ function extractMemories(text, options) {
       title: summarizeTitle(text, "新增公司事实"),
       detail: text.slice(0, 280),
       source: options.source,
+      sourceReferences: buildSourceReferences(text, options, "low"),
       confidence: "low",
       createdAt: now
     }
   ];
+}
+
+function buildSourceReferences(fragment, options, confidence) {
+  if (!options.contextId) {
+    return [];
+  }
+
+  return [
+    {
+      contextId: options.contextId,
+      quote: truncateQuote(fragment),
+      note: `来自上下文：${options.source}`,
+      confidence: sourceConfidenceValue(confidence)
+    }
+  ];
+}
+
+function truncateQuote(value) {
+  const clean = String(value || "").replace(/\s+/g, " ").trim();
+  return clean.length > 180 ? `${clean.slice(0, 180)}...` : clean;
+}
+
+function sourceConfidenceValue(confidence) {
+  const values = {
+    high: 0.9,
+    medium: 0.7,
+    low: 0.5
+  };
+
+  return values[confidence] ?? 0.5;
 }
 
 function proposeActions(project, memories) {
