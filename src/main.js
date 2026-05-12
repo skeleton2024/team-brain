@@ -2,7 +2,7 @@ import {
   absorbContext,
   generateBrief,
   recordActionResult
-} from "./domain/agentEngine.js";
+} from "./domain/agentEngineWithSources.js";
 import {
   createInitialState,
   loadState,
@@ -10,7 +10,7 @@ import {
   resetState,
   saveState
 } from "./services/store.js";
-import { getActiveProject, renderApp } from "./ui/render.js";
+import { getActiveProject, renderApp } from "./ui/renderWithSourceDetails.js";
 
 const app = document.querySelector("#app");
 
