@@ -1,4 +1,4 @@
-import { DEMO_PROJECT } from "../src/data/demo.js";
+import { DEMO_PROJECT_WITH_SOURCE_EVIDENCE as DEMO_PROJECT } from "../src/data/demoWithSourceEvidence.js";
 import {
   absorbContext,
   generateBrief,
