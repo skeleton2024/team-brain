@@ -1,6 +1,8 @@
 import {
   ACTION_STATUS,
   ACTION_TYPES,
+  CONTEXT_IMPORTANCE,
+  CONTEXT_IMPORTANCE_LABELS,
   CONTEXT_TYPES,
   MEMORY_TYPES,
   PRIORITY_LABELS,
@@ -23,7 +25,7 @@ export function renderApp(state) {
         ${renderPipeline(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
-            ${renderContextIntake()}
+            ${renderContextIntake(project)}
           </section>
           <section class="panel memory-panel">
             ${renderMemories(project)}
@@ -125,7 +127,7 @@ function renderPipeline(project) {
   `;
 }
 
-function renderContextIntake() {
+function renderContextIntake(project) {
   return `
     <div class="panel-heading">
       <div>
@@ -149,15 +151,92 @@ function renderContextIntake() {
           <input name="title" type="text" placeholder="例如：周三客户访谈" />
         </label>
       </div>
+      <div class="field-row">
+        <label>
+          发生日期
+          <input name="occurredAt" type="date" value="${escapeHtml(todayForInput())}" />
+        </label>
+        <label>
+          重要程度
+          <select name="importance">
+            ${CONTEXT_IMPORTANCE.map(
+              (item) => `<option value="${item.id}" ${item.id === "medium" ? "selected" : ""}>${escapeHtml(item.label)}</option>`
+            ).join("")}
+          </select>
+        </label>
+      </div>
+      <div class="field-row">
+        <label>
+          参与人
+          <input name="participants" type="text" placeholder="例如：客户 A, 李雷" />
+        </label>
+        <label>
+          标签
+          <input name="tags" type="text" placeholder="例如：试点, 权限" />
+        </label>
+      </div>
       <label>
         原始文本
-        <textarea name="body" rows="11" placeholder="粘贴会议纪要、客户反馈、投资人问题、工程进展或创始人笔记" required></textarea>
+        <textarea name="body" rows="8" placeholder="粘贴会议纪要、客户反馈、投资人问题、工程进展或创始人笔记" required></textarea>
       </label>
       <button class="primary-button" type="submit">
         <span>吸收上下文</span>
         <span>→</span>
       </button>
     </form>
+
+    ${renderContexts(project)}
+  `;
+}
+
+function renderContexts(project) {
+  const contexts = project?.contexts || [];
+  if (!contexts.length) {
+    return emptyState("暂无上下文");
+  }
+
+  return `
+    <div class="context-history">
+      <div class="context-history-heading">
+        <strong>最近上下文</strong>
+        <span class="count-pill">${contexts.length}</span>
+      </div>
+      <div class="context-list">
+        ${contexts.slice(0, 6).map(renderContextItem).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderContextItem(context) {
+  const tags = Array.isArray(context.tags) ? context.tags : [];
+  const participants = Array.isArray(context.participants) ? context.participants : [];
+
+  return `
+    <article class="context-item">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(contextTypeLabel(context.kind))}</span>
+        <span class="importance ${escapeHtml(context.importance || "medium")}">
+          ${escapeHtml(CONTEXT_IMPORTANCE_LABELS[context.importance] || CONTEXT_IMPORTANCE_LABELS.medium)}
+        </span>
+      </div>
+      <h4>${escapeHtml(context.title)}</h4>
+      <div class="context-meta">
+        <span>${escapeHtml(formatDateOnly(context.occurredAt || context.createdAt))}</span>
+        ${
+          participants.length
+            ? `<span>${escapeHtml(participants.join("、"))}</span>`
+            : ""
+        }
+      </div>
+      ${
+        tags.length
+          ? `<div class="context-tags">
+              ${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+            </div>`
+          : ""
+      }
+    </article>
   `;
 }
 
@@ -391,6 +470,31 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function formatDateOnly(value) {
+  if (!value) {
+    return "未记录";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
+
+function todayForInput() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function contextTypeLabel(kind) {
+  return CONTEXT_TYPES.find((type) => type.id === kind)?.label || "其他上下文";
 }
 
 function escapeHtml(value) {

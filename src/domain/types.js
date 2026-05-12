@@ -7,6 +7,16 @@ export const CONTEXT_TYPES = [
   { id: "other", label: "其他上下文" }
 ];
 
+export const CONTEXT_IMPORTANCE = [
+  { id: "low", label: "低" },
+  { id: "medium", label: "中" },
+  { id: "high", label: "高" }
+];
+
+export const CONTEXT_IMPORTANCE_LABELS = Object.fromEntries(
+  CONTEXT_IMPORTANCE.map((item) => [item.id, item.label])
+);
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",

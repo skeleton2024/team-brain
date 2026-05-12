@@ -184,7 +184,12 @@ export function absorbContext(project, input) {
     kind: input.kind,
     title: input.title || "未命名上下文",
     body: input.body,
+    occurredAt: input.occurredAt || now,
+    participants: normalizeList(input.participants),
+    tags: normalizeList(input.tags),
+    importance: normalizeImportance(input.importance),
     createdAt: now,
+    updatedAt: now,
     memoryIds: [],
     actionIds: []
   };
@@ -735,6 +740,25 @@ function adaptActionTitle(title, memory) {
 function includesAny(text, keywords) {
   const lower = text.toLowerCase();
   return keywords.some((keyword) => lower.includes(keyword.toLowerCase()));
+}
+
+function normalizeList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeImportance(value) {
+  return ["low", "medium", "high"].includes(value) ? value : "medium";
 }
 
 function normalize(value) {

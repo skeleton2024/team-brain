@@ -92,7 +92,11 @@ function handleAbsorbContext(event) {
   const input = {
     kind: String(form.get("kind") || "other"),
     title: String(form.get("title") || "").trim(),
-    body: String(form.get("body") || "").trim()
+    body: String(form.get("body") || "").trim(),
+    occurredAt: String(form.get("occurredAt") || "").trim(),
+    participants: parseList(form.get("participants")),
+    tags: parseList(form.get("tags")),
+    importance: String(form.get("importance") || "medium")
   };
 
   if (!input.body) {
@@ -166,4 +170,11 @@ function exportState() {
   anchor.download = "teammind-export.json";
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function parseList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

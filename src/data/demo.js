@@ -1,4 +1,6 @@
 const now = new Date().toISOString();
+const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
 
 export const DEMO_PROJECT = {
   id: "project-demo-northstar",
@@ -13,7 +15,12 @@ export const DEMO_PROJECT = {
       title: "周一增长和客户访谈复盘",
       body:
         "我们采访了 5 个早期 SaaS 团队。客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。工程上，Slack 导入还没做，当前只能粘贴文本。团队只有两名全职开发，本周必须先完成可演示闭环。",
-      createdAt: now,
+      occurredAt: twoDaysAgo,
+      participants: ["增长负责人", "创始人", "客户访谈小组"],
+      tags: ["客户发现", "权限", "MVP"],
+      importance: "high",
+      createdAt: twoDaysAgo,
+      updatedAt: twoDaysAgo,
       memoryIds: [
         "mem-demo-customer",
         "mem-demo-risk",
@@ -26,6 +33,36 @@ export const DEMO_PROJECT = {
         "act-demo-engineering",
         "act-demo-product"
       ]
+    },
+    {
+      id: "ctx-demo-2",
+      kind: "customer",
+      title: "付费意向客户安全顾虑",
+      body:
+        "一个付费意向客户愿意下周试点，但要求先确认权限设置、删除机制和数据范围。他们希望 follow-up 草稿里不要承诺自动导入所有历史数据。",
+      occurredAt: oneDayAgo,
+      participants: ["客户 A", "创始人"],
+      tags: ["试点", "安全", "follow-up"],
+      importance: "high",
+      createdAt: oneDayAgo,
+      updatedAt: oneDayAgo,
+      memoryIds: ["mem-demo-customer", "mem-demo-risk"],
+      actionIds: ["act-demo-customer"]
+    },
+    {
+      id: "ctx-demo-3",
+      kind: "engineering",
+      title: "手动粘贴闭环工程同步",
+      body:
+        "工程同步确认本周不做 Slack 导入，先把手动粘贴上下文、生成记忆、生成行动 Brief 和结果回流路径做稳定。团队只有两名全职开发，需要控制范围。",
+      occurredAt: now,
+      participants: ["工程负责人", "产品负责人"],
+      tags: ["工程", "范围控制", "闭环"],
+      importance: "medium",
+      createdAt: now,
+      updatedAt: now,
+      memoryIds: ["mem-demo-engineering", "mem-demo-product", "mem-demo-team"],
+      actionIds: ["act-demo-engineering", "act-demo-product"]
     }
   ],
   memories: [
