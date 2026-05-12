@@ -1,4 +1,5 @@
 const now = new Date().toISOString();
+const demoContextId = "ctx-demo-1";
 
 export const DEMO_PROJECT = {
   id: "project-demo-northstar",
@@ -8,7 +9,7 @@ export const DEMO_PROJECT = {
   updatedAt: now,
   contexts: [
     {
-      id: "ctx-demo-1",
+      id: demoContextId,
       kind: "meeting",
       title: "周一增长和客户访谈复盘",
       body:
@@ -36,6 +37,12 @@ export const DEMO_PROJECT = {
       detail:
         "早期 SaaS 团队愿意尝试公司记忆系统，但需要明确数据隔离、访问权限和可删除机制。",
       source: "周一增长和客户访谈复盘",
+      sourceReferences: [
+        sourceReference(
+          "客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。",
+          "支持客户对数据和权限的顾虑"
+        )
+      ],
       confidence: "high",
       createdAt: now
     },
@@ -45,7 +52,13 @@ export const DEMO_PROJECT = {
       title: "外部沟通不能自动承诺或自动发送",
       detail:
         "客户 follow-up、投资人回复和谈判内容必须先生成草稿，保留人工确认。",
-      source: "产品原则",
+      source: "周一增长和客户访谈复盘",
+      sourceReferences: [
+        sourceReference(
+          "一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+          "支持外部沟通先以草稿形式交给人工确认"
+        )
+      ],
       confidence: "high",
       createdAt: now
     },
@@ -55,7 +68,13 @@ export const DEMO_PROJECT = {
       title: "MVP 优先跑通上下文到结果回流闭环",
       detail:
         "第一版不做复杂集成，先让用户看到上下文、记忆、行动、Brief、结果回流的完整链路。",
-      source: "创始人笔记",
+      source: "周一增长和客户访谈复盘",
+      sourceReferences: [
+        sourceReference(
+          "团队只有两名全职开发，本周必须先完成可演示闭环。",
+          "支持 MVP 优先完成可演示闭环"
+        )
+      ],
       confidence: "high",
       createdAt: now
     },
@@ -66,6 +85,13 @@ export const DEMO_PROJECT = {
       detail:
         "当前工程能力只支持手动粘贴上下文，Slack、Notion、GitHub 等作为后续集成预留。",
       source: "周一增长和客户访谈复盘",
+      sourceReferences: [
+        sourceReference(
+          "工程上，Slack 导入还没做，当前只能粘贴文本。",
+          "支持当前只能手动粘贴上下文的工程限制",
+          0.8
+        )
+      ],
       confidence: "medium",
       createdAt: now
     },
@@ -76,6 +102,12 @@ export const DEMO_PROJECT = {
       detail:
         "团队容量有限，本周应避免后台、权限和外部集成的过度开发。",
       source: "周一增长和客户访谈复盘",
+      sourceReferences: [
+        sourceReference(
+          "团队只有两名全职开发，本周必须先完成可演示闭环。",
+          "支持团队容量和本周开发取舍"
+        )
+      ],
       confidence: "high",
       createdAt: now
     }
@@ -127,3 +159,12 @@ export const DEMO_PROJECT = {
   briefs: [],
   results: []
 };
+
+function sourceReference(quote, note, confidence = 0.9) {
+  return {
+    contextId: demoContextId,
+    quote,
+    note,
+    confidence
+  };
+}
