@@ -201,7 +201,7 @@ function renderMemories(project) {
                       <div class="memory-item">
                         <h4>${escapeHtml(memory.title)}</h4>
                         <p>${escapeHtml(memory.detail)}</p>
-                        <small>${escapeHtml(memory.source)} · ${confidenceLabel(memory.confidence)}</small>
+                        ${renderMemorySources(project, memory)}
                       </div>
                     `
                   )
@@ -213,6 +213,41 @@ function renderMemories(project) {
         .join("")}
     </div>
   `;
+}
+
+function renderMemorySources(project, memory) {
+  const sourceReferences = Array.isArray(memory.sourceReferences)
+    ? memory.sourceReferences.filter((reference) => reference?.contextId && reference?.quote)
+    : [];
+
+  if (!sourceReferences.length) {
+    return `<small>${escapeHtml(memory.source)} · ${confidenceLabel(memory.confidence)}</small>`;
+  }
+
+  const firstSourceTitle = contextTitle(project, sourceReferences[0].contextId);
+
+  return `
+    <div class="memory-sources">
+      <small>来源 ${sourceReferences.length} · ${escapeHtml(firstSourceTitle)} · ${confidenceLabel(memory.confidence)}</small>
+      <details>
+        <summary>查看引用片段</summary>
+        ${sourceReferences
+          .map(
+            (reference) => `
+              <blockquote>
+                <strong>${escapeHtml(contextTitle(project, reference.contextId))}</strong>
+                <p>${escapeHtml(reference.quote)}</p>
+              </blockquote>
+            `
+          )
+          .join("")}
+      </details>
+    </div>
+  `;
+}
+
+function contextTitle(project, contextId) {
+  return project.contexts.find((context) => context.id === contextId)?.title || "未知上下文";
 }
 
 function renderActions(project, selectedActionId) {
