@@ -1,4 +1,4 @@
-import { DEMO_PROJECT } from "../data/demo.js";
+import { DEMO_PROJECT_WITH_SOURCE_EVIDENCE as DEMO_PROJECT } from "../data/demoWithSourceEvidence.js";
 
 const STORAGE_KEY = "teammind.mvp.state.v1";
 
