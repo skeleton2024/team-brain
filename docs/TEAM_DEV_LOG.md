@@ -2,7 +2,7 @@
 
 文档名：`docs/TEAM_DEV_LOG.md`
 用途：团队协作看板、分支规则、开发决策和验收记录。
-最后更新：2026-05-12
+最后更新：2026-05-13
 
 ## 1. 当前协作结论
 
@@ -36,12 +36,11 @@ main
 
 ```text
 main
-  <- PR from codex/CTX-01-context-metadata
-  <- PR from codex/CTX-03-context-memory-source-links
-  <- PR from codex/MEM-01-memory-status-source-references
+  <- PR from skeleton/CTX-01-MEM-01-context-memory-foundation
+  <- PR from skeleton/CTX-03-context-memory-source-links
 ```
 
-重要 issue 建议从 `main` 拉一个短生命周期分支，完成后通过 PR 或明确提交合回 `main`。但这不是僵硬审批规则：多个强相关 issue 可以合并在同一个分支中开发，多人也可以共同使用一个开发分支。当前阶段不建议先加复杂流程；如果后续团队人数变多，可以再创建长期 `dev` 分支做集成。
+重要 issue 建议从 `main` 或当前复合开发分支拉一个短生命周期分支，完成后通过 PR 或明确提交合回 `main`。但这不是僵硬审批规则：多个强相关 issue 可以合并在同一个分支中开发，多人也可以共同使用一个开发分支。当前阶段推荐更快的复合 issue 开发模式：先把强依赖或同一数据链路的 issue 连续做在同一个开发者分支中，再一次性 review/合并。分支名必须包含开发者前缀和 issue 编号组合，方便追溯范围。
 
 ## 3. 草稿版本怎么改
 
@@ -56,6 +55,7 @@ main
 ```text
 codex/spike-memory-reconciliation
 codex/CTX-01-context-metadata
+skeleton/CTX-01-MEM-01-context-memory-foundation
 teammate/MEM-02-edit-company-memory
 ```
 
@@ -80,9 +80,9 @@ Milestone 1：让公司记忆可信。
 
 | Issue | 状态 | 建议负责人 | 建议分支 | 备注 |
 | --- | --- | --- | --- | --- |
-| CTX-01 | 待开始 | 未分配 | `codex/CTX-01-context-metadata` | 优先做，补上下文 metadata |
-| CTX-03 | 待开始 | 未分配 | `codex/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
-| MEM-01 | 待 review | Codex | `codex/MEM-01-memory-status-source-references` | 已补 memory 状态、来源数和旧数据兼容 |
+| CTX-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-context-memory-foundation` | 已与 MEM-01 复合开发，补上下文 metadata |
+| CTX-03 | 待开始 | 未分配 | `skeleton/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
+| MEM-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-context-memory-foundation` | 复合在 CTX-01 分支中，已补 memory 状态、来源数和旧数据兼容 |
 | MEM-02 | 待开始 | 未分配 | `codex/MEM-02-edit-company-memory` | 会改 `render.js` 和 `main.js`，注意冲突 |
 | MEM-03 | 待开始 | 未分配 | `codex/MEM-03-memory-status-transitions` | 依赖 MEM-01 的状态字段 |
 | MEM-04 | 待开始 | 未分配 | `codex/MEM-04-memory-detail-panel` | 可能和 CTX-03 的来源跳转有关 |
@@ -102,6 +102,7 @@ Milestone 1：让公司记忆可信。
 ```text
 codex/ISSUE-ID-short-name
 name/ISSUE-ID-short-name
+skeleton/ISSUE-ID-ISSUE-ID-short-name
 spike/topic-name
 ```
 
@@ -113,7 +114,7 @@ MEM-01 Add memory status badges
 REC-01 Extract memory pipeline
 ```
 
-默认建议一个 PR 对应一个 issue，但允许多个强相关 issue 合并在一个分支或 PR 中开发。关键要求不是形式上完美拆分，而是每次改动都能说明目的、影响文件、验证结果和遗留风险。
+默认建议一个 PR 对应一个 issue，但允许多个强相关 issue 合并在一个分支或 PR 中开发。当前 skeleton 开发节奏优先采用复合 issue 分支：分支名使用 `skeleton/ISSUE-ID-ISSUE-ID-short-name`，并在开发日志中写清楚包含哪些 issue、为什么合并开发、验证结果和遗留风险。关键要求不是形式上完美拆分，而是每次改动都能说明目的、影响文件、验证结果和遗留风险。
 
 ## 7. 易冲突文件
 
@@ -181,11 +182,34 @@ Issue：
 
 ## 11. 开发日志
 
+### 2026-05-13
+
+负责人：skeleton / Codex
+Issue：CTX-01 + MEM-01 复合分支命名与协作规则
+分支：`skeleton/CTX-01-MEM-01-context-memory-foundation`
+状态：待 review
+改动文件：
+
+- `docs/TEAM_DEV_LOG.md`
+- `docs/AI_DEVELOPMENT_GUIDE.md`
+- `docs/issues/README.md`
+
+验证结果：
+
+- 将 GitHub 上原 `codex/CTX-01-context-metadata` 分支重命名为 `skeleton/CTX-01-MEM-01-context-memory-foundation`。
+- 明确该分支由 `CTX-01-context-metadata.md` 和 `MEM-01-memory-status-source-references.md` 复合开发而来。
+- 后续默认可以继续采用复合 issue 分支模式，加快强相关功能开发。
+
+待决问题：
+
+- 复合分支进入 PR 前，需要在 PR 描述中列出包含的 issue、验收结果和不做范围。
+- 如果后续团队成员增多，再决定是否恢复更严格的单 issue PR 节奏。
+
 ### 2026-05-12
 
 负责人：Codex
 Issue：MEM-01 增加 memory status 和 sourceReferences
-分支：`codex/MEM-01-memory-status-source-references`
+分支：`skeleton/CTX-01-MEM-01-context-memory-foundation`
 状态：待 review
 改动文件：
 
@@ -210,7 +234,7 @@ Issue：MEM-01 增加 memory status 和 sourceReferences
 
 待决问题：
 
-- 当前分支基于 `codex/CTX-01-context-metadata` 堆叠开发，后续需要在 CTX-01 合并后决定 rebase 或拆 PR。
+- 当前分支基于 `CTX-01` 继续复合开发，后续以 `skeleton/CTX-01-MEM-01-context-memory-foundation` 作为 review 分支。
 - MEM-01 只展示状态，不提供编辑和状态切换；这些留给 MEM-02/MEM-03。
 
 ### 2026-05-12
