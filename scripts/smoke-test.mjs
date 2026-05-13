@@ -44,6 +44,9 @@ const sourceReferences = structuredClone(
 const referencingActionIds = project.actions
   .filter((item) => item.sourceMemoryIds?.includes(editableMemoryId))
   .map((item) => item.id);
+if (!referencingActionIds.length) {
+  throw new Error("Expected at least one action linked to the editable memory.");
+}
 
 project = updateMemory(project, editableMemoryId, {
   title: "GitHub 集成阻塞需要确认",
