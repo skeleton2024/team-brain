@@ -395,7 +395,7 @@ memory 详情面板 issue。
 
 - 新增状态、类型或标签时，同步 `DATA_MODEL.md` 和 UI。
 - 这里只放稳定常量，不放业务函数。
-- 当前还没有 memory status 常量，MEM-01/MEM-03 会补。
+- 当前已有 memory status 展示常量，MEM-03 会继续补状态流转。
 
 ### `src/domain/agentEngine.js`
 

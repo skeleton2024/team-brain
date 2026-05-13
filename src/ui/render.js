@@ -4,6 +4,7 @@ import {
   CONTEXT_IMPORTANCE,
   CONTEXT_IMPORTANCE_LABELS,
   CONTEXT_TYPES,
+  MEMORY_STATUS,
   MEMORY_TYPES,
   PRIORITY_LABELS,
   RESULT_OUTCOMES,
@@ -275,21 +276,32 @@ function renderMemories(project) {
               <div class="memory-list">
                 ${group.memories
                   .slice(0, 4)
-                  .map(
-                    (memory) => `
-                      <div class="memory-item">
-                        <h4>${escapeHtml(memory.title)}</h4>
-                        <p>${escapeHtml(memory.detail)}</p>
-                        <small>${escapeHtml(memory.source)} · ${confidenceLabel(memory.confidence)}</small>
-                      </div>
-                    `
-                  )
+                  .map(renderMemoryItem)
                   .join("")}
               </div>
             </article>
           `
         )
         .join("")}
+    </div>
+  `;
+}
+
+function renderMemoryItem(memory) {
+  const status = memoryStatusMeta(memory.status);
+  const sourceCount = Array.isArray(memory.sourceReferences) ? memory.sourceReferences.length : 0;
+  const sourceLabel = memorySourceLabel(memory);
+
+  return `
+    <div class="memory-item">
+      <div class="memory-item-top">
+        <span class="memory-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
+        <span>${escapeHtml(sourceCountLabel(sourceCount, sourceLabel))}</span>
+        <span>${escapeHtml(confidenceLabel(memory.confidence))}</span>
+      </div>
+      <h4>${escapeHtml(memory.title)}</h4>
+      <p>${escapeHtml(memory.detail)}</p>
+      <small>${escapeHtml(sourceLabel)}</small>
     </div>
   `;
 }
@@ -457,6 +469,22 @@ function confidenceLabel(confidence) {
   };
 
   return labels[confidence] || "待确认";
+}
+
+function memoryStatusMeta(status) {
+  return MEMORY_STATUS[status] || MEMORY_STATUS.draft;
+}
+
+function sourceCountLabel(count, sourceLabel) {
+  if (count > 0) {
+    return `来源 ${count}`;
+  }
+
+  return sourceLabel !== "来源待补" ? "旧来源" : "来源待补";
+}
+
+function memorySourceLabel(memory) {
+  return memory.source || memory.sourceReferences?.[0]?.note || "来源待补";
 }
 
 function formatDate(value) {

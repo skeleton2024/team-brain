@@ -196,6 +196,7 @@ export function absorbContext(project, input) {
 
   const memories = extractMemories(input.body, {
     source: context.title,
+    sourceContextId: context.id,
     defaultType: inferTypeFromContext(input.kind)
   }).filter((memory) => !hasSimilarMemory(project.memories, memory));
 
@@ -259,19 +260,47 @@ export function recordActionResult(project, actionId, resultInput) {
     actionIds: []
   };
 
+  const resultContext = {
+    id: makeId("ctx"),
+    kind: "other",
+    title: `行动结果：${action.title}`,
+    body: resultInput.summary,
+    occurredAt: now,
+    participants: [],
+    tags: ["结果回流"],
+    importance: resultInput.outcome === "blocked" ? "high" : "medium",
+    createdAt: now,
+    updatedAt: now,
+    memoryIds: [],
+    actionIds: []
+  };
+
   const extracted = extractMemories(resultInput.summary, {
-    source: `行动结果：${action.title}`,
+    source: resultContext.title,
+    sourceContextId: resultContext.id,
     defaultType: "result_learning"
   });
 
+  const resultConfidence = "high";
   const resultMemory = {
     id: makeId("mem"),
     type: "result_learning",
     title: summarizeTitle(resultInput.summary, "执行结果已回流"),
     detail: resultInput.summary,
-    source: `行动结果：${action.title}`,
-    confidence: "high",
-    createdAt: now
+    source: resultContext.title,
+    confidence: resultConfidence,
+    status: "draft",
+    sourceReferences: [
+      makeSourceReference({
+        contextId: resultContext.id,
+        quote: resultInput.summary,
+        note: resultContext.title,
+        confidence: resultConfidence
+      })
+    ],
+    createdBy: "ai",
+    createdAt: now,
+    updatedAt: now
   };
 
   const newMemories = [resultMemory, ...extracted].filter(
@@ -283,10 +312,13 @@ export function recordActionResult(project, actionId, resultInput) {
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
+  resultContext.memoryIds = result.memoryIds;
+  resultContext.actionIds = result.actionIds;
 
   return {
     ...project,
     updatedAt: now,
+    contexts: [resultContext, ...project.contexts],
     memories: [...newMemories, ...project.memories],
     actions: mergeActions(
       followUpActions,
@@ -305,14 +337,26 @@ function extractMemories(text, options) {
   const memories = fragments
     .map((fragment) => {
       const type = classifyFragment(fragment, options.defaultType);
+      const confidence = scoreConfidence(fragment, type);
       return {
         id: makeId("mem"),
         type,
         title: summarizeTitle(fragment, MEMORY_TYPES[type]?.label ?? "公司记忆"),
         detail: fragment,
         source: options.source,
-        confidence: scoreConfidence(fragment, type),
-        createdAt: now
+        confidence,
+        status: "draft",
+        sourceReferences: [
+          makeSourceReference({
+            contextId: options.sourceContextId,
+            quote: fragment,
+            note: options.source,
+            confidence
+          })
+        ],
+        createdBy: "ai",
+        createdAt: now,
+        updatedAt: now
       };
     })
     .filter((memory) => memory.detail.length >= 8);
@@ -321,15 +365,29 @@ function extractMemories(text, options) {
     return memories.slice(0, 8);
   }
 
+  const confidence = "low";
+  const detail = text.slice(0, 280);
+
   return [
     {
       id: makeId("mem"),
       type: options.defaultType || "fact",
       title: summarizeTitle(text, "新增公司事实"),
-      detail: text.slice(0, 280),
+      detail,
       source: options.source,
-      confidence: "low",
-      createdAt: now
+      confidence,
+      status: "draft",
+      sourceReferences: [
+        makeSourceReference({
+          contextId: options.sourceContextId,
+          quote: detail,
+          note: options.source,
+          confidence
+        })
+      ],
+      createdBy: "ai",
+      createdAt: now,
+      updatedAt: now
     }
   ];
 }
@@ -652,6 +710,30 @@ function scoreConfidence(fragment, type) {
   }
 
   return "low";
+}
+
+function makeSourceReference({ contextId, quote, note, confidence }) {
+  return {
+    contextId: contextId || "ctx-unknown-source",
+    quote: excerpt(quote),
+    note,
+    confidence: confidenceScoreValue(confidence)
+  };
+}
+
+function confidenceScoreValue(confidence) {
+  const scores = {
+    high: 0.9,
+    medium: 0.7,
+    low: 0.45
+  };
+
+  return scores[confidence] ?? 0.5;
+}
+
+function excerpt(value) {
+  const clean = String(value || "").replace(/\s+/g, " ").trim();
+  return clean.length > 180 ? `${clean.slice(0, 180)}...` : clean;
 }
 
 function summarizeTitle(text, fallback) {

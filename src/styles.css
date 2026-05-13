@@ -442,11 +442,54 @@ textarea:focus {
 
 .memory-item {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fbfcfa;
+}
+
+.memory-item-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.memory-item-top span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 5px 7px;
+  white-space: nowrap;
+}
+
+.memory-item-top .memory-status {
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.memory-status.draft {
+  background: #7c6f64;
+}
+
+.memory-status.confirmed {
+  background: #17845d;
+}
+
+.memory-status.outdated {
+  background: #b46b22;
+}
+
+.memory-status.disputed {
+  background: #b43f5a;
+}
+
+.memory-status.archived {
+  background: #64748b;
 }
 
 .memory-item h4,

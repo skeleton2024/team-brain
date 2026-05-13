@@ -65,6 +65,29 @@ export const MEMORY_TYPES = {
   }
 };
 
+export const MEMORY_STATUS = {
+  draft: {
+    label: "待确认",
+    tone: "draft"
+  },
+  confirmed: {
+    label: "已确认",
+    tone: "confirmed"
+  },
+  outdated: {
+    label: "已过期",
+    tone: "outdated"
+  },
+  disputed: {
+    label: "有争议",
+    tone: "disputed"
+  },
+  archived: {
+    label: "已归档",
+    tone: "archived"
+  }
+};
+
 export const ACTION_TYPES = {
   customer_followup: "客户 follow-up",
   investor_reply: "投资人回复",

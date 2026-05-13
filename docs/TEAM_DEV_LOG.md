@@ -1,7 +1,7 @@
 # TeamMind 团队开发共享日志
 
-文档名：`docs/TEAM_DEV_LOG.md`  
-用途：团队协作看板、分支规则、开发决策和验收记录。  
+文档名：`docs/TEAM_DEV_LOG.md`
+用途：团队协作看板、分支规则、开发决策和验收记录。
 最后更新：2026-05-12
 
 ## 1. 当前协作结论
@@ -82,7 +82,7 @@ Milestone 1：让公司记忆可信。
 | --- | --- | --- | --- | --- |
 | CTX-01 | 待开始 | 未分配 | `codex/CTX-01-context-metadata` | 优先做，补上下文 metadata |
 | CTX-03 | 待开始 | 未分配 | `codex/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
-| MEM-01 | 待开始 | 未分配 | `codex/MEM-01-memory-status-source-references` | 让 memory 显示状态和来源数 |
+| MEM-01 | 待 review | Codex | `codex/MEM-01-memory-status-source-references` | 已补 memory 状态、来源数和旧数据兼容 |
 | MEM-02 | 待开始 | 未分配 | `codex/MEM-02-edit-company-memory` | 会改 `render.js` 和 `main.js`，注意冲突 |
 | MEM-03 | 待开始 | 未分配 | `codex/MEM-03-memory-status-transitions` | 依赖 MEM-01 的状态字段 |
 | MEM-04 | 待开始 | 未分配 | `codex/MEM-04-memory-detail-panel` | 可能和 CTX-03 的来源跳转有关 |
@@ -183,10 +183,42 @@ Issue：
 
 ### 2026-05-12
 
-负责人：Codex  
-Issue：AI 开发规范指南  
-分支：`main`  
-状态：已完成  
+负责人：Codex
+Issue：MEM-01 增加 memory status 和 sourceReferences
+分支：`codex/MEM-01-memory-status-source-references`
+状态：待 review
+改动文件：
+
+- `src/domain/types.js`
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- 新生成 memory 默认 `status = "draft"`，并带 `sourceReferences`、`createdBy`、`updatedAt`。
+- Demo memory 已展示不同状态、来源数量和置信度。
+- 结果回流会生成可追溯的 result context，结果 memory 的 `sourceReferences` 指向真实 context。
+- 旧 memory 没有 `status` 时显示默认状态；有旧版 `source` 但没有 `sourceReferences` 时显示“旧来源”，不误报“来源待补”。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- 当前分支基于 `codex/CTX-01-context-metadata` 堆叠开发，后续需要在 CTX-01 合并后决定 rebase 或拆 PR。
+- MEM-01 只展示状态，不提供编辑和状态切换；这些留给 MEM-02/MEM-03。
+
+### 2026-05-12
+
+负责人：Codex
+Issue：AI 开发规范指南
+分支：`main`
+状态：已完成
 改动文件：
 
 - `docs/AI_DEVELOPMENT_GUIDE.md`
@@ -207,10 +239,10 @@ Issue：AI 开发规范指南
 
 ### 2026-05-12
 
-负责人：Codex  
-Issue：文档协作准备  
-分支：`main`  
-状态：已完成  
+负责人：Codex
+Issue：文档协作准备
+分支：`main`
+状态：已完成
 改动文件：
 
 - `docs/TEAM_DEV_LOG.md`

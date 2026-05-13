@@ -422,6 +422,7 @@ RelatedMemoryUpdate
 - 结果回流必须能改变行动状态。
 - 结果回流应触发 `processResult`。
 - 如果结果改变旧判断，应产生 memory update 建议。
+- 当前本地实现会把结果摘要同步为一个 `ContextItem`，供结果生成的 memory 通过 `sourceReferences` 回溯原文。
 - 不要只把结果作为一段文本保存后结束。
 
 ## 11. AgentRun
@@ -460,11 +461,13 @@ AgentRun
 
 ## 13. 当前与目标模型的差异
 
-当前 v0.1 代码已经有：
+当前 v0.1 到 v0.2 过渡代码已经有：
 
 - Project。
 - Context。
 - Memory。
+- Memory status 基础字段和默认值。
+- 上下文输入、结果回流与 demo memory 的基础 `sourceReferences`。
 - Action。
 - Brief。
 - Result。
@@ -472,8 +475,8 @@ AgentRun
 但还缺少：
 
 - `schemaVersion`。
-- 完整 `sourceReferences`。
-- memory status。
+- sourceReferences 的详情查看、跳转和跨对象来源建模。
+- memory status 的人工确认、编辑和状态流转。
 - action `whyNow` 和 `evidenceMemoryIds`。
 - scenario-specific Brief sections。
 - result `whatChanged` / `newEvidence` / `relatedMemoryUpdates`。
