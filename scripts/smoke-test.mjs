@@ -5,6 +5,7 @@ import {
   recordActionResult,
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
+import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
@@ -21,6 +22,30 @@ project = absorbContext(project, {
 });
 
 const newestContext = project.contexts[0];
+const memoryCountBeforePipelineProbe = project.memories.length;
+const pipelineProbe = extractMemories({
+  project,
+  context: newestContext,
+  now: "2026-05-13T00:00:00.000Z"
+});
+
+if (
+  !Array.isArray(pipelineProbe.memories) ||
+  pipelineProbe.memories.length < 1 ||
+  typeof pipelineProbe.runSummary !== "string" ||
+  !pipelineProbe.runSummary.includes("候选记忆") ||
+  pipelineProbe.memories.some(
+    (memory) =>
+      memory.createdAt !== "2026-05-13T00:00:00.000Z" ||
+      memory.status !== "draft" ||
+      !Array.isArray(memory.sourceReferences) ||
+      memory.sourceReferences[0]?.contextId !== newestContext.id
+  ) ||
+  project.memories.length !== memoryCountBeforePipelineProbe
+) {
+  throw new Error(`extractMemories pipeline contract failed: ${JSON.stringify(pipelineProbe)}`);
+}
+
 if (
   newestContext.occurredAt !== "2026-05-12" ||
   newestContext.importance !== "high" ||

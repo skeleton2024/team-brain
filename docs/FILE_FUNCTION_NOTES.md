@@ -1,7 +1,7 @@
 # TeamMind 全文件功能备注
 
 用途：给人类队友和 AI 协作者快速理解仓库里每个文件的作用、修改边界和检查重点。  
-最后更新：2026-05-12
+最后更新：2026-05-13
 
 ## 1. 根目录文件
 
@@ -317,6 +317,7 @@ memory 详情面板 issue。
 - 调用 `generateBrief()` 生成 Brief。
 - 调用 `recordActionResult()` 写入结果回流。
 - 检查 contexts、memories、actions、briefs、results 都存在。
+- 直接检查 `extractMemories()` pipeline 输出 `{ memories, runSummary }`，并确认候选记忆带 `sourceReferences`。
 
 修改时注意：
 
@@ -404,14 +405,13 @@ memory 详情面板 issue。
 主要作用：
 
 - 暴露核心闭环入口：`absorbContext(project, input)`、`generateBrief(project, actionId)`、`recordActionResult(project, actionId, resultInput)`。
-- 用关键词规则把文本片段分类为 memory。
+- 调用 `extractMemories()` pipeline 把上下文转成候选 memory。
 - 为 memory 生成 action。
 - 为 action 生成通用 Brief。
 - 处理结果回流并生成 result learning memory 和 follow-up actions。
 
 当前内部职责：
 
-- `extractMemories()`：从文本拆片段并生成 memory。
 - `proposeActions()`：按 memory type 生成 action。
 - `buildBrief()`：生成通用 brief sections。
 - `recordActionResult()`：写入结果并产生新的记忆和后续行动。
@@ -422,6 +422,23 @@ memory 详情面板 issue。
 - 对外三个入口应尽量保持稳定，减少 UI 层改动。
 - 不要在这里直接调用外部 SaaS 或真实发送动作。
 - 新增 AI 输出时必须保证可追溯、可校验。
+
+### `src/domain/pipelines/extractMemories.js`
+
+记忆提取 pipeline。
+
+主要作用：
+
+- 暴露 `extractMemories({ project, context, now })`。
+- 用本地关键词规则把 `ContextItem.body` 拆成候选 `MemoryItem`。
+- 为每条候选 memory 补齐 `status`、`sourceReferences`、`createdBy`、`createdAt` 和 `updatedAt`。
+- 返回 `{ memories, runSummary }`，不直接保存或修改 project state。
+
+修改时注意：
+
+- 不在这里做 reconciliation，也不直接过滤已有记忆；去重仍由 `agentEngine.js` 编排。
+- 后续接真实 AI provider 时，应保持输出结构稳定并补 schema 校验。
+- 每条 AI 生成的 memory 必须能追溯到 `context.id`。
 
 ### `src/services/store.js`
 
@@ -478,7 +495,6 @@ HTML 渲染层。
 这些文件在 v0.2 文档中已经规划，但当前仓库还不存在：
 
 - `src/domain/schemas.js`
-- `src/domain/pipelines/extractMemories.js`
 - `src/domain/pipelines/reconcileMemories.js`
 - `src/domain/pipelines/planActions.js`
 - `src/domain/pipelines/composeBrief.js`

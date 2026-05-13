@@ -30,13 +30,13 @@ https://github.com/skeleton2024/team-brain.git
 main
 ```
 
-当前没有单独的 `dev` 分支。`npm run dev` 只是本地开发服务器命令，不代表 GitHub 里已经有一个 `dev` 分支。
+远程现在存在 `dev` 分支，但当前奇数线仍以 `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` 作为基线继续复合开发。`npm run dev` 只是本地开发服务器命令，不代表必须使用 GitHub 的 `dev` 分支。
 
 默认推荐协作方式：
 
 ```text
 main
-  <- PR from skeleton/CTX-01-MEM-01-context-memory-foundation
+  <- PR from skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation
   <- PR from skeleton/CTX-03-context-memory-source-links
 ```
 
@@ -80,13 +80,13 @@ Milestone 1：让公司记忆可信。
 
 | Issue | 状态 | 建议负责人 | 建议分支 | 备注 |
 | --- | --- | --- | --- | --- |
-| CTX-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-context-memory-foundation` | 已与 MEM-01 复合开发，补上下文 metadata |
+| CTX-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，补上下文 metadata |
 | CTX-03 | 待开始 | 未分配 | `skeleton/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
-| MEM-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-context-memory-foundation` | 复合在 CTX-01 分支中，已补 memory 状态、来源数和旧数据兼容 |
+| MEM-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，补 memory 状态、来源数和旧数据兼容 |
 | MEM-02 | 待开始 | 未分配 | `codex/MEM-02-edit-company-memory` | 会改 `render.js` 和 `main.js`，注意冲突 |
-| MEM-03 | 待 review | skeleton / Codex | `skeleton/MEM-03-memory-status-transitions` | 已支持快捷状态切换、确认时间记录和行动证据过滤 |
+| MEM-03 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，支持快捷状态切换、确认时间记录和行动证据过滤 |
 | MEM-04 | 待开始 | 未分配 | `codex/MEM-04-memory-detail-panel` | 可能和 CTX-03 的来源跳转有关 |
-| REC-01 | 待开始 | 未分配 | `codex/REC-01-extract-memories-pipeline` | 开始拆 domain pipeline |
+| REC-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation` | 已拆出 `extractMemories` domain pipeline |
 | REC-02 | 待开始 | 未分配 | `codex/REC-02-reconcile-memories-pipeline` | 依赖 REC-01 更清楚 |
 
 状态建议只用：
@@ -181,6 +181,33 @@ Issue：
 ```
 
 ## 11. 开发日志
+
+### 2026-05-13
+
+负责人：skeleton / Codex
+Issue：REC-01 拆出 extractMemories pipeline
+分支：`skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation`
+状态：待 review
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/extractMemories.js`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- 从 `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` 拉出新的奇数复合分支，继续包含任务 1、3、5、7。
+- `agentEngine.js` 不再内联 memory 提取规则，改为调用 `extractMemories({ project, context, now })`。
+- 新 pipeline 返回 `{ memories, runSummary }`，每条候选 memory 继续带 `status = "draft"`、`sourceReferences`、`createdBy` 和时间戳。
+- `absorbContext()` 调用方不需要改变，context 写入、去重、action 生成仍由 orchestrator 处理。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- 暂无。REC-02 可以在此基础上继续拆 reconciliation pipeline。
 
 ### 2026-05-13
 
