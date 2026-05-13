@@ -2,7 +2,8 @@ import { DEMO_PROJECT } from "../src/data/demo.js";
 import {
   absorbContext,
   generateBrief,
-  recordActionResult
+  recordActionResult,
+  updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { renderApp } from "../src/ui/render.js";
 
@@ -54,6 +55,29 @@ if (
   throw new Error(`New memory did not include MEM-01 defaults: ${JSON.stringify(newestMemory)}`);
 }
 
+project = updateMemoryStatus(project, newestMemory.id, "confirmed");
+const confirmedMemory = project.memories.find((memory) => memory.id === newestMemory.id);
+if (
+  confirmedMemory.status !== "confirmed" ||
+  !confirmedMemory.updatedAt ||
+  !confirmedMemory.lastVerifiedAt
+) {
+  throw new Error(`Confirmed memory did not record MEM-03 timestamps: ${JSON.stringify(confirmedMemory)}`);
+}
+
+const memoryActionsHtml = renderApp({
+  activeProjectId: project.id,
+  selectedActionId: null,
+  projects: [project]
+});
+
+if (
+  !memoryActionsHtml.includes('data-action="update-memory-status"') ||
+  !memoryActionsHtml.includes('data-memory-status="archived"')
+) {
+  throw new Error("Expected memory cards to render quick status actions.");
+}
+
 const demoStatuses = new Set(DEMO_PROJECT.memories.map((memory) => memory.status));
 if (!demoStatuses.has("confirmed") || !demoStatuses.has("draft") || !demoStatuses.has("outdated")) {
   throw new Error(`Expected demo memories to show multiple statuses: ${JSON.stringify([...demoStatuses])}`);
@@ -65,6 +89,38 @@ const demoMemoriesWithSources = DEMO_PROJECT.memories.filter(
 
 if (demoMemoriesWithSources.length !== DEMO_PROJECT.memories.length) {
   throw new Error("Expected every demo memory to include source references.");
+}
+
+let archivedProject = {
+  ...structuredClone(DEMO_PROJECT),
+  contexts: [],
+  actions: [],
+  briefs: [],
+  results: [],
+  memories: [structuredClone(DEMO_PROJECT.memories[0])]
+};
+
+archivedProject = updateMemoryStatus(archivedProject, "mem-demo-customer", "archived");
+archivedProject = absorbContext(archivedProject, {
+  kind: "customer",
+  title: "归档后重新输入客户顾虑",
+  occurredAt: "2026-05-13",
+  participants: ["客户 A"],
+  tags: ["权限"],
+  importance: "high",
+  body: DEMO_PROJECT.memories[0].detail
+});
+
+const archivedContext = archivedProject.contexts[0];
+const archivedEvidenceActions = archivedProject.actions.filter((item) =>
+  archivedContext.actionIds.includes(item.id)
+);
+
+if (
+  archivedContext.memoryIds.length < 1 ||
+  archivedEvidenceActions.some((item) => item.sourceMemoryIds.includes("mem-demo-customer"))
+) {
+  throw new Error("Archived memories should not block fresh memories or become new action evidence.");
 }
 
 const action = project.actions.find((item) => item.status !== "done");

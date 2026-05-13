@@ -84,7 +84,7 @@ Milestone 1：让公司记忆可信。
 | CTX-03 | 待开始 | 未分配 | `skeleton/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
 | MEM-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-context-memory-foundation` | 复合在 CTX-01 分支中，已补 memory 状态、来源数和旧数据兼容 |
 | MEM-02 | 待开始 | 未分配 | `codex/MEM-02-edit-company-memory` | 会改 `render.js` 和 `main.js`，注意冲突 |
-| MEM-03 | 待开始 | 未分配 | `codex/MEM-03-memory-status-transitions` | 依赖 MEM-01 的状态字段 |
+| MEM-03 | 待 review | skeleton / Codex | `skeleton/MEM-03-memory-status-transitions` | 已支持快捷状态切换、确认时间记录和行动证据过滤 |
 | MEM-04 | 待开始 | 未分配 | `codex/MEM-04-memory-detail-panel` | 可能和 CTX-03 的来源跳转有关 |
 | REC-01 | 待开始 | 未分配 | `codex/REC-01-extract-memories-pipeline` | 开始拆 domain pipeline |
 | REC-02 | 待开始 | 未分配 | `codex/REC-02-reconcile-memories-pipeline` | 依赖 REC-01 更清楚 |
@@ -181,6 +181,33 @@ Issue：
 ```
 
 ## 11. 开发日志
+
+### 2026-05-13
+
+负责人：skeleton / Codex
+Issue：MEM-03 支持记忆状态切换
+分支：`skeleton/MEM-03-memory-status-transitions`
+状态：待 review
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Memory 卡片新增确认、过期、争议、归档快捷操作。
+- 状态切换会更新 `updatedAt`，切到 `confirmed` 时记录 `lastVerifiedAt`。
+- 新行动生成会忽略 `archived` 和 `outdated` memory；`confirmed` 证据优先，`draft` / `disputed` 会在行动理由中提示人工复核。
+- `node scripts/smoke-test.mjs` 通过。
+- 本地静态页面服务 `http://127.0.0.1:4173` 返回 200。
+
+待决问题：
+
+- 当前分支基于 `skeleton/CTX-01-MEM-01-context-memory-foundation` 拉出；发布前需要确认远端目标分支，因为本地 `origin` 暂时指向上一份本地 clone，而不是 GitHub URL。
 
 ### 2026-05-13
 

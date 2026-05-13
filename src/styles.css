@@ -513,6 +513,45 @@ textarea:focus {
   font-size: 12px;
 }
 
+.memory-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.memory-status-action {
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 9px;
+}
+
+.memory-status-action:hover,
+.memory-status-action:focus {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.memory-status-action.confirmed {
+  color: var(--green);
+}
+
+.memory-status-action.outdated {
+  color: var(--amber);
+}
+
+.memory-status-action.disputed {
+  color: var(--red);
+}
+
+.memory-status-action.archived {
+  color: #64748b;
+}
+
 .action-card {
   display: grid;
   gap: 10px;

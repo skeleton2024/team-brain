@@ -177,6 +177,20 @@ const ACTION_BY_MEMORY_TYPE = {
   }
 };
 
+const ACTIVE_MEMORY_STATUSES = new Set(["confirmed", "draft", "disputed"]);
+const MEMORY_STATUS_ORDER = {
+  confirmed: 0,
+  draft: 1,
+  disputed: 2
+};
+const MEMORY_TRANSITION_STATUS = new Set([
+  "draft",
+  "confirmed",
+  "outdated",
+  "disputed",
+  "archived"
+]);
+
 export function absorbContext(project, input) {
   const now = new Date().toISOString();
   const context = {
@@ -240,6 +254,39 @@ export function generateBrief(project, actionId) {
     actions: project.actions.map((item) =>
       item.id === actionId ? { ...item, status: "briefed", briefId: brief.id } : item
     )
+  };
+}
+
+export function updateMemoryStatus(project, memoryId, status) {
+  if (!MEMORY_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const memories = project.memories.map((memory) => {
+    if (memory.id !== memoryId || memory.status === status) {
+      return memory;
+    }
+
+    changed = true;
+    return {
+      ...memory,
+      status,
+      updatedAt: now,
+      ...(status === "confirmed" ? { lastVerifiedAt: now } : {})
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    memories
   };
 }
 
@@ -393,7 +440,10 @@ function extractMemories(text, options) {
 }
 
 function proposeActions(project, memories) {
-  const byType = groupBy(memories, "type");
+  const usableMemories = memories
+    .filter(isUsableActionMemory)
+    .sort(compareMemoryEvidenceStrength);
+  const byType = groupBy(usableMemories, "type");
 
   return Object.entries(byType)
     .map(([memoryType, sourceMemories]) => buildActionForMemoryType(memoryType, sourceMemories))
@@ -405,6 +455,7 @@ function proposeActions(project, memories) {
 function proposeResultActions(project, completedAction, resultInput, memories) {
   const text = resultInput.summary;
   const actions = [];
+  const sourceMemoryIds = memories.filter(isUsableActionMemory).map((memory) => memory.id);
 
   if (resultInput.outcome === "positive" || includesAny(text, ["愿意", "同意", "下周", "试点", "付费", "推进"])) {
     actions.push({
@@ -415,7 +466,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "high",
       riskLevel: "medium",
       expectedOutput: "下一轮沟通草稿、试点范围和人工确认清单",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -431,7 +482,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "high",
       riskLevel: "high",
       expectedOutput: "阻塞拆解、备选方案和创始人决策项",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -447,7 +498,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "high",
       riskLevel: "low",
       expectedOutput: "开发任务说明、验收标准和回归检查",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -463,7 +514,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "medium",
       riskLevel: "low",
       expectedOutput: "学习摘要、假设变化和下一步建议",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -479,17 +530,22 @@ function buildActionForMemoryType(memoryType, memories) {
     return null;
   }
 
-  const lead = memories[0];
+  const sourceMemories = memories.filter(isUsableActionMemory).sort(compareMemoryEvidenceStrength);
+  const lead = sourceMemories[0];
+  if (!lead) {
+    return null;
+  }
+  const statusNote = actionEvidenceStatusNote(sourceMemories);
 
   return {
     id: makeId("act"),
     type: template.type,
     title: adaptActionTitle(template.title, lead),
-    rationale: `来自记忆“${lead.title}”。${lead.detail}`,
+    rationale: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
     priority: template.priority,
     riskLevel: template.riskLevel,
     expectedOutput: template.expectedOutput,
-    sourceMemoryIds: memories.map((memory) => memory.id),
+    sourceMemoryIds: sourceMemories.map((memory) => memory.id),
     status: "pending",
     requiresHumanConfirmation: true,
     createdAt: new Date().toISOString()
@@ -787,10 +843,36 @@ function resolveMemories(project, memoryIds) {
 function hasSimilarMemory(existing, memory) {
   return existing.some(
     (item) =>
+      item.status !== "outdated" &&
+      item.status !== "archived" &&
       item.type === memory.type &&
       (normalize(item.title) === normalize(memory.title) ||
         normalize(item.detail).includes(normalize(memory.detail).slice(0, 18)))
   );
+}
+
+function isUsableActionMemory(memory) {
+  return ACTIVE_MEMORY_STATUSES.has(memory.status || "draft");
+}
+
+function compareMemoryEvidenceStrength(left, right) {
+  return (
+    (MEMORY_STATUS_ORDER[left.status || "draft"] ?? 1) -
+    (MEMORY_STATUS_ORDER[right.status || "draft"] ?? 1)
+  );
+}
+
+function actionEvidenceStatusNote(memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("disputed")) {
+    return "包含有争议记忆，请人工复核。";
+  }
+
+  if (statuses.has("draft")) {
+    return "依据包含待确认记忆，请人工复核。";
+  }
+
+  return "";
 }
 
 function hasSimilarAction(existing, action) {

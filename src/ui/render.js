@@ -11,6 +11,13 @@ import {
   RISK_LABELS
 } from "../domain/types.js";
 
+const MEMORY_STATUS_ACTIONS = [
+  { status: "confirmed", label: "确认" },
+  { status: "outdated", label: "过期" },
+  { status: "disputed", label: "争议" },
+  { status: "archived", label: "归档" }
+];
+
 export function renderApp(state) {
   const project = getActiveProject(state);
   const selectedAction = project?.actions.find((action) => action.id === state.selectedActionId);
@@ -301,7 +308,31 @@ function renderMemoryItem(memory) {
       </div>
       <h4>${escapeHtml(memory.title)}</h4>
       <p>${escapeHtml(memory.detail)}</p>
+      ${renderMemoryStatusActions(memory)}
       <small>${escapeHtml(sourceLabel)}</small>
+    </div>
+  `;
+}
+
+function renderMemoryStatusActions(memory) {
+  const currentStatus = memory.status || "draft";
+  return `
+    <div class="memory-status-actions" aria-label="记忆状态操作">
+      ${MEMORY_STATUS_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-memory-status"
+              data-memory-id="${escapeHtml(memory.id)}"
+              data-memory-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
     </div>
   `;
 }
