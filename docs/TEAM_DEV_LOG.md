@@ -1,8 +1,8 @@
 # TeamMind 团队开发共享日志
 
-文档名：`docs/TEAM_DEV_LOG.md`  
-用途：团队协作看板、分支规则、开发决策和验收记录。  
-最后更新：2026-05-12
+文档名：`docs/TEAM_DEV_LOG.md`
+用途：团队协作看板、分支规则、开发决策和验收记录。
+最后更新：2026-05-13
 
 ## 1. 当前协作结论
 
@@ -30,18 +30,17 @@ https://github.com/skeleton2024/team-brain.git
 main
 ```
 
-当前没有单独的 `dev` 分支。`npm run dev` 只是本地开发服务器命令，不代表 GitHub 里已经有一个 `dev` 分支。
+远程现在存在 `dev` 分支，但当前奇数线仍以 `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` 作为基线继续复合开发。`npm run dev` 只是本地开发服务器命令，不代表必须使用 GitHub 的 `dev` 分支。
 
 默认推荐协作方式：
 
 ```text
 main
-  <- PR from codex/CTX-01-context-metadata
-  <- PR from codex/CTX-03-context-memory-source-links
-  <- PR from codex/MEM-01-memory-status-source-references
+  <- PR from skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation
+  <- PR from skeleton/CTX-03-context-memory-source-links
 ```
 
-重要 issue 建议从 `main` 拉一个短生命周期分支，完成后通过 PR 或明确提交合回 `main`。但这不是僵硬审批规则：多个强相关 issue 可以合并在同一个分支中开发，多人也可以共同使用一个开发分支。当前阶段不建议先加复杂流程；如果后续团队人数变多，可以再创建长期 `dev` 分支做集成。
+重要 issue 建议从 `main` 或当前复合开发分支拉一个短生命周期分支，完成后通过 PR 或明确提交合回 `main`。但这不是僵硬审批规则：多个强相关 issue 可以合并在同一个分支中开发，多人也可以共同使用一个开发分支。当前阶段推荐更快的复合 issue 开发模式：先把强依赖或同一数据链路的 issue 连续做在同一个开发者分支中，再一次性 review/合并。分支名必须包含开发者前缀和 issue 编号组合，方便追溯范围。
 
 ## 3. 草稿版本怎么改
 
@@ -56,6 +55,7 @@ main
 ```text
 codex/spike-memory-reconciliation
 codex/CTX-01-context-metadata
+skeleton/CTX-01-MEM-01-context-memory-foundation
 teammate/MEM-02-edit-company-memory
 ```
 
@@ -80,13 +80,13 @@ Milestone 1：让公司记忆可信。
 
 | Issue | 状态 | 建议负责人 | 建议分支 | 备注 |
 | --- | --- | --- | --- | --- |
-| CTX-01 | 待开始 | 未分配 | `codex/CTX-01-context-metadata` | 优先做，补上下文 metadata |
-| CTX-03 | 待开始 | 未分配 | `codex/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
-| MEM-01 | 待开始 | 未分配 | `codex/MEM-01-memory-status-source-references` | 让 memory 显示状态和来源数 |
+| CTX-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，补上下文 metadata |
+| CTX-03 | 待开始 | 未分配 | `skeleton/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
+| MEM-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，补 memory 状态、来源数和旧数据兼容 |
 | MEM-02 | 待开始 | 未分配 | `codex/MEM-02-edit-company-memory` | 会改 `render.js` 和 `main.js`，注意冲突 |
-| MEM-03 | 待开始 | 未分配 | `codex/MEM-03-memory-status-transitions` | 依赖 MEM-01 的状态字段 |
+| MEM-03 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，支持快捷状态切换、确认时间记录和行动证据过滤 |
 | MEM-04 | 待开始 | 未分配 | `codex/MEM-04-memory-detail-panel` | 可能和 CTX-03 的来源跳转有关 |
-| REC-01 | 待开始 | 未分配 | `codex/REC-01-extract-memories-pipeline` | 开始拆 domain pipeline |
+| REC-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation` | 已拆出 `extractMemories` domain pipeline |
 | REC-02 | 待开始 | 未分配 | `codex/REC-02-reconcile-memories-pipeline` | 依赖 REC-01 更清楚 |
 
 状态建议只用：
@@ -102,6 +102,7 @@ Milestone 1：让公司记忆可信。
 ```text
 codex/ISSUE-ID-short-name
 name/ISSUE-ID-short-name
+skeleton/ISSUE-ID-ISSUE-ID-short-name
 spike/topic-name
 ```
 
@@ -113,7 +114,7 @@ MEM-01 Add memory status badges
 REC-01 Extract memory pipeline
 ```
 
-默认建议一个 PR 对应一个 issue，但允许多个强相关 issue 合并在一个分支或 PR 中开发。关键要求不是形式上完美拆分，而是每次改动都能说明目的、影响文件、验证结果和遗留风险。
+默认建议一个 PR 对应一个 issue，但允许多个强相关 issue 合并在一个分支或 PR 中开发。当前 skeleton 开发节奏优先采用复合 issue 分支：分支名使用 `skeleton/ISSUE-ID-ISSUE-ID-short-name`，并在开发日志中写清楚包含哪些 issue、为什么合并开发、验证结果和遗留风险。关键要求不是形式上完美拆分，而是每次改动都能说明目的、影响文件、验证结果和遗留风险。
 
 ## 7. 易冲突文件
 
@@ -181,12 +182,121 @@ Issue：
 
 ## 11. 开发日志
 
+### 2026-05-13
+
+负责人：skeleton / Codex
+Issue：REC-01 拆出 extractMemories pipeline
+分支：`skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation`
+状态：待 review
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/extractMemories.js`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- 从 `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` 拉出新的奇数复合分支，继续包含任务 1、3、5、7。
+- `agentEngine.js` 不再内联 memory 提取规则，改为调用 `extractMemories({ project, context, now })`。
+- 新 pipeline 返回 `{ memories, runSummary }`，每条候选 memory 继续带 `status = "draft"`、`sourceReferences`、`createdBy` 和时间戳。
+- `absorbContext()` 调用方不需要改变，context 写入、去重、action 生成仍由 orchestrator 处理。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- 暂无。REC-02 可以在此基础上继续拆 reconciliation pipeline。
+
+### 2026-05-13
+
+负责人：skeleton / Codex
+Issue：MEM-03 支持记忆状态切换
+分支：`skeleton/MEM-03-memory-status-transitions`
+状态：待 review
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Memory 卡片新增确认、过期、争议、归档快捷操作。
+- 状态切换会更新 `updatedAt`，切到 `confirmed` 时记录 `lastVerifiedAt`。
+- 新行动生成会忽略 `archived` 和 `outdated` memory；`confirmed` 证据优先，`draft` / `disputed` 会在行动理由中提示人工复核。
+- `node scripts/smoke-test.mjs` 通过。
+- 本地静态页面服务 `http://127.0.0.1:4173` 返回 200。
+
+待决问题：
+
+- 当前分支基于 `skeleton/CTX-01-MEM-01-context-memory-foundation` 拉出；发布前需要确认远端目标分支，因为本地 `origin` 暂时指向上一份本地 clone，而不是 GitHub URL。
+
+### 2026-05-13
+
+负责人：skeleton / Codex
+Issue：CTX-01 + MEM-01 复合分支命名与协作规则
+分支：`skeleton/CTX-01-MEM-01-context-memory-foundation`
+状态：待 review
+改动文件：
+
+- `docs/TEAM_DEV_LOG.md`
+- `docs/AI_DEVELOPMENT_GUIDE.md`
+- `docs/issues/README.md`
+
+验证结果：
+
+- 将 GitHub 上原 `codex/CTX-01-context-metadata` 分支重命名为 `skeleton/CTX-01-MEM-01-context-memory-foundation`。
+- 明确该分支由 `CTX-01-context-metadata.md` 和 `MEM-01-memory-status-source-references.md` 复合开发而来。
+- 后续默认可以继续采用复合 issue 分支模式，加快强相关功能开发。
+
+待决问题：
+
+- 复合分支进入 PR 前，需要在 PR 描述中列出包含的 issue、验收结果和不做范围。
+- 如果后续团队成员增多，再决定是否恢复更严格的单 issue PR 节奏。
+
 ### 2026-05-12
 
-负责人：Codex  
-Issue：AI 开发规范指南  
-分支：`main`  
-状态：已完成  
+负责人：Codex
+Issue：MEM-01 增加 memory status 和 sourceReferences
+分支：`skeleton/CTX-01-MEM-01-context-memory-foundation`
+状态：待 review
+改动文件：
+
+- `src/domain/types.js`
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- 新生成 memory 默认 `status = "draft"`，并带 `sourceReferences`、`createdBy`、`updatedAt`。
+- Demo memory 已展示不同状态、来源数量和置信度。
+- 结果回流会生成可追溯的 result context，结果 memory 的 `sourceReferences` 指向真实 context。
+- 旧 memory 没有 `status` 时显示默认状态；有旧版 `source` 但没有 `sourceReferences` 时显示“旧来源”，不误报“来源待补”。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- 当前分支基于 `CTX-01` 继续复合开发，后续以 `skeleton/CTX-01-MEM-01-context-memory-foundation` 作为 review 分支。
+- MEM-01 只展示状态，不提供编辑和状态切换；这些留给 MEM-02/MEM-03。
+
+### 2026-05-12
+
+负责人：Codex
+Issue：AI 开发规范指南
+分支：`main`
+状态：已完成
 改动文件：
 
 - `docs/AI_DEVELOPMENT_GUIDE.md`
@@ -207,10 +317,10 @@ Issue：AI 开发规范指南
 
 ### 2026-05-12
 
-负责人：Codex  
-Issue：文档协作准备  
-分支：`main`  
-状态：已完成  
+负责人：Codex
+Issue：文档协作准备
+分支：`main`
+状态：已完成
 改动文件：
 
 - `docs/TEAM_DEV_LOG.md`

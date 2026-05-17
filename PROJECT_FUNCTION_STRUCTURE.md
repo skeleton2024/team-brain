@@ -105,6 +105,8 @@ team-brain/
     domain/
       agentEngine.js
       types.js
+      pipelines/
+        extractMemories.js
     services/
       store.js
     ui/
@@ -234,6 +236,11 @@ v0.2 目标：
 - 每次 pipeline 运行产生 `AgentRun`。
 - 每个 AI 或规则输出都能追溯 sourceReferences。
 
+REC-01 当前进展：
+
+- `absorbContext()` 已调用 `src/domain/pipelines/extractMemories.js` 获取候选记忆。
+- `agentEngine.js` 继续负责 context 写入、去重、action 生成、Brief 和结果回流编排。
+
 ### `src/domain/types.js`
 
 共享枚举和展示标签。
@@ -268,13 +275,14 @@ v0.2 计划新增。
 
 ### `src/domain/pipelines/extractMemories.js`
 
-v0.2 计划新增。
+REC-01 已新增。
 
 职责：
 
 - 从 `ContextItem` 中提取候选 `MemoryItem`。
 - 每条 memory 必须包含 `sourceReferences`。
 - 输出候选记忆，不直接改 state。
+- 当前实现使用本地关键词规则，返回 `{ memories, runSummary }`，为后续真实 AI provider 和 schema 校验预留边界。
 
 ### `src/domain/pipelines/reconcileMemories.js`
 

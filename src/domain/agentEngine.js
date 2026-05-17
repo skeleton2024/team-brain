@@ -1,122 +1,6 @@
-import { ACTION_TYPES, MEMORY_TYPES } from "./types.js";
+import { ACTION_TYPES } from "./types.js";
+import { extractMemories, makeSourceReference, summarizeTitle } from "./pipelines/extractMemories.js";
 import { makeId } from "../services/store.js";
-
-const MEMORY_RULES = [
-  {
-    type: "customer_concern",
-    keywords: [
-      "客户",
-      "用户",
-      "担心",
-      "顾虑",
-      "质疑",
-      "不愿意",
-      "价格",
-      "隐私",
-      "权限",
-      "数据",
-      "准确",
-      "customer",
-      "feedback"
-    ]
-  },
-  {
-    type: "investor_question",
-    keywords: [
-      "投资人",
-      "融资",
-      "估值",
-      "市场",
-      "壁垒",
-      "竞争",
-      "ARR",
-      "CAC",
-      "LTV",
-      "moat",
-      "investor",
-      "why now"
-    ]
-  },
-  {
-    type: "product_decision",
-    keywords: [
-      "决定",
-      "产品",
-      "路线",
-      "roadmap",
-      "MVP",
-      "优先",
-      "版本",
-      "功能",
-      "取舍",
-      "不做",
-      "先做"
-    ]
-  },
-  {
-    type: "engineering_blocker",
-    keywords: [
-      "工程",
-      "技术",
-      "阻塞",
-      "bug",
-      "API",
-      "延迟",
-      "部署",
-      "数据库",
-      "导入",
-      "merge",
-      "性能",
-      "GitHub",
-      "Slack"
-    ]
-  },
-  {
-    type: "team_constraint",
-    keywords: [
-      "团队",
-      "人手",
-      "时间",
-      "资源",
-      "容量",
-      "创始人",
-      "全职",
-      "兼职",
-      "本周",
-      "deadline"
-    ]
-  },
-  {
-    type: "risk",
-    keywords: [
-      "风险",
-      "可能",
-      "合规",
-      "法务",
-      "延期",
-      "流失",
-      "承诺",
-      "自动发送",
-      "敏感",
-      "安全"
-    ]
-  },
-  {
-    type: "opportunity",
-    keywords: [
-      "机会",
-      "愿意付费",
-      "付费意向",
-      "试点",
-      "pilot",
-      "合作",
-      "增长",
-      "转介绍",
-      "需求",
-      "可以卖"
-    ]
-  }
-];
 
 const ACTION_BY_MEMORY_TYPE = {
   customer_concern: {
@@ -177,6 +61,20 @@ const ACTION_BY_MEMORY_TYPE = {
   }
 };
 
+const ACTIVE_MEMORY_STATUSES = new Set(["confirmed", "draft", "disputed"]);
+const MEMORY_STATUS_ORDER = {
+  confirmed: 0,
+  draft: 1,
+  disputed: 2
+};
+const MEMORY_TRANSITION_STATUS = new Set([
+  "draft",
+  "confirmed",
+  "outdated",
+  "disputed",
+  "archived"
+]);
+
 export function absorbContext(project, input) {
   const now = new Date().toISOString();
   const context = {
@@ -184,15 +82,18 @@ export function absorbContext(project, input) {
     kind: input.kind,
     title: input.title || "未命名上下文",
     body: input.body,
+    occurredAt: input.occurredAt || now,
+    participants: normalizeList(input.participants),
+    tags: normalizeList(input.tags),
+    importance: normalizeImportance(input.importance),
     createdAt: now,
+    updatedAt: now,
     memoryIds: [],
     actionIds: []
   };
 
-  const memories = extractMemories(input.body, {
-    source: context.title,
-    defaultType: inferTypeFromContext(input.kind)
-  }).filter((memory) => !hasSimilarMemory(project.memories, memory));
+  const { memories: extractedMemories } = extractMemories({ project, context, now });
+  const memories = extractedMemories.filter((memory) => !hasSimilarMemory(project.memories, memory));
 
   context.memoryIds = memories.map((memory) => memory.id);
 
@@ -237,6 +138,39 @@ export function generateBrief(project, actionId) {
   };
 }
 
+export function updateMemoryStatus(project, memoryId, status) {
+  if (!MEMORY_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const memories = project.memories.map((memory) => {
+    if (memory.id !== memoryId || memory.status === status) {
+      return memory;
+    }
+
+    changed = true;
+    return {
+      ...memory,
+      status,
+      updatedAt: now,
+      ...(status === "confirmed" ? { lastVerifiedAt: now } : {})
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    memories
+  };
+}
+
 export function recordActionResult(project, actionId, resultInput) {
   const now = new Date().toISOString();
   const action = project.actions.find((item) => item.id === actionId);
@@ -254,19 +188,48 @@ export function recordActionResult(project, actionId, resultInput) {
     actionIds: []
   };
 
-  const extracted = extractMemories(resultInput.summary, {
-    source: `行动结果：${action.title}`,
+  const resultContext = {
+    id: makeId("ctx"),
+    kind: "other",
+    title: `行动结果：${action.title}`,
+    body: resultInput.summary,
+    occurredAt: now,
+    participants: [],
+    tags: ["结果回流"],
+    importance: resultInput.outcome === "blocked" ? "high" : "medium",
+    createdAt: now,
+    updatedAt: now,
+    memoryIds: [],
+    actionIds: []
+  };
+
+  const { memories: extracted } = extractMemories({
+    project,
+    context: resultContext,
+    now,
     defaultType: "result_learning"
   });
 
+  const resultConfidence = "high";
   const resultMemory = {
     id: makeId("mem"),
     type: "result_learning",
     title: summarizeTitle(resultInput.summary, "执行结果已回流"),
     detail: resultInput.summary,
-    source: `行动结果：${action.title}`,
-    confidence: "high",
-    createdAt: now
+    source: resultContext.title,
+    confidence: resultConfidence,
+    status: "draft",
+    sourceReferences: [
+      makeSourceReference({
+        contextId: resultContext.id,
+        quote: resultInput.summary,
+        note: resultContext.title,
+        confidence: resultConfidence
+      })
+    ],
+    createdBy: "ai",
+    createdAt: now,
+    updatedAt: now
   };
 
   const newMemories = [resultMemory, ...extracted].filter(
@@ -278,10 +241,13 @@ export function recordActionResult(project, actionId, resultInput) {
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
+  resultContext.memoryIds = result.memoryIds;
+  resultContext.actionIds = result.actionIds;
 
   return {
     ...project,
     updatedAt: now,
+    contexts: [resultContext, ...project.contexts],
     memories: [...newMemories, ...project.memories],
     actions: mergeActions(
       followUpActions,
@@ -293,44 +259,11 @@ export function recordActionResult(project, actionId, resultInput) {
   };
 }
 
-function extractMemories(text, options) {
-  const fragments = splitIntoFragments(text);
-  const now = new Date().toISOString();
-
-  const memories = fragments
-    .map((fragment) => {
-      const type = classifyFragment(fragment, options.defaultType);
-      return {
-        id: makeId("mem"),
-        type,
-        title: summarizeTitle(fragment, MEMORY_TYPES[type]?.label ?? "公司记忆"),
-        detail: fragment,
-        source: options.source,
-        confidence: scoreConfidence(fragment, type),
-        createdAt: now
-      };
-    })
-    .filter((memory) => memory.detail.length >= 8);
-
-  if (memories.length > 0) {
-    return memories.slice(0, 8);
-  }
-
-  return [
-    {
-      id: makeId("mem"),
-      type: options.defaultType || "fact",
-      title: summarizeTitle(text, "新增公司事实"),
-      detail: text.slice(0, 280),
-      source: options.source,
-      confidence: "low",
-      createdAt: now
-    }
-  ];
-}
-
 function proposeActions(project, memories) {
-  const byType = groupBy(memories, "type");
+  const usableMemories = memories
+    .filter(isUsableActionMemory)
+    .sort(compareMemoryEvidenceStrength);
+  const byType = groupBy(usableMemories, "type");
 
   return Object.entries(byType)
     .map(([memoryType, sourceMemories]) => buildActionForMemoryType(memoryType, sourceMemories))
@@ -342,6 +275,7 @@ function proposeActions(project, memories) {
 function proposeResultActions(project, completedAction, resultInput, memories) {
   const text = resultInput.summary;
   const actions = [];
+  const sourceMemoryIds = memories.filter(isUsableActionMemory).map((memory) => memory.id);
 
   if (resultInput.outcome === "positive" || includesAny(text, ["愿意", "同意", "下周", "试点", "付费", "推进"])) {
     actions.push({
@@ -352,7 +286,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "high",
       riskLevel: "medium",
       expectedOutput: "下一轮沟通草稿、试点范围和人工确认清单",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -368,7 +302,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "high",
       riskLevel: "high",
       expectedOutput: "阻塞拆解、备选方案和创始人决策项",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -384,7 +318,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "high",
       riskLevel: "low",
       expectedOutput: "开发任务说明、验收标准和回归检查",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -400,7 +334,7 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       priority: "medium",
       riskLevel: "low",
       expectedOutput: "学习摘要、假设变化和下一步建议",
-      sourceMemoryIds: memories.map((memory) => memory.id),
+      sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -416,17 +350,22 @@ function buildActionForMemoryType(memoryType, memories) {
     return null;
   }
 
-  const lead = memories[0];
+  const sourceMemories = memories.filter(isUsableActionMemory).sort(compareMemoryEvidenceStrength);
+  const lead = sourceMemories[0];
+  if (!lead) {
+    return null;
+  }
+  const statusNote = actionEvidenceStatusNote(sourceMemories);
 
   return {
     id: makeId("act"),
     type: template.type,
     title: adaptActionTitle(template.title, lead),
-    rationale: `来自记忆“${lead.title}”。${lead.detail}`,
+    rationale: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
     priority: template.priority,
     riskLevel: template.riskLevel,
     expectedOutput: template.expectedOutput,
-    sourceMemoryIds: memories.map((memory) => memory.id),
+    sourceMemoryIds: sourceMemories.map((memory) => memory.id),
     status: "pending",
     requiresHumanConfirmation: true,
     createdAt: new Date().toISOString()
@@ -586,91 +525,6 @@ function buildRiskNotes(action) {
   return notes;
 }
 
-function splitIntoFragments(text) {
-  return text
-    .replace(/\r/g, "\n")
-    .split(/[\n。！？!?；;]+/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .flatMap((item) => (item.length > 140 ? splitLongFragment(item) : [item]))
-    .slice(0, 12);
-}
-
-function splitLongFragment(fragment) {
-  const parts = fragment.split(/[，,]/).map((item) => item.trim()).filter(Boolean);
-  const groups = [];
-  let current = "";
-
-  parts.forEach((part) => {
-    const next = current ? `${current}，${part}` : part;
-    if (next.length > 120 && current) {
-      groups.push(current);
-      current = part;
-    } else {
-      current = next;
-    }
-  });
-
-  if (current) {
-    groups.push(current);
-  }
-
-  return groups;
-}
-
-function classifyFragment(fragment, fallback = "fact") {
-  const scored = MEMORY_RULES.map((rule) => ({
-    type: rule.type,
-    score: rule.keywords.reduce(
-      (total, keyword) => total + (fragment.toLowerCase().includes(keyword.toLowerCase()) ? 1 : 0),
-      0
-    )
-  })).sort((a, b) => b.score - a.score);
-
-  return scored[0]?.score > 0 ? scored[0].type : fallback;
-}
-
-function scoreConfidence(fragment, type) {
-  const rule = MEMORY_RULES.find((item) => item.type === type);
-  const score =
-    rule?.keywords.reduce(
-      (total, keyword) => total + (fragment.toLowerCase().includes(keyword.toLowerCase()) ? 1 : 0),
-      0
-    ) ?? 0;
-
-  if (score >= 2) {
-    return "high";
-  }
-
-  if (score === 1) {
-    return "medium";
-  }
-
-  return "low";
-}
-
-function summarizeTitle(text, fallback) {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) {
-    return fallback;
-  }
-
-  return clean.length > 28 ? `${clean.slice(0, 28)}...` : clean;
-}
-
-function inferTypeFromContext(kind) {
-  const map = {
-    customer: "customer_concern",
-    investor: "investor_question",
-    engineering: "engineering_blocker",
-    founder: "product_decision",
-    meeting: "fact",
-    other: "fact"
-  };
-
-  return map[kind] || "fact";
-}
-
 function groupBy(items, key) {
   return items.reduce((groups, item) => {
     const value = item[key];
@@ -700,10 +554,36 @@ function resolveMemories(project, memoryIds) {
 function hasSimilarMemory(existing, memory) {
   return existing.some(
     (item) =>
+      item.status !== "outdated" &&
+      item.status !== "archived" &&
       item.type === memory.type &&
       (normalize(item.title) === normalize(memory.title) ||
         normalize(item.detail).includes(normalize(memory.detail).slice(0, 18)))
   );
+}
+
+function isUsableActionMemory(memory) {
+  return ACTIVE_MEMORY_STATUSES.has(memory.status || "draft");
+}
+
+function compareMemoryEvidenceStrength(left, right) {
+  return (
+    (MEMORY_STATUS_ORDER[left.status || "draft"] ?? 1) -
+    (MEMORY_STATUS_ORDER[right.status || "draft"] ?? 1)
+  );
+}
+
+function actionEvidenceStatusNote(memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("disputed")) {
+    return "包含有争议记忆，请人工复核。";
+  }
+
+  if (statuses.has("draft")) {
+    return "依据包含待确认记忆，请人工复核。";
+  }
+
+  return "";
 }
 
 function hasSimilarAction(existing, action) {
@@ -735,6 +615,25 @@ function adaptActionTitle(title, memory) {
 function includesAny(text, keywords) {
   const lower = text.toLowerCase();
   return keywords.some((keyword) => lower.includes(keyword.toLowerCase()));
+}
+
+function normalizeList(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function normalizeImportance(value) {
+  return ["low", "medium", "high"].includes(value) ? value : "medium";
 }
 
 function normalize(value) {

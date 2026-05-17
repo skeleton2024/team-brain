@@ -28,7 +28,9 @@ Milestone 1：让公司记忆可信。
 
 ## 开发规则
 
-- 一次只做一个 issue，除非两个 issue 的代码变更不可拆。
+- 默认一次只做一个 issue；如果多个 issue 强依赖、共享同一数据链路，或连续开发明显更快，可以使用复合 issue 分支。
+- 复合 issue 分支名必须包含开发者前缀和 issue 编号组合，例如 `skeleton/CTX-01-MEM-01-context-memory-foundation`。
+- 复合 issue 分支必须在开发日志和 PR 描述里列出包含哪些 issue、为什么合并开发、各自验收结果和遗留风险。
 - 每个代码提交信息建议包含 issue 编号。
 - 数据模型变化必须同步更新 `DATA_MODEL.md`。
 - 行为变化必须同步更新 `PRD.md` 或对应 issue spec。

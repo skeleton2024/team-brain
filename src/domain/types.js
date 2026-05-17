@@ -7,6 +7,16 @@ export const CONTEXT_TYPES = [
   { id: "other", label: "其他上下文" }
 ];
 
+export const CONTEXT_IMPORTANCE = [
+  { id: "low", label: "低" },
+  { id: "medium", label: "中" },
+  { id: "high", label: "高" }
+];
+
+export const CONTEXT_IMPORTANCE_LABELS = Object.fromEntries(
+  CONTEXT_IMPORTANCE.map((item) => [item.id, item.label])
+);
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",
@@ -52,6 +62,29 @@ export const MEMORY_TYPES = {
     label: "结果学习",
     shortLabel: "回流",
     tone: "green"
+  }
+};
+
+export const MEMORY_STATUS = {
+  draft: {
+    label: "待确认",
+    tone: "draft"
+  },
+  confirmed: {
+    label: "已确认",
+    tone: "confirmed"
+  },
+  outdated: {
+    label: "已过期",
+    tone: "outdated"
+  },
+  disputed: {
+    label: "有争议",
+    tone: "disputed"
+  },
+  archived: {
+    label: "已归档",
+    tone: "archived"
   }
 };
 

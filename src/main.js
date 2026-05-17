@@ -1,7 +1,8 @@
 import {
   absorbContext,
   generateBrief,
-  recordActionResult
+  recordActionResult,
+  updateMemoryStatus
 } from "./domain/agentEngine.js";
 import {
   createInitialState,
@@ -27,6 +28,14 @@ function bindEvents() {
   app.querySelector('[data-form="create-project"]')?.addEventListener("submit", handleCreateProject);
   app.querySelector('[data-form="absorb-context"]')?.addEventListener("submit", handleAbsorbContext);
   app.querySelector('[data-form="record-result"]')?.addEventListener("submit", handleRecordResult);
+
+  app.querySelectorAll('[data-action="update-memory-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateMemoryStatus(project, button.dataset.memoryId, button.dataset.memoryStatus)
+      );
+    });
+  });
 
   app.querySelectorAll("[data-project-id]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -92,7 +101,11 @@ function handleAbsorbContext(event) {
   const input = {
     kind: String(form.get("kind") || "other"),
     title: String(form.get("title") || "").trim(),
-    body: String(form.get("body") || "").trim()
+    body: String(form.get("body") || "").trim(),
+    occurredAt: String(form.get("occurredAt") || "").trim(),
+    participants: parseList(form.get("participants")),
+    tags: parseList(form.get("tags")),
+    importance: String(form.get("importance") || "medium")
   };
 
   if (!input.body) {
@@ -166,4 +179,11 @@ function exportState() {
   anchor.download = "teammind-export.json";
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function parseList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
