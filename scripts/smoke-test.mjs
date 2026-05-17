@@ -115,6 +115,25 @@ if (
   throw new Error("Expected memory cards to render quick status actions.");
 }
 
+const memoryDetailHtml = renderApp({
+  activeProjectId: project.id,
+  editingMemoryId: null,
+  selectedMemoryId: "mem-demo-customer",
+  selectedActionId: "act-demo-engineering",
+  projects: [project]
+});
+
+if (
+  !memoryDetailHtml.includes("Memory Detail") ||
+  !memoryDetailHtml.includes("完整内容") ||
+  !memoryDetailHtml.includes('href="#context-ctx-demo-1"') ||
+  !memoryDetailHtml.includes('data-action-id="act-demo-customer"') ||
+  !memoryDetailHtml.includes('data-action="edit-memory"') ||
+  !memoryDetailHtml.includes("action-card selected")
+) {
+  throw new Error("Expected selected memory detail to render sources, linked actions, edit entry, and preserve selected action.");
+}
+
 const demoStatuses = new Set(DEMO_PROJECT.memories.map((memory) => memory.status));
 if (!demoStatuses.has("confirmed") || !demoStatuses.has("draft") || !demoStatuses.has("outdated")) {
   throw new Error(`Expected demo memories to show multiple statuses: ${JSON.stringify([...demoStatuses])}`);
@@ -258,6 +277,22 @@ if (
   )
 ) {
   throw new Error(`Result memories did not include draft status and sources: ${JSON.stringify(resultMemories)}`);
+}
+
+const resultMemoryDetailHtml = renderApp({
+  activeProjectId: project.id,
+  editingMemoryId: null,
+  selectedMemoryId: resultMemories[0].id,
+  selectedActionId: action.id,
+  projects: [project]
+});
+
+if (
+  !resultMemoryDetailHtml.includes("关联 results / memory updates") ||
+  !resultMemoryDetailHtml.includes(resultSummary) ||
+  !resultMemoryDetailHtml.includes(`href="#context-${resultContext.id}"`)
+) {
+  throw new Error("Expected memory detail to show result-created memories and source context links.");
 }
 
 const allMemoriesMissingSources = project.memories.filter(

@@ -36,7 +36,7 @@ export function renderApp(state) {
             ${renderContextIntake(project)}
           </section>
           <section class="panel memory-panel">
-            ${renderMemories(project, state.editingMemoryId)}
+            ${renderMemories(project, state.editingMemoryId, state.selectedMemoryId)}
           </section>
           <section class="panel action-panel">
             ${renderActions(project, state.selectedActionId)}
@@ -221,7 +221,7 @@ function renderContextItem(context) {
   const participants = Array.isArray(context.participants) ? context.participants : [];
 
   return `
-    <article class="context-item">
+    <article class="context-item" id="context-${escapeHtml(context.id)}">
       <div class="context-item-top">
         <span class="context-type">${escapeHtml(contextTypeLabel(context.kind))}</span>
         <span class="importance ${escapeHtml(context.importance || "medium")}">
@@ -248,7 +248,7 @@ function renderContextItem(context) {
   `;
 }
 
-function renderMemories(project, editingMemoryId) {
+function renderMemories(project, editingMemoryId, selectedMemoryId) {
   if (!project.memories.length) {
     return emptyState("暂无公司记忆");
   }
@@ -286,7 +286,7 @@ function renderMemories(project, editingMemoryId) {
                   .map((memory) =>
                     memory.id === editingMemoryId
                       ? renderMemoryEditForm(memory)
-                      : renderMemoryItem(project, memory)
+                      : renderMemoryItem(project, memory, memory.id === selectedMemoryId)
                   )
                   .join("")}
               </div>
@@ -295,16 +295,18 @@ function renderMemories(project, editingMemoryId) {
         )
         .join("")}
     </div>
+
+    ${renderMemoryDetailPanel(project, selectedMemoryId)}
   `;
 }
 
-function renderMemoryItem(project, memory) {
+function renderMemoryItem(project, memory, isSelected = false) {
   const status = memoryStatusMeta(memory.status);
   const sourceCount = Array.isArray(memory.sourceReferences) ? memory.sourceReferences.length : 0;
   const sourceLabel = memorySourceLabel(memory);
 
   return `
-    <div class="memory-item">
+    <div class="memory-item ${isSelected ? "selected" : ""}" data-memory-open-id="${escapeHtml(memory.id)}">
       <div class="memory-item-top">
         <span class="memory-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
         <span>${escapeHtml(sourceCountLabel(sourceCount, sourceLabel))}</span>
@@ -315,9 +317,171 @@ function renderMemoryItem(project, memory) {
       ${renderMemoryStatusActions(memory)}
       ${renderMemorySources(project, memory, sourceLabel)}
       <div class="memory-card-actions">
+        <button class="secondary-button compact-button" data-action="open-memory-detail" data-memory-id="${escapeHtml(memory.id)}" type="button" aria-label="查看详情 ${escapeHtml(memory.title)}" title="查看记忆详情">详情</button>
         <button class="secondary-button compact-button" data-action="edit-memory" data-memory-id="${escapeHtml(memory.id)}" type="button" aria-label="编辑 ${escapeHtml(memory.title)}" title="编辑记忆">编辑</button>
       </div>
     </div>
+  `;
+}
+
+function renderMemoryDetailPanel(project, memoryId) {
+  const memory = project.memories.find((item) => item.id === memoryId);
+  if (!memory) {
+    return "";
+  }
+
+  const status = memoryStatusMeta(memory.status);
+  const typeMeta = MEMORY_TYPES[memory.type] || MEMORY_TYPES.fact;
+  const relatedActions = actionsForMemory(project, memory.id);
+  const relatedResults = resultsForMemory(project, memory.id, relatedActions);
+
+  return `
+    <article class="memory-detail-panel" aria-label="记忆详情">
+      <div class="memory-detail-heading">
+        <div>
+          <p class="eyebrow">Memory Detail</p>
+          <h4>${escapeHtml(memory.title)}</h4>
+        </div>
+        <button class="ghost-button compact-button" data-action="close-memory-detail" type="button">关闭</button>
+      </div>
+
+      <div class="memory-detail-meta">
+        <span class="memory-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
+        <span>${escapeHtml(typeMeta.label || memory.type)}</span>
+        <span>${escapeHtml(confidenceLabel(memory.confidence))}</span>
+      </div>
+
+      <section class="memory-detail-section">
+        <h5>完整内容</h5>
+        <p>${escapeHtml(memoryContent(memory))}</p>
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>来源与引用</h5>
+        ${renderMemoryDetailSources(project, memory)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>关联 actions</h5>
+        ${renderRelatedActions(relatedActions)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>关联 results / memory updates</h5>
+        ${renderRelatedResults(relatedResults, memory.id)}
+      </section>
+
+      <div class="memory-detail-actions">
+        <button class="primary-button compact-button" data-action="edit-memory" data-memory-id="${escapeHtml(memory.id)}" type="button">进入编辑</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderMemoryDetailSources(project, memory) {
+  const sourceReferences = Array.isArray(memory.sourceReferences)
+    ? memory.sourceReferences.filter((reference) => reference?.contextId || reference?.quote)
+    : [];
+
+  if (!sourceReferences.length) {
+    return `<p class="muted">${escapeHtml(memory.source || "来源待补")}</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${sourceReferences
+        .map((reference) => {
+          const context = project.contexts.find((item) => item.id === reference.contextId);
+          return `
+            <article class="memory-detail-source">
+              <div>
+                <strong>${escapeHtml(context?.title || reference.note || "未知上下文")}</strong>
+                <span>${escapeHtml(formatDateOnly(context?.occurredAt || context?.createdAt))}</span>
+              </div>
+              <blockquote>${escapeHtml(reference.quote || memoryContent(memory))}</blockquote>
+              ${
+                context?.body
+                  ? `<details class="source-context">
+                      <summary>Context 原文</summary>
+                      <p>${escapeHtml(context.body)}</p>
+                    </details>
+                    <a class="secondary-link compact-button" href="#context-${escapeHtml(context.id)}">跳到原文</a>`
+                  : ""
+              }
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRelatedActions(actions) {
+  if (!actions.length) {
+    return `<p class="muted">暂无关联 action</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${actions
+        .map(
+          (action) => `
+            <button class="memory-related-action" data-action-id="${escapeHtml(action.id)}" type="button">
+              <span>${escapeHtml(ACTION_TYPES[action.type] || action.type)}</span>
+              <strong>${escapeHtml(action.title)}</strong>
+              <small>${escapeHtml(ACTION_STATUS[action.status] || action.status)}</small>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRelatedResults(results, memoryId) {
+  if (!results.length) {
+    return `<p class="muted">暂无关联 result</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${results
+        .map(
+          (result) => `
+            <article class="memory-detail-result">
+              <strong>${escapeHtml(result.summary || result.outcome || "执行结果")}</strong>
+              <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+              ${renderRelatedMemoryUpdates(result, memoryId)}
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRelatedMemoryUpdates(result, memoryId) {
+  const updates = Array.isArray(result.relatedMemoryUpdates)
+    ? result.relatedMemoryUpdates.filter((update) => updateReferencesMemory(update, memoryId))
+    : [];
+
+  if (!updates.length) {
+    return "";
+  }
+
+  return `
+    <ul class="memory-update-list">
+      ${updates
+        .map(
+          (update) => `
+            <li>
+              <span>${escapeHtml(update.kind || update.type || "update")}</span>
+              ${escapeHtml(update.summary || update.note || update.reason || "")}
+            </li>
+          `
+        )
+        .join("")}
+    </ul>
   `;
 }
 
@@ -592,6 +756,39 @@ function emptyState(text) {
 
 export function getActiveProject(state) {
   return state.projects.find((project) => project.id === state.activeProjectId) || state.projects[0];
+}
+
+function actionsForMemory(project, memoryId) {
+  return project.actions.filter((action) => actionMemoryIds(action).includes(memoryId));
+}
+
+function resultsForMemory(project, memoryId, relatedActions) {
+  const relatedActionIds = new Set(relatedActions.map((action) => action.id));
+
+  return project.results.filter(
+    (result) =>
+      (Array.isArray(result.memoryIds) && result.memoryIds.includes(memoryId)) ||
+      relatedActionIds.has(result.actionId) ||
+      (Array.isArray(result.relatedMemoryUpdates) &&
+        result.relatedMemoryUpdates.some((update) => updateReferencesMemory(update, memoryId)))
+  );
+}
+
+function actionMemoryIds(action) {
+  return [
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ];
+}
+
+function updateReferencesMemory(update, memoryId) {
+  return [
+    update?.memoryId,
+    update?.sourceMemoryId,
+    update?.targetMemoryId,
+    update?.previousMemoryId,
+    update?.nextMemoryId
+  ].includes(memoryId);
 }
 
 function memoryContent(memory) {

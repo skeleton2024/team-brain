@@ -47,6 +47,7 @@ function bindEvents() {
         ...state,
         activeProjectId: button.dataset.projectId,
         editingMemoryId: null,
+        selectedMemoryId: null,
         selectedActionId:
           state.projects.find((project) => project.id === button.dataset.projectId)?.actions[0]?.id ??
           null
@@ -67,10 +68,40 @@ function bindEvents() {
     });
   });
 
+  app.querySelectorAll("[data-memory-open-id]").forEach((card) => {
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("button, a, input, select, textarea, summary, details")) {
+        return;
+      }
+
+      setState({
+        ...state,
+        selectedMemoryId: card.dataset.memoryOpenId
+      });
+    });
+  });
+
+  app.querySelectorAll('[data-action="open-memory-detail"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedMemoryId: button.dataset.memoryId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-memory-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedMemoryId: null
+    });
+  });
+
   app.querySelectorAll('[data-action="edit-memory"]').forEach((button) => {
     button.addEventListener("click", () => {
       setState({
         ...state,
+        selectedMemoryId: button.dataset.memoryId,
         editingMemoryId: button.dataset.memoryId
       });
     });
@@ -114,6 +145,7 @@ function handleCreateProject(event) {
     ...state,
     activeProjectId: project.id,
     editingMemoryId: null,
+    selectedMemoryId: null,
     selectedActionId: null,
     projects: [project, ...state.projects]
   });
@@ -142,6 +174,7 @@ function handleAbsorbContext(event) {
     state = {
       ...state,
       editingMemoryId: null,
+      selectedMemoryId: next.contexts[0]?.memoryIds[0] ?? state.selectedMemoryId,
       selectedActionId: newActionId
     };
     return next;
@@ -166,6 +199,7 @@ function handleEditMemory(event) {
   updateActiveProject((project) => {
     state = {
       ...state,
+      selectedMemoryId: memoryId,
       editingMemoryId: null
     };
     return updateMemory(project, memoryId, input);
