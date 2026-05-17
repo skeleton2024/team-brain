@@ -6,6 +6,7 @@ import {
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
+import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
 import { updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
@@ -56,6 +57,174 @@ if (
   project.memories.length !== memoryCountBeforePipelineProbe
 ) {
   throw new Error(`extractMemories pipeline contract failed: ${JSON.stringify(pipelineProbe)}`);
+}
+
+const priceConcernMemory = {
+  id: "mem-price-concern",
+  type: "customer_concern",
+  title: "客户担心价格",
+  detail: "客户担心价格太高，需要先确认 ROI。",
+  source: "测试来源",
+  confidence: "high",
+  status: "confirmed",
+  sourceReferences: [
+    {
+      contextId: "ctx-price-old",
+      quote: "客户担心价格太高。",
+      confidence: 0.9
+    }
+  ],
+  createdBy: "human",
+  createdAt: "2026-05-10T00:00:00.000Z",
+  updatedAt: "2026-05-10T00:00:00.000Z"
+};
+
+const reconciliationProbe = reconcileMemories({
+  existingMemories: [priceConcernMemory],
+  candidateMemories: [
+    {
+      ...structuredClone(priceConcernMemory),
+      id: "mem-price-duplicate",
+      createdBy: "ai",
+      sourceReferences: [
+        {
+          contextId: "ctx-price-duplicate",
+          quote: "客户担心价格太高，需要先确认 ROI。",
+          confidence: 0.86
+        }
+      ]
+    },
+    {
+      ...structuredClone(priceConcernMemory),
+      id: "mem-price-resolved",
+      title: "客户已经不担心价格",
+      detail: "客户已经明确表示价格不是问题，当前更关注上线时间。",
+      sourceReferences: [
+        {
+          contextId: "ctx-price-new",
+          quote: "客户已经明确表示价格不是问题。",
+          confidence: 0.88
+        }
+      ]
+    },
+    {
+      id: "mem-new-investor",
+      type: "investor_question",
+      title: "投资人追问留存指标",
+      detail: "投资人追问次月留存和团队如何验证持续使用。",
+      source: "投资人会议",
+      confidence: "medium",
+      status: "draft",
+      sourceReferences: [
+        {
+          contextId: "ctx-investor-new",
+          quote: "投资人追问次月留存。",
+          confidence: 0.7
+        }
+      ],
+      createdBy: "ai",
+      createdAt: "2026-05-13T00:00:00.000Z",
+      updatedAt: "2026-05-13T00:00:00.000Z"
+    }
+  ],
+  now: "2026-05-13T00:00:00.000Z"
+});
+
+const reconciliationOperations = reconciliationProbe.reconciliationResults.map((item) => item.operation);
+if (
+  !reconciliationOperations.includes("duplicate") ||
+  !reconciliationOperations.includes("outdate") ||
+  !reconciliationOperations.includes("new") ||
+  reconciliationProbe.acceptedMemories.length !== 1 ||
+  reconciliationProbe.acceptedMemories[0].id !== "mem-new-investor" ||
+  !reconciliationProbe.memoryUpdates.some((update) => update.operation === "outdate")
+) {
+  throw new Error(`reconcileMemories pipeline contract failed: ${JSON.stringify(reconciliationProbe)}`);
+}
+
+let duplicateIntakeProject = {
+  ...structuredClone(DEMO_PROJECT),
+  contexts: [],
+  memories: [],
+  actions: [],
+  briefs: [],
+  results: [],
+  reconciliationResults: [],
+  pendingMemoryUpdates: []
+};
+
+duplicateIntakeProject = absorbContext(duplicateIntakeProject, {
+  kind: "customer",
+  title: "价格顾虑",
+  occurredAt: "2026-05-13",
+  body: "客户担心价格太高，需要先确认 ROI。",
+  participants: ["客户 B"],
+  tags: ["价格"],
+  importance: "high"
+});
+const duplicateFirstMemoryCount = duplicateIntakeProject.memories.length;
+duplicateIntakeProject = absorbContext(duplicateIntakeProject, {
+  kind: "customer",
+  title: "价格顾虑复述",
+  occurredAt: "2026-05-14",
+  body: "客户担心价格太高，需要先确认 ROI。",
+  participants: ["客户 B"],
+  tags: ["价格"],
+  importance: "high"
+});
+
+const duplicateSummaryHtml = renderApp({
+  activeProjectId: duplicateIntakeProject.id,
+  selectedActionId: null,
+  projects: [duplicateIntakeProject]
+});
+
+if (
+  duplicateIntakeProject.memories.length !== duplicateFirstMemoryCount ||
+  duplicateIntakeProject.contexts[0].memoryIds.length !== 0 ||
+  duplicateIntakeProject.reconciliationResults[0]?.operation !== "duplicate" ||
+  !duplicateSummaryHtml.includes('data-reconciliation-summary') ||
+  !duplicateSummaryHtml.includes("跳过重复")
+) {
+  throw new Error("Expected duplicate context intake to skip repeated memories and render reconciliation summary.");
+}
+
+let outdateProject = {
+  ...structuredClone(DEMO_PROJECT),
+  contexts: [],
+  memories: [structuredClone(priceConcernMemory)],
+  actions: [
+    {
+      id: "act-price",
+      type: "customer_followup",
+      title: "跟进价格顾虑",
+      rationale: "客户仍担心价格，需要确认。",
+      priority: "high",
+      riskLevel: "medium",
+      expectedOutput: "价格沟通草稿",
+      sourceMemoryIds: ["mem-price-concern"],
+      status: "pending",
+      requiresHumanConfirmation: true,
+      createdAt: "2026-05-13T00:00:00.000Z"
+    }
+  ],
+  briefs: [],
+  results: [],
+  reconciliationResults: [],
+  pendingMemoryUpdates: []
+};
+
+outdateProject = recordActionResult(outdateProject, "act-price", {
+  outcome: "positive",
+  summary: "客户已经明确表示价格不是问题，当前更关注上线时间。"
+});
+
+if (
+  !outdateProject.results[0].relatedMemoryUpdates.some((update) => update.operation === "outdate") ||
+  !outdateProject.pendingMemoryUpdates.some((update) => update.memoryId === "mem-price-concern") ||
+  outdateProject.memories.find((memory) => memory.id === "mem-price-concern")?.status !== "confirmed"
+) {
+  throw new Error("Expected result reconciliation to suggest outdating old memory without auto-overwriting it.");
 }
 
 if (

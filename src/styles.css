@@ -806,6 +806,41 @@ textarea:focus {
   padding: 0 16px 16px;
 }
 
+.reconciliation-summary {
+  display: grid;
+  gap: 10px;
+  margin: 0 16px 16px;
+  padding: 12px;
+  border: 1px solid rgba(15, 143, 123, 0.22);
+  border-radius: var(--radius);
+  background: #f7fbf9;
+}
+
+.reconciliation-summary strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.reconciliation-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reconciliation-pills span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 8px;
+}
+
 .context-history-heading {
   display: flex;
   align-items: center;

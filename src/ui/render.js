@@ -193,7 +193,33 @@ function renderContextIntake(project) {
       </button>
     </form>
 
+    ${renderReconciliationSummary(project)}
     ${renderContexts(project)}
+  `;
+}
+
+function renderReconciliationSummary(project) {
+  const results = latestReconciliationResults(project);
+  if (!results.length) {
+    return "";
+  }
+
+  const counts = countReconciliationOperations(results);
+  const reviewCount = counts.conflict + counts.outdate;
+
+  return `
+    <div class="reconciliation-summary" data-reconciliation-summary>
+      <div>
+        <p class="eyebrow">Reconcile</p>
+        <strong>记忆校准</strong>
+      </div>
+      <div class="reconciliation-pills">
+        <span>新增 ${counts.new}</span>
+        <span>跳过重复 ${counts.duplicate}</span>
+        <span>更新建议 ${counts.update}</span>
+        <span>冲突/过期 ${reviewCount}</span>
+      </div>
+    </div>
   `;
 }
 
@@ -756,6 +782,38 @@ function emptyState(text) {
 
 export function getActiveProject(state) {
   return state.projects.find((project) => project.id === state.activeProjectId) || state.projects[0];
+}
+
+function latestReconciliationResults(project) {
+  const allResults = Array.isArray(project.reconciliationResults) ? project.reconciliationResults : [];
+  const latestContext = project.contexts.find(
+    (context) => Array.isArray(context.reconciliationResultIds) && context.reconciliationResultIds.length
+  );
+
+  if (!latestContext) {
+    return allResults.slice(0, 8);
+  }
+
+  const ids = new Set(latestContext.reconciliationResultIds);
+  return allResults.filter((result) => ids.has(result.id));
+}
+
+function countReconciliationOperations(results) {
+  return results.reduce(
+    (counts, result) => {
+      if (counts[result.operation] !== undefined) {
+        counts[result.operation] += 1;
+      }
+      return counts;
+    },
+    {
+      new: 0,
+      duplicate: 0,
+      update: 0,
+      conflict: 0,
+      outdate: 0
+    }
+  );
 }
 
 function actionsForMemory(project, memoryId) {
