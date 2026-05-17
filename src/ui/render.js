@@ -36,7 +36,7 @@ export function renderApp(state) {
             ${renderContextIntake(project)}
           </section>
           <section class="panel memory-panel">
-            ${renderMemories(project)}
+            ${renderMemories(project, state.editingMemoryId)}
           </section>
           <section class="panel action-panel">
             ${renderActions(project, state.selectedActionId)}
@@ -248,7 +248,7 @@ function renderContextItem(context) {
   `;
 }
 
-function renderMemories(project) {
+function renderMemories(project, editingMemoryId) {
   if (!project.memories.length) {
     return emptyState("暂无公司记忆");
   }
@@ -283,7 +283,11 @@ function renderMemories(project) {
               <div class="memory-list">
                 ${group.memories
                   .slice(0, 4)
-                  .map((memory) => renderMemoryItem(project, memory))
+                  .map((memory) =>
+                    memory.id === editingMemoryId
+                      ? renderMemoryEditForm(memory)
+                      : renderMemoryItem(project, memory)
+                  )
                   .join("")}
               </div>
             </article>
@@ -307,9 +311,12 @@ function renderMemoryItem(project, memory) {
         <span>${escapeHtml(confidenceLabel(memory.confidence))}</span>
       </div>
       <h4>${escapeHtml(memory.title)}</h4>
-      <p>${escapeHtml(memory.detail)}</p>
+      <p>${escapeHtml(memoryContent(memory))}</p>
       ${renderMemoryStatusActions(memory)}
       ${renderMemorySources(project, memory, sourceLabel)}
+      <div class="memory-card-actions">
+        <button class="secondary-button compact-button" data-action="edit-memory" data-memory-id="${escapeHtml(memory.id)}" type="button" aria-label="编辑 ${escapeHtml(memory.title)}" title="编辑记忆">编辑</button>
+      </div>
     </div>
   `;
 }
@@ -384,6 +391,51 @@ function renderSourceContext(project, contextId) {
       <summary>查看 Context 原文</summary>
       <p>${escapeHtml(context.body)}</p>
     </details>
+  `;
+}
+
+function renderMemoryEditForm(memory) {
+  const status = memory.status || "draft";
+
+  return `
+    <form class="memory-item memory-edit-form" data-form="edit-memory" data-memory-id="${escapeHtml(memory.id)}">
+      <label>
+        标题
+        <input name="title" type="text" value="${escapeHtml(memory.title)}" required />
+      </label>
+      <div class="field-row">
+        <label>
+          类型
+          <select name="type">
+            ${Object.entries(MEMORY_TYPES)
+              .map(
+                ([type, meta]) =>
+                  `<option value="${escapeHtml(type)}" ${type === memory.type ? "selected" : ""}>${escapeHtml(meta.label)}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+        <label>
+          状态
+          <select name="status">
+            ${Object.entries(MEMORY_STATUS)
+              .map(
+                ([value, meta]) =>
+                  `<option value="${escapeHtml(value)}" ${value === status ? "selected" : ""}>${escapeHtml(meta.label)}</option>`
+              )
+              .join("")}
+          </select>
+        </label>
+      </div>
+      <label>
+        内容
+        <textarea name="content" rows="5" required>${escapeHtml(memoryContent(memory))}</textarea>
+      </label>
+      <div class="memory-edit-actions">
+        <button class="primary-button" type="submit">保存</button>
+        <button class="ghost-button" data-action="cancel-edit-memory" type="button">取消</button>
+      </div>
+    </form>
   `;
 }
 
@@ -540,6 +592,23 @@ function emptyState(text) {
 
 export function getActiveProject(state) {
   return state.projects.find((project) => project.id === state.activeProjectId) || state.projects[0];
+}
+
+function memoryContent(memory) {
+  return memory.content || memory.detail || "";
+}
+
+function memorySource(memory) {
+  const sourceCount = memory.sourceReferences?.length ?? 0;
+  if (sourceCount > 0) {
+    return `${sourceCount} 个来源`;
+  }
+
+  return memory.source || "来源待补";
+}
+
+function memoryStatusLabel(status) {
+  return MEMORY_STATUS[status] || MEMORY_STATUS.draft;
 }
 
 function confidenceLabel(confidence) {

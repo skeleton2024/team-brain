@@ -9,7 +9,8 @@ import {
   loadState,
   makeProject,
   resetState,
-  saveState
+  saveState,
+  updateMemory
 } from "./services/store.js";
 import { getActiveProject, renderApp } from "./ui/render.js";
 
@@ -28,6 +29,9 @@ function bindEvents() {
   app.querySelector('[data-form="create-project"]')?.addEventListener("submit", handleCreateProject);
   app.querySelector('[data-form="absorb-context"]')?.addEventListener("submit", handleAbsorbContext);
   app.querySelector('[data-form="record-result"]')?.addEventListener("submit", handleRecordResult);
+  app.querySelectorAll('[data-form="edit-memory"]').forEach((form) => {
+    form.addEventListener("submit", handleEditMemory);
+  });
 
   app.querySelectorAll('[data-action="update-memory-status"]').forEach((button) => {
     button.addEventListener("click", () => {
@@ -42,6 +46,7 @@ function bindEvents() {
       setState({
         ...state,
         activeProjectId: button.dataset.projectId,
+        editingMemoryId: null,
         selectedActionId:
           state.projects.find((project) => project.id === button.dataset.projectId)?.actions[0]?.id ??
           null
@@ -58,6 +63,24 @@ function bindEvents() {
       setState({
         ...state,
         selectedActionId: button.dataset.actionId
+      });
+    });
+  });
+
+  app.querySelectorAll('[data-action="edit-memory"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        editingMemoryId: button.dataset.memoryId
+      });
+    });
+  });
+
+  app.querySelectorAll('[data-action="cancel-edit-memory"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        editingMemoryId: null
       });
     });
   });
@@ -90,6 +113,7 @@ function handleCreateProject(event) {
   setState({
     ...state,
     activeProjectId: project.id,
+    editingMemoryId: null,
     selectedActionId: null,
     projects: [project, ...state.projects]
   });
@@ -117,9 +141,34 @@ function handleAbsorbContext(event) {
     const newActionId = next.actions.find((action) => action.status !== "done")?.id ?? null;
     state = {
       ...state,
+      editingMemoryId: null,
       selectedActionId: newActionId
     };
     return next;
+  });
+}
+
+function handleEditMemory(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const memoryId = event.currentTarget.dataset.memoryId;
+  const input = {
+    title: String(form.get("title") || "").trim(),
+    type: String(form.get("type") || ""),
+    content: String(form.get("content") || "").trim(),
+    status: String(form.get("status") || "draft")
+  };
+
+  if (!memoryId || !input.title || !input.content) {
+    return;
+  }
+
+  updateActiveProject((project) => {
+    state = {
+      ...state,
+      editingMemoryId: null
+    };
+    return updateMemory(project, memoryId, input);
   });
 }
 
@@ -142,6 +191,7 @@ function handleRecordResult(event) {
 
     state = {
       ...state,
+      editingMemoryId: null,
       selectedActionId: nextAction?.id ?? actionId
     };
 

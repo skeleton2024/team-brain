@@ -6,6 +6,7 @@ import {
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
+import { updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
@@ -157,6 +158,66 @@ if (
   archivedEvidenceActions.some((item) => item.sourceMemoryIds.includes("mem-demo-customer"))
 ) {
   throw new Error("Archived memories should not block fresh memories or become new action evidence.");
+}
+
+const editableMemoryId = project.memories.find((item) => item.type === "engineering_blocker")?.id;
+if (!editableMemoryId) {
+  throw new Error("Expected an engineering memory to edit.");
+}
+
+const sourceReferences = structuredClone(
+  project.memories.find((item) => item.id === editableMemoryId).sourceReferences
+);
+const referencingActionIds = project.actions
+  .filter((item) => item.sourceMemoryIds?.includes(editableMemoryId))
+  .map((item) => item.id);
+if (!referencingActionIds.length) {
+  throw new Error("Expected at least one action linked to the editable memory.");
+}
+
+project = updateMemory(project, editableMemoryId, {
+  title: "GitHub 集成阻塞需要确认",
+  type: "engineering_blocker",
+  content: "GitHub 集成仍未完成，需要确认权限、分工和交付时间。",
+  status: "confirmed"
+});
+
+const editedMemory = project.memories.find((item) => item.id === editableMemoryId);
+if (
+  editedMemory.title !== "GitHub 集成阻塞需要确认" ||
+  editedMemory.detail !== "GitHub 集成仍未完成，需要确认权限、分工和交付时间。" ||
+  editedMemory.content !== "GitHub 集成仍未完成，需要确认权限、分工和交付时间。" ||
+  editedMemory.status !== "confirmed" ||
+  !editedMemory.updatedAt ||
+  !editedMemory.lastVerifiedAt
+) {
+  throw new Error(`Memory edit failed: ${JSON.stringify(editedMemory)}`);
+}
+
+if (JSON.stringify(editedMemory.sourceReferences) !== JSON.stringify(sourceReferences)) {
+  throw new Error("Memory edit should preserve sourceReferences.");
+}
+
+const stillLinked = referencingActionIds.every((actionId) =>
+  project.actions.find((item) => item.id === actionId)?.sourceMemoryIds?.includes(editableMemoryId)
+);
+if (!stillLinked) {
+  throw new Error("Memory edit should not break action sourceMemoryIds.");
+}
+
+const memoryEditHtml = renderApp({
+  activeProjectId: project.id,
+  editingMemoryId: editableMemoryId,
+  selectedActionId: null,
+  projects: [project]
+});
+
+if (
+  !memoryEditHtml.includes('data-form="edit-memory"') ||
+  !memoryEditHtml.includes('name="content"') ||
+  !memoryEditHtml.includes("GitHub 集成仍未完成")
+) {
+  throw new Error("Expected memory edit form to render the selected memory.");
 }
 
 const action = project.actions.find((item) => item.status !== "done");
