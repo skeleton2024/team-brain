@@ -1,5 +1,6 @@
 import { ACTION_TYPES } from "./types.js";
 import { extractMemories, makeSourceReference, summarizeTitle } from "./pipelines/extractMemories.js";
+import { reconcileMemories } from "./pipelines/reconcileMemories.js";
 import { makeId } from "../services/store.js";
 
 const ACTION_BY_MEMORY_TYPE = {
@@ -92,10 +93,16 @@ export function absorbContext(project, input) {
     actionIds: []
   };
 
-  const { memories: extractedMemories } = extractMemories({ project, context, now });
-  const memories = extractedMemories.filter((memory) => !hasSimilarMemory(project.memories, memory));
+  const { memories: candidateMemories } = extractMemories({ project, context, now });
+  const reconciliation = reconcileMemories({
+    existingMemories: project.memories,
+    candidateMemories,
+    now
+  });
+  const memories = reconciliation.acceptedMemories;
 
   context.memoryIds = memories.map((memory) => memory.id);
+  context.reconciliationResultIds = reconciliation.reconciliationResults.map((result) => result.id);
 
   const actions = proposeActions(project, memories);
   context.actionIds = actions.map((action) => action.id);
@@ -105,7 +112,12 @@ export function absorbContext(project, input) {
     updatedAt: now,
     contexts: [context, ...project.contexts],
     memories: [...memories, ...project.memories],
-    actions: mergeActions(actions, project.actions)
+    actions: mergeActions(actions, project.actions),
+    reconciliationResults: [
+      ...reconciliation.reconciliationResults,
+      ...(project.reconciliationResults || [])
+    ],
+    pendingMemoryUpdates: [...reconciliation.memoryUpdates, ...(project.pendingMemoryUpdates || [])]
   };
 }
 
@@ -185,7 +197,8 @@ export function recordActionResult(project, actionId, resultInput) {
     summary: resultInput.summary,
     createdAt: now,
     memoryIds: [],
-    actionIds: []
+    actionIds: [],
+    relatedMemoryUpdates: []
   };
 
   const resultContext = {
@@ -232,17 +245,28 @@ export function recordActionResult(project, actionId, resultInput) {
     updatedAt: now
   };
 
-  const newMemories = [resultMemory, ...extracted].filter(
+  const candidateMemories = [resultMemory, ...extracted].filter(
     (memory, index, items) =>
-      items.findIndex((item) => normalize(item.title) === normalize(memory.title)) === index
+      items.findIndex(
+        (item) => item.type === memory.type && normalize(item.title) === normalize(memory.title)
+      ) === index
   );
+  const reconciliation = reconcileMemories({
+    existingMemories: project.memories,
+    candidateMemories,
+    now
+  });
+  const newMemories = reconciliation.acceptedMemories;
 
   result.memoryIds = newMemories.map((memory) => memory.id);
+  result.relatedMemoryUpdates = reconciliation.memoryUpdates;
+  result.reconciliationResultIds = reconciliation.reconciliationResults.map((item) => item.id);
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
   resultContext.memoryIds = result.memoryIds;
   resultContext.actionIds = result.actionIds;
+  resultContext.reconciliationResultIds = result.reconciliationResultIds;
 
   return {
     ...project,
@@ -255,7 +279,12 @@ export function recordActionResult(project, actionId, resultInput) {
         item.id === actionId ? { ...item, status: "done", resultId: result.id } : item
       )
     ),
-    results: [result, ...project.results]
+    results: [result, ...project.results],
+    reconciliationResults: [
+      ...reconciliation.reconciliationResults,
+      ...(project.reconciliationResults || [])
+    ],
+    pendingMemoryUpdates: [...reconciliation.memoryUpdates, ...(project.pendingMemoryUpdates || [])]
   };
 }
 
@@ -549,17 +578,6 @@ function mergeActions(incoming, existing) {
 function resolveMemories(project, memoryIds) {
   const ids = new Set(memoryIds || []);
   return project.memories.filter((memory) => ids.has(memory.id));
-}
-
-function hasSimilarMemory(existing, memory) {
-  return existing.some(
-    (item) =>
-      item.status !== "outdated" &&
-      item.status !== "archived" &&
-      item.type === memory.type &&
-      (normalize(item.title) === normalize(memory.title) ||
-        normalize(item.detail).includes(normalize(memory.detail).slice(0, 18)))
-  );
 }
 
 function isUsableActionMemory(memory) {

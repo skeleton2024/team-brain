@@ -55,7 +55,9 @@ export function makeProject(name) {
     memories: [],
     actions: [],
     briefs: [],
-    results: []
+    results: [],
+    reconciliationResults: [],
+    pendingMemoryUpdates: []
   };
 }
 
@@ -140,7 +142,13 @@ function normalizeProject(project) {
     memories: Array.isArray(project.memories) ? project.memories.map(normalizeMemory) : [],
     actions: Array.isArray(project.actions) ? project.actions : [],
     briefs: Array.isArray(project.briefs) ? project.briefs : [],
-    results: Array.isArray(project.results) ? project.results : []
+    results: Array.isArray(project.results) ? project.results.map(normalizeActionResult) : [],
+    reconciliationResults: Array.isArray(project.reconciliationResults)
+      ? project.reconciliationResults.map(normalizeReconciliationResult)
+      : [],
+    pendingMemoryUpdates: Array.isArray(project.pendingMemoryUpdates)
+      ? project.pendingMemoryUpdates.map(normalizeRelatedMemoryUpdate)
+      : []
   };
 }
 
@@ -159,7 +167,50 @@ function normalizeContext(context) {
     createdAt,
     updatedAt: context.updatedAt || createdAt,
     memoryIds: Array.isArray(context.memoryIds) ? context.memoryIds : [],
-    actionIds: Array.isArray(context.actionIds) ? context.actionIds : []
+    actionIds: Array.isArray(context.actionIds) ? context.actionIds : [],
+    reconciliationResultIds: Array.isArray(context.reconciliationResultIds)
+      ? context.reconciliationResultIds
+      : []
+  };
+}
+
+function normalizeActionResult(result) {
+  const createdAt = result.createdAt || new Date().toISOString();
+
+  return {
+    ...result,
+    createdAt,
+    memoryIds: Array.isArray(result.memoryIds) ? result.memoryIds : [],
+    actionIds: Array.isArray(result.actionIds) ? result.actionIds : [],
+    relatedMemoryUpdates: Array.isArray(result.relatedMemoryUpdates)
+      ? result.relatedMemoryUpdates.map(normalizeRelatedMemoryUpdate)
+      : [],
+    reconciliationResultIds: Array.isArray(result.reconciliationResultIds)
+      ? result.reconciliationResultIds
+      : []
+  };
+}
+
+function normalizeReconciliationResult(result) {
+  const createdAt = result.createdAt || new Date().toISOString();
+
+  return {
+    ...result,
+    id: result.id || makeId("rec"),
+    candidateMemoryId: result.candidateMemoryId || "",
+    operation: normalizeReconciliationOperation(result.operation),
+    reason: result.reason || "",
+    requiresHumanReview: Boolean(result.requiresHumanReview),
+    createdAt
+  };
+}
+
+function normalizeRelatedMemoryUpdate(update) {
+  return {
+    ...update,
+    memoryId: update.memoryId || "",
+    operation: normalizeMemoryUpdateOperation(update.operation),
+    reason: update.reason || ""
   };
 }
 
@@ -212,6 +263,18 @@ function normalizeMemoryStatus(value) {
   return ["draft", "confirmed", "outdated", "disputed", "archived"].includes(value)
     ? value
     : "draft";
+}
+
+function normalizeReconciliationOperation(value) {
+  return ["new", "duplicate", "update", "conflict", "outdate"].includes(value)
+    ? value
+    : "new";
+}
+
+function normalizeMemoryUpdateOperation(value) {
+  return ["confirm", "update", "dispute", "outdate", "archive"].includes(value)
+    ? value
+    : "update";
 }
 
 function normalizeConfidence(value) {

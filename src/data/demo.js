@@ -240,5 +240,7 @@ export const DEMO_PROJECT = {
     }
   ],
   briefs: [],
-  results: []
+  results: [],
+  reconciliationResults: [],
+  pendingMemoryUpdates: []
 };
