@@ -1,6 +1,7 @@
 const now = new Date().toISOString();
 const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+const demoContextId = "ctx-demo-1";
 
 export const DEMO_PROJECT = {
   id: "project-demo-northstar",
@@ -10,7 +11,7 @@ export const DEMO_PROJECT = {
   updatedAt: now,
   contexts: [
     {
-      id: "ctx-demo-1",
+      id: demoContextId,
       kind: "meeting",
       title: "周一增长和客户访谈复盘",
       body:
@@ -100,7 +101,7 @@ export const DEMO_PROJECT = {
       title: "外部沟通不能自动承诺或自动发送",
       detail:
         "客户 follow-up、投资人回复和谈判内容必须先生成草稿，保留人工确认。",
-      source: "产品原则",
+      source: "周一增长和客户访谈复盘",
       confidence: "high",
       status: "confirmed",
       sourceReferences: [
@@ -122,7 +123,7 @@ export const DEMO_PROJECT = {
       title: "MVP 优先跑通上下文到结果回流闭环",
       detail:
         "第一版不做复杂集成，先让用户看到上下文、记忆、行动、Brief、结果回流的完整链路。",
-      source: "创始人笔记",
+      source: "周一增长和客户访谈复盘",
       confidence: "high",
       status: "confirmed",
       sourceReferences: [

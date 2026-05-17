@@ -283,7 +283,7 @@ function renderMemories(project) {
               <div class="memory-list">
                 ${group.memories
                   .slice(0, 4)
-                  .map(renderMemoryItem)
+                  .map((memory) => renderMemoryItem(project, memory))
                   .join("")}
               </div>
             </article>
@@ -294,7 +294,7 @@ function renderMemories(project) {
   `;
 }
 
-function renderMemoryItem(memory) {
+function renderMemoryItem(project, memory) {
   const status = memoryStatusMeta(memory.status);
   const sourceCount = Array.isArray(memory.sourceReferences) ? memory.sourceReferences.length : 0;
   const sourceLabel = memorySourceLabel(memory);
@@ -309,7 +309,39 @@ function renderMemoryItem(memory) {
       <h4>${escapeHtml(memory.title)}</h4>
       <p>${escapeHtml(memory.detail)}</p>
       ${renderMemoryStatusActions(memory)}
-      <small>${escapeHtml(sourceLabel)}</small>
+      ${renderMemorySources(project, memory, sourceLabel)}
+    </div>
+  `;
+}
+
+function renderMemorySources(project, memory) {
+  const sourceReferences = Array.isArray(memory.sourceReferences)
+    ? memory.sourceReferences.filter((reference) => reference?.contextId && reference?.quote)
+    : [];
+
+  if (!sourceReferences.length) {
+    return `<small>${escapeHtml(memory.source || "来源待补")} · ${confidenceLabel(memory.confidence)}</small>`;
+  }
+
+  const firstSourceTitle = contextTitle(project, sourceReferences[0].contextId);
+
+  return `
+    <div class="memory-sources">
+      <small>来源 ${sourceReferences.length} · ${escapeHtml(firstSourceTitle)} · ${confidenceLabel(memory.confidence)}</small>
+      <details>
+        <summary>查看引用片段</summary>
+        ${sourceReferences
+          .map(
+            (reference) => `
+              <blockquote>
+                <strong>${escapeHtml(contextTitle(project, reference.contextId))}</strong>
+                <p>${escapeHtml(reference.quote)}</p>
+                ${renderSourceContext(project, reference.contextId)}
+              </blockquote>
+            `
+          )
+          .join("")}
+      </details>
     </div>
   `;
 }
@@ -334,6 +366,24 @@ function renderMemoryStatusActions(memory) {
         )
         .join("")}
     </div>
+  `;
+}
+
+function contextTitle(project, contextId) {
+  return project.contexts.find((context) => context.id === contextId)?.title || "未知上下文";
+}
+
+function renderSourceContext(project, contextId) {
+  const context = project.contexts.find((item) => item.id === contextId);
+  if (!context?.body) {
+    return "";
+  }
+
+  return `
+    <details class="source-context">
+      <summary>查看 Context 原文</summary>
+      <p>${escapeHtml(context.body)}</p>
+    </details>
   `;
 }
 

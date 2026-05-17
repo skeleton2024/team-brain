@@ -10,6 +10,17 @@ import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
 
+const demoMemoriesMissingSources = project.memories.filter(
+  (memory) => !hasUsableSourceReference(memory)
+);
+if (demoMemoriesMissingSources.length) {
+  throw new Error(
+    `Expected demo memories to include source references: ${demoMemoriesMissingSources
+      .map((memory) => memory.id)
+      .join(", ")}`
+  );
+}
+
 project = absorbContext(project, {
   kind: "customer",
   title: "测试客户访谈",
@@ -153,10 +164,12 @@ if (!action) {
   throw new Error("Expected at least one open action.");
 }
 
+const resultSummary = "客户同意下周试点，但要求权限设置、删除机制和数据范围先确认。";
+
 project = generateBrief(project, action.id);
 project = recordActionResult(project, action.id, {
   outcome: "positive",
-  summary: "客户同意下周试点，但要求权限设置、删除机制和数据范围先确认。"
+  summary: resultSummary
 });
 
 const latestResult = project.results[0];
@@ -184,6 +197,17 @@ if (
   )
 ) {
   throw new Error(`Result memories did not include draft status and sources: ${JSON.stringify(resultMemories)}`);
+}
+
+const allMemoriesMissingSources = project.memories.filter(
+  (memory) => !hasUsableSourceReference(memory)
+);
+if (allMemoriesMissingSources.length) {
+  throw new Error(
+    `Expected every memory to include a source reference: ${allMemoriesMissingSources
+      .map((memory) => memory.id)
+      .join(", ")}`
+  );
 }
 
 const legacyHtml = renderApp({
@@ -225,7 +249,9 @@ const summary = {
   actions: project.actions.length,
   briefs: project.briefs.length,
   results: project.results.length,
-  openActions: project.actions.filter((item) => item.status !== "done").length
+  openActions: project.actions.filter((item) => item.status !== "done").length,
+  sourceReferencedMemories: project.memories.filter((memory) => hasUsableSourceReference(memory)).length,
+  resultSourceContextId: resultContext.id
 };
 
 if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {
@@ -233,3 +259,16 @@ if (!summary.contexts || !summary.memories || !summary.actions || !summary.brief
 }
 
 console.log(JSON.stringify(summary, null, 2));
+
+function hasUsableSourceReference(memory, contextId) {
+  if (!Array.isArray(memory.sourceReferences)) {
+    return false;
+  }
+
+  return memory.sourceReferences.some(
+    (reference) =>
+      reference?.quote &&
+      reference?.contextId &&
+      (!contextId || reference.contextId === contextId)
+  );
+}
