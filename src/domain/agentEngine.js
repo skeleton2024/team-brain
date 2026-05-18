@@ -195,6 +195,9 @@ export function recordActionResult(project, actionId, resultInput) {
     actionId,
     outcome: resultInput.outcome,
     summary: resultInput.summary,
+    whatChanged: resultInput.whatChanged || resultInput.summary,
+    newEvidence: resultInput.newEvidence || resultInput.summary,
+    followUpNeeded: Boolean(resultInput.followUpNeeded),
     createdAt: now,
     memoryIds: [],
     actionIds: [],
@@ -264,6 +267,7 @@ export function recordActionResult(project, actionId, resultInput) {
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
+  result.followUpNeeded = result.followUpNeeded || followUpActions.length > 0;
   resultContext.memoryIds = result.memoryIds;
   resultContext.actionIds = result.actionIds;
   resultContext.reconciliationResultIds = result.reconciliationResultIds;
@@ -312,10 +316,13 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       type: "negotiation_prep",
       title: "准备下一轮推进方案",
       rationale: "结果显示对方有继续推进信号，需要把下一步边界和成功标准写清楚。",
+      whyNow: "结果显示对方有继续推进信号，需要把下一步边界和成功标准写清楚。",
       priority: "high",
       riskLevel: "medium",
       expectedOutput: "下一轮沟通草稿、试点范围和人工确认清单",
+      expectedArtifact: "下一轮沟通草稿、试点范围和人工确认清单",
       sourceMemoryIds,
+      evidenceMemoryIds: sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -328,10 +335,13 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       type: "risk_review",
       title: "整理阻塞原因和降风险方案",
       rationale: "执行结果暴露了新的阻塞，需要更新判断并避免过早承诺。",
+      whyNow: "执行结果暴露了新的阻塞，需要更新判断并避免过早承诺。",
       priority: "high",
       riskLevel: "high",
       expectedOutput: "阻塞拆解、备选方案和创始人决策项",
+      expectedArtifact: "阻塞拆解、备选方案和创始人决策项",
       sourceMemoryIds,
+      evidenceMemoryIds: sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -344,10 +354,13 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       type: "coding_brief",
       title: "更新工程修复 Brief",
       rationale: "结果中出现工程或数据问题，需要转成可执行任务并确认验收标准。",
+      whyNow: "结果中出现工程或数据问题，需要转成可执行任务并确认验收标准。",
       priority: "high",
       riskLevel: "low",
       expectedOutput: "开发任务说明、验收标准和回归检查",
+      expectedArtifact: "开发任务说明、验收标准和回归检查",
       sourceMemoryIds,
+      evidenceMemoryIds: sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -360,10 +373,13 @@ function proposeResultActions(project, completedAction, resultInput, memories) {
       type: "learning_loop",
       title: "复盘执行结果并更新下一步",
       rationale: `行动“${completedAction.title}”已有回流，适合把学习转成下一轮验证。`,
+      whyNow: `行动“${completedAction.title}”已有回流，适合把学习转成下一轮验证。`,
       priority: "medium",
       riskLevel: "low",
       expectedOutput: "学习摘要、假设变化和下一步建议",
+      expectedArtifact: "学习摘要、假设变化和下一步建议",
       sourceMemoryIds,
+      evidenceMemoryIds: sourceMemoryIds,
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: new Date().toISOString()
@@ -391,10 +407,13 @@ function buildActionForMemoryType(memoryType, memories) {
     type: template.type,
     title: adaptActionTitle(template.title, lead),
     rationale: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
+    whyNow: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
     priority: template.priority,
     riskLevel: template.riskLevel,
     expectedOutput: template.expectedOutput,
+    expectedArtifact: template.expectedOutput,
     sourceMemoryIds: sourceMemories.map((memory) => memory.id),
+    evidenceMemoryIds: sourceMemories.map((memory) => memory.id),
     status: "pending",
     requiresHumanConfirmation: true,
     createdAt: new Date().toISOString()
@@ -408,8 +427,13 @@ function buildBrief(project, action, memories) {
   return {
     id: makeId("brief"),
     actionId: action.id,
+    type: action.type,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     title: `${action.title} Brief`,
+    evidenceMemoryIds: memories.map((memory) => memory.id),
+    sourceContextIds: sourceContextIdsForMemories(memories),
+    createdBy: "ai",
     sections: {
       goal: `完成“${action.title}”，产出 ${action.expectedOutput}。`,
       background:
@@ -432,6 +456,17 @@ function buildBrief(project, action, memories) {
       ]
     }
   };
+}
+
+function sourceContextIdsForMemories(memories) {
+  return [
+    ...new Set(
+      memories
+        .flatMap((memory) => memory.sourceReferences || [])
+        .map((reference) => reference.contextId)
+        .filter(Boolean)
+    )
+  ];
 }
 
 function buildStrategy(action) {
