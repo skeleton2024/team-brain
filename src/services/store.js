@@ -1,5 +1,10 @@
 import { DEMO_PROJECT } from "../data/demo.js";
-import { MEMORY_STATUS, MEMORY_TYPES, SOURCE_TYPE_LABELS } from "../domain/types.js";
+import {
+  MEMORY_STATUS,
+  MEMORY_TYPES,
+  SIGNAL_TYPES,
+  SOURCE_TYPE_LABELS
+} from "../domain/types.js";
 
 const STORAGE_KEY = "teammind.mvp.state.v1";
 
@@ -143,7 +148,7 @@ function normalizeProject(project) {
     createdAt: project.createdAt || now,
     updatedAt: project.updatedAt || project.createdAt || now,
     sources: Array.isArray(project.sources) ? project.sources.map(normalizeSource) : [],
-    signals: Array.isArray(project.signals) ? project.signals : [],
+    signals: Array.isArray(project.signals) ? project.signals.map(normalizeSignal) : [],
     entities: Array.isArray(project.entities) ? project.entities : [],
     entityRelations: Array.isArray(project.entityRelations) ? project.entityRelations : [],
     contexts: Array.isArray(project.contexts) ? project.contexts.map(normalizeContext) : [],
@@ -182,6 +187,29 @@ function normalizeSource(source) {
     status: normalizeSourceStatus(source.status),
     createdAt,
     updatedAt: source.updatedAt || createdAt
+  };
+}
+
+function normalizeSignal(signal) {
+  const createdAt = signal.createdAt || new Date().toISOString();
+
+  return {
+    ...signal,
+    id: signal.id || makeId("sig"),
+    sourceId: signal.sourceId || "",
+    type: normalizeSignalType(signal.type),
+    title: signal.title || "未命名 Signal",
+    summary: signal.summary || signal.quote || "",
+    quote: signal.quote ? String(signal.quote).trim() : undefined,
+    confidence: normalizeSignalConfidence(signal.confidence),
+    suggestedEntityIds: Array.isArray(signal.suggestedEntityIds) ? signal.suggestedEntityIds : [],
+    suggestedProjectIds: Array.isArray(signal.suggestedProjectIds) ? signal.suggestedProjectIds : [],
+    suggestedMemory: signal.suggestedMemory || undefined,
+    suggestedAction: signal.suggestedAction || undefined,
+    status: normalizeSignalStatus(signal.status),
+    createdBy: signal.createdBy === "human" ? "human" : "ai",
+    createdAt,
+    updatedAt: signal.updatedAt || createdAt
   };
 }
 
@@ -308,6 +336,22 @@ function normalizeSourceOrigin(value) {
 
 function normalizeSourceStatus(value) {
   return ["new", "processed", "ignored", "archived"].includes(value) ? value : "new";
+}
+
+function normalizeSignalType(value) {
+  return SIGNAL_TYPES[value] ? value : "fact";
+}
+
+function normalizeSignalStatus(value) {
+  return ["new", "confirmed", "ignored", "converted"].includes(value) ? value : "new";
+}
+
+function normalizeSignalConfidence(value) {
+  if (typeof value === "number") {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  return 0.5;
 }
 
 function normalizeReconciliationOperation(value) {

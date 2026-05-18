@@ -25,12 +25,44 @@ export const DEMO_PROJECT = {
       relatedProjectIds: ["project-demo-northstar"],
       tags: ["客户发现", "权限", "MVP"],
       importance: "high",
-      status: "new",
+      status: "processed",
       createdAt: twoDaysAgo,
       updatedAt: twoDaysAgo
     }
   ],
-  signals: [],
+  signals: [
+    {
+      id: "sig-demo-1",
+      sourceId: "src-demo-1",
+      type: "customer_need",
+      title: "客户愿意试用但担心权限边界",
+      summary: "客户愿意尝试公司记忆系统，但需要先确认敏感数据和权限边界。",
+      quote: "客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。",
+      confidence: 0.86,
+      suggestedEntityIds: [],
+      suggestedProjectIds: ["project-demo-northstar"],
+      suggestedMemory: {
+        type: "customer_concern",
+        title: "客户愿意试用但担心权限边界",
+        content: "客户愿意尝试公司记忆系统，但需要先确认敏感数据和权限边界。",
+        confidence: 0.86
+      },
+      suggestedAction: {
+        type: "customer_followup",
+        title: "准备客户 follow-up 草稿",
+        whyNow: "客户已经表达试用兴趣，但权限边界仍需人工确认。",
+        priority: "high",
+        riskLevel: "medium",
+        expectedArtifact: "客户 follow-up 草稿和待确认问题",
+        status: "pending",
+        humanConfirmationChecklist: ["确认事实准确", "确认不会自动对外发送"]
+      },
+      status: "new",
+      createdBy: "ai",
+      createdAt: oneDayAgo,
+      updatedAt: oneDayAgo
+    }
+  ],
   entities: [],
   entityRelations: [],
   contexts: [

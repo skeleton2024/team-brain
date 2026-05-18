@@ -45,6 +45,26 @@ export const SOURCE_STATUS = {
   archived: "已归档"
 };
 
+export const SIGNAL_TYPES = {
+  customer_need: "客户需求",
+  investor_question: "投资人问题",
+  product_feedback: "产品反馈",
+  engineering_blocker: "工程阻塞",
+  team_constraint: "团队限制",
+  risk: "风险",
+  opportunity: "机会",
+  commitment: "承诺",
+  decision: "决策",
+  fact: "事实"
+};
+
+export const SIGNAL_STATUS = {
+  new: "待 review",
+  confirmed: "已确认",
+  ignored: "已忽略",
+  converted: "已转化"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",

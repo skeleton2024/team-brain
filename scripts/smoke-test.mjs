@@ -6,6 +6,7 @@ import {
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
+import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
 import { updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
@@ -57,6 +58,50 @@ if (
   project.memories.length !== memoryCountBeforePipelineProbe
 ) {
   throw new Error(`extractMemories pipeline contract failed: ${JSON.stringify(pipelineProbe)}`);
+}
+
+const sourceProbe = {
+  id: "src-smoke-1",
+  kind: "customer_feedback",
+  title: "客户预算和权限反馈",
+  body: "客户愿意下周试点，但担心预算审批和敏感数据权限。工程上 Slack 导入还没做，本周只能手动粘贴。",
+  origin: "manual",
+  occurredAt: "2026-05-13",
+  receivedAt: "2026-05-13T00:00:00.000Z",
+  participants: ["客户 A", "销售负责人"],
+  relatedEntityIds: [],
+  relatedProjectIds: [project.id],
+  tags: ["试点", "预算"],
+  importance: "high",
+  status: "new",
+  createdAt: "2026-05-13T00:00:00.000Z",
+  updatedAt: "2026-05-13T00:00:00.000Z"
+};
+const signalProbe = extractSignals({
+  project,
+  source: sourceProbe,
+  now: "2026-05-13T00:00:00.000Z"
+});
+
+if (
+  !Array.isArray(signalProbe.signals) ||
+  signalProbe.signals.length < 1 ||
+  typeof signalProbe.runSummary !== "string" ||
+  !signalProbe.runSummary.includes("Signal") ||
+  signalProbe.signals.some(
+    (signal) =>
+      signal.sourceId !== sourceProbe.id ||
+      signal.status !== "new" ||
+      signal.createdBy !== "ai" ||
+      signal.createdAt !== "2026-05-13T00:00:00.000Z" ||
+      !signal.summary ||
+      !signal.quote ||
+      typeof signal.confidence !== "number" ||
+      !Array.isArray(signal.suggestedProjectIds) ||
+      !signal.suggestedMemory
+  )
+) {
+  throw new Error(`extractSignals pipeline contract failed: ${JSON.stringify(signalProbe)}`);
 }
 
 const priceConcernMemory = {

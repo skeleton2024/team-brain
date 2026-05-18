@@ -436,6 +436,27 @@ Phase 3 Alpha Wave 1 的手动 Source Inbox issue。
 - `src/styles.css`
 - `src/data/demo.js`
 
+### `docs/issues/PIPE-01-source-to-signal.md`
+
+Phase 3 Alpha Wave 1 的 Source 到 Signal pipeline issue。
+
+主要作用：
+
+- 要求新增本地 `extractSignals()` pipeline。
+- 要求 Source 可以被处理成结构化 Signal。
+- 明确本 issue 不做人工 review、转 memory、转 action 或真实外部 AI provider。
+
+通常会改：
+
+- `src/domain/pipelines/extractSignals.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -575,6 +596,23 @@ Phase 3 Alpha Wave 1 的手动 Source Inbox issue。
 - 不在这里做 reconciliation，也不直接过滤已有记忆；去重仍由 `agentEngine.js` 编排。
 - 后续接真实 AI provider 时，应保持输出结构稳定并补 schema 校验。
 - 每条 AI 生成的 memory 必须能追溯到 `context.id`。
+
+### `src/domain/pipelines/extractSignals.js`
+
+Source 到 Signal pipeline。
+
+主要作用：
+
+- 暴露 `extractSignals({ project, source, now })`。
+- 用本地关键词规则把 `Source.body` 拆成候选 `Signal`。
+- 为每条 Signal 补齐 `sourceId`、`type`、`summary`、`quote`、`confidence`、`suggestedMemory`、`suggestedAction`、`status`、`createdBy` 和时间字段。
+- 返回 `{ signals, runSummary }`，不直接保存或修改 project state。
+
+修改时注意：
+
+- 不在这里做人工确认、转 memory 或转 action。
+- 不调用真实外部 provider，也不执行 Gmail / Slack 等外部动作。
+- 后续可替换为真实 AI provider，但输出结构必须保持稳定。
 
 ### `src/services/store.js`
 
