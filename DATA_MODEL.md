@@ -811,18 +811,16 @@ Opportunity
 - Memory。
 - Memory status 基础字段和默认值。
 - 上下文输入、结果回流与 demo memory 的基础 `sourceReferences`。
-- Action。
-- Brief。
-- Result。
+- Action，包括新生成 action 和 demo action 的 `whyNow`、`evidenceMemoryIds`、`expectedArtifact` 兼容字段。
+- Brief，包括新生成 brief 的 `type`、`evidenceMemoryIds`、`sourceContextIds`、`createdBy`、`updatedAt`。
+- Result，包括 `whatChanged`、`newEvidence`、`followUpNeeded`、`relatedMemoryUpdates`。
 
 但还缺少：
 
 - `schemaVersion`。
 - sourceReferences 的详情查看、跳转和跨对象来源建模。
 - memory status 的人工确认、编辑和状态流转。
-- action `whyNow` 和 `evidenceMemoryIds`。
 - scenario-specific Brief sections。
-- result `whatChanged` / `newEvidence` / `relatedMemoryUpdates`。
 - AgentRun。
 - repository abstraction。
 
@@ -833,8 +831,6 @@ Phase 3 Alpha 合同已经定义但尚未完整落地：
 - ProjectNode 项目节点。
 - Commitment / Risk / Opportunity 的 Command Center 输入。
 - EvidenceLink 对 Source、Signal、Memory、Context 的统一证据引用。
-
-后续 Wave 应按顺序逐步实现这些对象，不要一次性大重写。
 
 后续 issue 应逐步补齐，而不是一次性大重写。
 

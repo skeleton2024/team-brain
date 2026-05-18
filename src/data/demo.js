@@ -202,10 +202,13 @@ export const DEMO_PROJECT = {
       title: "准备付费意向客户 follow-up 草稿",
       rationale:
         "客户已经表达试用兴趣，但敏感数据和权限边界仍是关键顾虑。",
+      whyNow: "客户已经表达试用兴趣，但敏感数据和权限边界仍是关键顾虑。",
       priority: "high",
       riskLevel: "medium",
       expectedOutput: "一封不自动发送的 follow-up 邮件草稿和确认清单",
+      expectedArtifact: "一封不自动发送的 follow-up 邮件草稿和确认清单",
       sourceMemoryIds: ["mem-demo-customer", "mem-demo-risk"],
+      evidenceMemoryIds: ["mem-demo-customer", "mem-demo-risk"],
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: now
@@ -216,10 +219,13 @@ export const DEMO_PROJECT = {
       title: "生成手动上下文输入的工程 Brief",
       rationale:
         "Slack 导入暂不做，必须把粘贴文本的闭环体验做稳。",
+      whyNow: "Slack 导入暂不做，必须把粘贴文本的闭环体验做稳。",
       priority: "high",
       riskLevel: "low",
       expectedOutput: "一个可执行的 MVP 工程任务说明",
+      expectedArtifact: "一个可执行的 MVP 工程任务说明",
       sourceMemoryIds: ["mem-demo-engineering", "mem-demo-product"],
+      evidenceMemoryIds: ["mem-demo-engineering", "mem-demo-product"],
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: now
@@ -230,10 +236,13 @@ export const DEMO_PROJECT = {
       title: "整理 60 秒 Demo 路线",
       rationale:
         "MVP 需要让早期团队快速理解闭环价值，而不是把产品看成聊天机器人。",
+      whyNow: "MVP 需要让早期团队快速理解闭环价值，而不是把产品看成聊天机器人。",
       priority: "medium",
       riskLevel: "low",
       expectedOutput: "演示路径和产品取舍说明",
+      expectedArtifact: "演示路径和产品取舍说明",
       sourceMemoryIds: ["mem-demo-product", "mem-demo-team"],
+      evidenceMemoryIds: ["mem-demo-product", "mem-demo-team"],
       status: "pending",
       requiresHumanConfirmation: true,
       createdAt: now
