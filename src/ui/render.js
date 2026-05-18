@@ -316,8 +316,22 @@ function renderSignalItem(project, signal) {
         <button class="secondary-button compact-button" data-action="suggest-signal-links" data-signal-id="${escapeHtml(signal.id)}" type="button">
           建议关联
         </button>
+        ${renderSignalReviewActions(signal)}
       </div>
     </article>
+  `;
+}
+
+function renderSignalReviewActions(signal) {
+  if (signal.status === "converted" || signal.status === "ignored") {
+    return "";
+  }
+
+  return `
+    <button class="secondary-button compact-button" data-signal-review="confirm" data-signal-id="${escapeHtml(signal.id)}" type="button">确认</button>
+    <button class="ghost-button compact-button" data-signal-review="ignore" data-signal-id="${escapeHtml(signal.id)}" type="button">忽略</button>
+    <button class="secondary-button compact-button" data-signal-review="memory" data-signal-id="${escapeHtml(signal.id)}" type="button">转 Memory</button>
+    <button class="secondary-button compact-button" data-signal-review="action" data-signal-id="${escapeHtml(signal.id)}" type="button">转 Action</button>
   `;
 }
 
@@ -628,7 +642,7 @@ function renderMemoryDetailPanel(project, memoryId) {
 
 function renderMemoryDetailSources(project, memory) {
   const sourceReferences = Array.isArray(memory.sourceReferences)
-    ? memory.sourceReferences.filter((reference) => reference?.contextId || reference?.quote)
+    ? memory.sourceReferences.filter((reference) => reference?.contextId || reference?.sourceId || reference?.quote)
     : [];
 
   if (!sourceReferences.length) {
@@ -640,11 +654,12 @@ function renderMemoryDetailSources(project, memory) {
       ${sourceReferences
         .map((reference) => {
           const context = project.contexts.find((item) => item.id === reference.contextId);
+          const source = (project.sources || []).find((item) => item.id === reference.sourceId);
           return `
             <article class="memory-detail-source">
               <div>
-                <strong>${escapeHtml(context?.title || reference.note || "未知上下文")}</strong>
-                <span>${escapeHtml(formatDateOnly(context?.occurredAt || context?.createdAt))}</span>
+                <strong>${escapeHtml(context?.title || source?.title || reference.note || "未知来源")}</strong>
+                <span>${escapeHtml(formatDateOnly(context?.occurredAt || context?.createdAt || source?.occurredAt || source?.receivedAt))}</span>
               </div>
               <blockquote>${escapeHtml(reference.quote || memoryContent(memory))}</blockquote>
               ${
@@ -654,6 +669,12 @@ function renderMemoryDetailSources(project, memory) {
                       <p>${escapeHtml(context.body)}</p>
                     </details>
                     <a class="secondary-link compact-button" href="#context-${escapeHtml(context.id)}">跳到原文</a>`
+                  : source?.body
+                    ? `<details class="source-context">
+                        <summary>Source 原文</summary>
+                        <p>${escapeHtml(source.body)}</p>
+                      </details>
+                      <a class="secondary-link compact-button" href="#source-${escapeHtml(source.id)}">跳到 Source</a>`
                   : ""
               }
             </article>
@@ -735,14 +756,14 @@ function renderRelatedMemoryUpdates(result, memoryId) {
 
 function renderMemorySources(project, memory) {
   const sourceReferences = Array.isArray(memory.sourceReferences)
-    ? memory.sourceReferences.filter((reference) => reference?.contextId && reference?.quote)
+    ? memory.sourceReferences.filter((reference) => (reference?.contextId || reference?.sourceId) && reference?.quote)
     : [];
 
   if (!sourceReferences.length) {
     return `<small>${escapeHtml(memory.source || "来源待补")} · ${confidenceLabel(memory.confidence)}</small>`;
   }
 
-  const firstSourceTitle = contextTitle(project, sourceReferences[0].contextId);
+  const firstSourceTitle = referenceTitle(project, sourceReferences[0]);
 
   return `
     <div class="memory-sources">
@@ -753,9 +774,9 @@ function renderMemorySources(project, memory) {
           .map(
             (reference) => `
               <blockquote>
-                <strong>${escapeHtml(contextTitle(project, reference.contextId))}</strong>
+                <strong>${escapeHtml(referenceTitle(project, reference))}</strong>
                 <p>${escapeHtml(reference.quote)}</p>
-                ${renderSourceContext(project, reference.contextId)}
+                ${renderSourceEvidence(project, reference)}
               </blockquote>
             `
           )
@@ -792,6 +813,18 @@ function contextTitle(project, contextId) {
   return project.contexts.find((context) => context.id === contextId)?.title || "未知上下文";
 }
 
+function referenceTitle(project, reference) {
+  if (reference?.contextId) {
+    return contextTitle(project, reference.contextId);
+  }
+
+  if (reference?.sourceId) {
+    return (project.sources || []).find((source) => source.id === reference.sourceId)?.title || "未知 Source";
+  }
+
+  return "未知来源";
+}
+
 function renderSourceContext(project, contextId) {
   const context = project.contexts.find((item) => item.id === contextId);
   if (!context?.body) {
@@ -802,6 +835,24 @@ function renderSourceContext(project, contextId) {
     <details class="source-context">
       <summary>查看 Context 原文</summary>
       <p>${escapeHtml(context.body)}</p>
+    </details>
+  `;
+}
+
+function renderSourceEvidence(project, reference) {
+  if (reference?.contextId) {
+    return renderSourceContext(project, reference.contextId);
+  }
+
+  const source = (project.sources || []).find((item) => item.id === reference?.sourceId);
+  if (!source?.body) {
+    return "";
+  }
+
+  return `
+    <details class="source-context">
+      <summary>查看 Source 原文</summary>
+      <p>${escapeHtml(source.body)}</p>
     </details>
   `;
 }

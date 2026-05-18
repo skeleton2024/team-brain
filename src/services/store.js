@@ -331,6 +331,8 @@ function normalizeSourceReferences(value) {
   return value
     .map((reference) => ({
       contextId: String(reference?.contextId || "").trim(),
+      sourceId: String(reference?.sourceId || "").trim(),
+      signalId: String(reference?.signalId || "").trim(),
       quote: String(reference?.quote || "").trim(),
       note: reference?.note ? String(reference.note).trim() : undefined,
       confidence:
@@ -338,10 +340,10 @@ function normalizeSourceReferences(value) {
           ? Math.max(0, Math.min(1, reference.confidence))
           : undefined
     }))
-    .filter((reference) => reference.contextId || reference.quote)
+    .filter((reference) => reference.contextId || reference.sourceId || reference.quote)
     .map((reference) => ({
       ...reference,
-      contextId: reference.contextId || "ctx-unknown-source"
+      contextId: reference.contextId || (reference.sourceId ? "" : "ctx-unknown-source")
     }));
 }
 

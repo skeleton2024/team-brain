@@ -200,6 +200,8 @@ other
 ```text
 SourceReference
   contextId: string
+  sourceId?: string
+  signalId?: string
   quote: string
   note?: string
   confidence?: number
@@ -208,6 +210,8 @@ SourceReference
 字段说明：
 
 - `contextId`：来源上下文 ID。
+- `sourceId`：Phase 3 Alpha Source ID。用于从 Inbox Signal 转成 Memory 时追溯原始 Source。
+- `signalId`：Phase 3 Alpha Signal ID。用于记录该 Memory 是由哪条 Signal 转化而来。
 - `quote`：原文片段，帮助用户验证 AI 判断。
 - `note`：AI 或人工补充说明。
 - `confidence`：这条引用支持该判断的强度，范围 `0-1`。

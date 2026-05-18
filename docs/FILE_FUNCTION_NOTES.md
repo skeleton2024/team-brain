@@ -480,6 +480,25 @@ Phase 3 Alpha Wave 1 的 Signal 到 Entity / Project 建议关联 issue。
 - `src/data/demo.js`
 - `scripts/smoke-test.mjs`
 
+### `docs/issues/UI-01-inbox-review-flow.md`
+
+Phase 3 Alpha Wave 1 的 Inbox review flow issue。
+
+主要作用：
+
+- 要求 Signal 支持确认、忽略、转 Memory、转 Action。
+- 要求 Signal 转化后的 Memory 能追溯到 Source 和 Signal。
+- 要求转 Action 时保留人工确认边界，不自动执行外部动作。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `DATA_MODEL.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
