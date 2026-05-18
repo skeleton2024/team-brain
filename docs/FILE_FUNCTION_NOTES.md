@@ -367,6 +367,55 @@ memory 详情面板 issue。
 - `src/data/demo.js`
 - `scripts/smoke-test.mjs`
 
+### `docs/issues/DEV-00-ai-development-rules.md`
+
+Phase 3 Alpha Wave 0 的开发规则固化 issue。
+
+主要作用：
+
+- 要求补齐 Wave 0 issue spec。
+- 明确 Wave 0 的分支、验收和文档同步入口。
+- 保证后续 issue 不再只依赖阶段计划里的任务列表。
+
+### `docs/issues/ARCH-00-core-domain-contract.md`
+
+Phase 3 Alpha 核心数据合同 issue。
+
+主要作用：
+
+- 要求在 `DATA_MODEL.md` 中定义 Source、Signal、Entity、ProjectNode、Commitment、Risk、Opportunity 等 Alpha 对象。
+- 对齐这些对象与现有 ContextItem、MemoryItem、ActionItem、Brief、ActionResult 和 AgentRun 的关系。
+- 为 Wave 1 到 Wave 4 的实现提供稳定字段边界。
+
+### `docs/issues/QA-00-smoke-test-baseline.md`
+
+Phase 3 Alpha smoke test baseline issue。
+
+主要作用：
+
+- 要求增强 `scripts/smoke-test.mjs`。
+- 把核心闭环、source references、reconciliation、action evidence、brief source 等作为后续 Wave 的最低验收线。
+
+### `docs/issues/DOC-00-current-system-status.md`
+
+当前系统状态维护 issue。
+
+主要作用：
+
+- 要求 Wave 0 结束后更新 `当前系统状态.md`。
+- 记录 Phase 3 Alpha 的实际基线、风险和下一步。
+- 同步 `docs/TEAM_DEV_LOG.md`。
+
+### `docs/issues/DOC-01-ai-handoff.md`
+
+AI handoff 维护 issue。
+
+主要作用：
+
+- 要求 Wave 0 结束后更新 `AI_HANDOFF.md`。
+- 让下一个 Codex 对话能从 Wave 1 的 Inbox / Source / Signal 起点接手。
+- 同步 `docs/TEAM_DEV_LOG.md`。
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -382,6 +431,9 @@ memory 详情面板 issue。
 - 调用 `recordActionResult()` 写入结果回流。
 - 检查 contexts、memories、actions、briefs、results 都存在。
 - 直接检查 `extractMemories()` pipeline 输出 `{ memories, runSummary }`，并确认候选记忆带 `sourceReferences`。
+- 检查新生成 action 的 `whyNow`、`evidenceMemoryIds`、`expectedArtifact`。
+- 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
+- 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
 
 修改时注意：
 

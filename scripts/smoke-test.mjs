@@ -261,6 +261,21 @@ if (
   throw new Error(`New memory did not include MEM-01 defaults: ${JSON.stringify(newestMemory)}`);
 }
 
+const generatedActions = project.actions.filter((item) => newestContext.actionIds.includes(item.id));
+if (
+  generatedActions.length < 1 ||
+  generatedActions.some(
+    (item) =>
+      !item.whyNow ||
+      !item.expectedArtifact ||
+      !Array.isArray(item.sourceMemoryIds) ||
+      item.sourceMemoryIds.length < 1 ||
+      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds)
+  )
+) {
+  throw new Error(`Generated actions should include Phase 3 evidence fields: ${JSON.stringify(generatedActions)}`);
+}
+
 project = updateMemoryStatus(project, newestMemory.id, "confirmed");
 const confirmedMemory = project.memories.find((memory) => memory.id === newestMemory.id);
 if (
@@ -416,12 +431,35 @@ if (!action) {
 const resultSummary = "客户同意下周试点，但要求权限设置、删除机制和数据范围先确认。";
 
 project = generateBrief(project, action.id);
+const generatedBrief = project.briefs.find((brief) => brief.actionId === action.id);
+if (
+  !generatedBrief ||
+  generatedBrief.type !== action.type ||
+  generatedBrief.createdBy !== "ai" ||
+  !generatedBrief.updatedAt ||
+  !Array.isArray(generatedBrief.evidenceMemoryIds) ||
+  generatedBrief.evidenceMemoryIds.length < 1 ||
+  !Array.isArray(generatedBrief.sourceContextIds) ||
+  generatedBrief.sourceContextIds.length < 1
+) {
+  throw new Error(`Generated brief should include evidence and source context links: ${JSON.stringify(generatedBrief)}`);
+}
+
 project = recordActionResult(project, action.id, {
   outcome: "positive",
   summary: resultSummary
 });
 
 const latestResult = project.results[0];
+if (
+  latestResult.whatChanged !== resultSummary ||
+  latestResult.newEvidence !== resultSummary ||
+  latestResult.followUpNeeded !== true ||
+  !Array.isArray(latestResult.relatedMemoryUpdates)
+) {
+  throw new Error(`Action result should include Phase 3 result fields: ${JSON.stringify(latestResult)}`);
+}
+
 const resultContext = project.contexts.find(
   (context) => context.title === `行动结果：${action.title}` && context.body.includes("客户同意下周试点")
 );
