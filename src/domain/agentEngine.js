@@ -1,6 +1,7 @@
 import { ACTION_TYPES } from "./types.js";
 import { extractMemories, makeSourceReference, summarizeTitle } from "./pipelines/extractMemories.js";
 import { extractSignals } from "./pipelines/extractSignals.js";
+import { linkSignals } from "./pipelines/linkSignals.js";
 import { reconcileMemories } from "./pipelines/reconcileMemories.js";
 import { makeId } from "../services/store.js";
 
@@ -127,6 +128,69 @@ export function processSource(project, sourceId) {
       item.id === sourceId ? { ...item, status: "processed", updatedAt: now } : item
     ),
     signals: [...newSignals, ...(project.signals || [])]
+  };
+}
+
+export function suggestSignalLinks(project, signalId) {
+  const targetSignals = signalId
+    ? (project.signals || []).filter((signal) => signal.id === signalId)
+    : (project.signals || []).filter((signal) => signal.status === "new");
+
+  if (!targetSignals.length) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const linking = linkSignals({ project, signals: targetSignals, now });
+  const entityIdsBySignal = new Map(
+    linking.signalUpdates.map((update) => [update.id, update.suggestedEntityIds])
+  );
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: (project.sources || []).map((source) => {
+      const update = linking.sourceUpdates.find((item) => item.sourceId === source.id);
+      if (!update) {
+        return source;
+      }
+
+      return {
+        ...source,
+        relatedEntityIds: unique([...(source.relatedEntityIds || []), ...update.relatedEntityIds]),
+        relatedProjectIds: unique([...(source.relatedProjectIds || []), ...update.relatedProjectIds]),
+        updatedAt: now
+      };
+    }),
+    signals: (project.signals || []).map((signal) => {
+      const update = linking.signalUpdates.find((item) => item.id === signal.id);
+      if (!update) {
+        return signal;
+      }
+
+      return {
+        ...signal,
+        suggestedEntityIds: update.suggestedEntityIds,
+        suggestedProjectIds: update.suggestedProjectIds,
+        updatedAt: now
+      };
+    }).map((signal) => ({
+      ...signal,
+      suggestedEntityIds: unique(signal.suggestedEntityIds || []),
+      suggestedProjectIds: unique(signal.suggestedProjectIds || [])
+    })),
+    entities: mergeEntities(
+      linking.entities.map((entity) => ({
+        ...entity,
+        relatedSignalIds: unique([
+          ...(entity.relatedSignalIds || []),
+          ...targetSignals
+            .filter((signal) => entityIdsBySignal.get(signal.id)?.includes(entity.id))
+            .map((signal) => signal.id)
+        ])
+      })),
+      project.entities || []
+    )
   };
 }
 
@@ -697,6 +761,17 @@ function hasSimilarAction(existing, action) {
   return existing.some(
     (item) => item.status !== "done" && normalize(item.title) === normalize(action.title)
   );
+}
+
+function mergeEntities(incoming, existing) {
+  return [...incoming, ...existing].filter(
+    (entity, index, items) =>
+      items.findIndex((item) => normalize(item.name) === normalize(entity.name)) === index
+  );
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function adaptActionTitle(title, memory) {

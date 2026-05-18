@@ -3,6 +3,7 @@ import {
   absorbContext,
   generateBrief,
   recordActionResult,
+  suggestSignalLinks,
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
@@ -102,6 +103,32 @@ if (
   )
 ) {
   throw new Error(`extractSignals pipeline contract failed: ${JSON.stringify(signalProbe)}`);
+}
+
+let linkProbeProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [sourceProbe],
+  signals: signalProbe.signals,
+  entities: [],
+  entityRelations: []
+};
+linkProbeProject = suggestSignalLinks(linkProbeProject, signalProbe.signals[0].id);
+const linkedSignal = linkProbeProject.signals.find((signal) => signal.id === signalProbe.signals[0].id);
+const linkedSource = linkProbeProject.sources.find((source) => source.id === sourceProbe.id);
+
+if (
+  linkProbeProject.entities.length < 1 ||
+  !linkedSignal?.suggestedEntityIds?.length ||
+  !linkedSignal?.suggestedProjectIds?.includes(linkProbeProject.id) ||
+  !linkedSource?.relatedEntityIds?.length ||
+  linkProbeProject.entities.some(
+    (entity) =>
+      entity.status !== "watching" ||
+      !entity.relatedSourceIds.includes(sourceProbe.id) ||
+      !entity.relatedProjectIds.includes(linkProbeProject.id)
+  )
+) {
+  throw new Error(`Signal link suggestion failed: ${JSON.stringify(linkProbeProject)}`);
 }
 
 const priceConcernMemory = {

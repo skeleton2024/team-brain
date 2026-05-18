@@ -457,6 +457,29 @@ Phase 3 Alpha Wave 1 的 Source 到 Signal pipeline issue。
 - `src/styles.css`
 - `src/data/demo.js`
 
+### `docs/issues/LINK-01-project-entity-suggestion.md`
+
+Phase 3 Alpha Wave 1 的 Signal 到 Entity / Project 建议关联 issue。
+
+主要作用：
+
+- 要求新增本地 `linkSignals()` pipeline。
+- 要求 Signal 能产生 `suggestedEntityIds` 和 `suggestedProjectIds`。
+- 要求 Source 同步保留 `relatedEntityIds` 和 `relatedProjectIds`。
+- 明确本 issue 不做复杂关系图、CRM 集成或自动确认为事实。
+
+通常会改：
+
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -613,6 +636,24 @@ Source 到 Signal pipeline。
 - 不在这里做人工确认、转 memory 或转 action。
 - 不调用真实外部 provider，也不执行 Gmail / Slack 等外部动作。
 - 后续可替换为真实 AI provider，但输出结构必须保持稳定。
+
+### `src/domain/pipelines/linkSignals.js`
+
+Signal 到 Entity / Project 建议关联 pipeline。
+
+主要作用：
+
+- 暴露 `linkSignals({ project, signals, now })`。
+- 基于 Source 参与对象建议 Entity。
+- 为 Signal 补齐 `suggestedEntityIds` 和 `suggestedProjectIds`。
+- 为 Source 生成 `relatedEntityIds` 和 `relatedProjectIds` 更新建议。
+- 返回结构化更新，不直接写入 project state。
+
+修改时注意：
+
+- 不把建议自动确认为事实，Entity 默认 `watching`。
+- 不做复杂实体合并或关系图可视化。
+- 不接 CRM、Gmail、Slack 等外部系统。
 
 ### `src/services/store.js`
 

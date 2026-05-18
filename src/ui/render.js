@@ -4,6 +4,8 @@ import {
   CONTEXT_IMPORTANCE,
   CONTEXT_IMPORTANCE_LABELS,
   CONTEXT_TYPES,
+  ENTITY_STATUS,
+  ENTITY_TYPES,
   MEMORY_STATUS,
   MEMORY_TYPES,
   PRIORITY_LABELS,
@@ -288,6 +290,12 @@ function renderSignals(project) {
 
 function renderSignalItem(project, signal) {
   const source = (project.sources || []).find((item) => item.id === signal.sourceId);
+  const entities = (signal.suggestedEntityIds || [])
+    .map((entityId) => (project.entities || []).find((entity) => entity.id === entityId))
+    .filter(Boolean);
+  const projects = (signal.suggestedProjectIds || [])
+    .map((projectId) => (projectId === project.id ? project : null))
+    .filter(Boolean);
 
   return `
     <article class="signal-item" id="signal-${escapeHtml(signal.id)}">
@@ -303,7 +311,49 @@ function renderSignalItem(project, signal) {
         <span>${escapeHtml(source?.title || "未知 Source")}</span>
         <span>${escapeHtml(formatDateOnly(signal.createdAt))}</span>
       </div>
+      ${renderSignalSuggestions(entities, projects)}
+      <div class="source-actions">
+        <button class="secondary-button compact-button" data-action="suggest-signal-links" data-signal-id="${escapeHtml(signal.id)}" type="button">
+          建议关联
+        </button>
+      </div>
     </article>
+  `;
+}
+
+function renderSignalSuggestions(entities, projects) {
+  if (!entities.length && !projects.length) {
+    return `<p class="muted compact-copy">尚未建议 Entity / Project。</p>`;
+  }
+
+  return `
+    <div class="signal-suggestions">
+      ${
+        entities.length
+          ? `<div>
+              <strong>Entity</strong>
+              <div class="context-tags">
+                ${entities
+                  .map(
+                    (entity) =>
+                      `<span>${escapeHtml(entity.name)} · ${escapeHtml(entityTypeLabel(entity.type))} · ${escapeHtml(entityStatusLabel(entity.status))}</span>`
+                  )
+                  .join("")}
+              </div>
+            </div>`
+          : ""
+      }
+      ${
+        projects.length
+          ? `<div>
+              <strong>Project</strong>
+              <div class="context-tags">
+                ${projects.map((item) => `<span>${escapeHtml(item.name)}</span>`).join("")}
+              </div>
+            </div>`
+          : ""
+      }
+    </div>
   `;
 }
 
@@ -1116,6 +1166,14 @@ function signalTypeLabel(type) {
 
 function signalStatusLabel(status) {
   return SIGNAL_STATUS[status] || SIGNAL_STATUS.new;
+}
+
+function entityTypeLabel(type) {
+  return ENTITY_TYPES[type] || ENTITY_TYPES.other;
+}
+
+function entityStatusLabel(status) {
+  return ENTITY_STATUS[status] || ENTITY_STATUS.watching;
 }
 
 function confidenceScoreLabel(confidence) {
