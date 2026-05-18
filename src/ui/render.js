@@ -8,7 +8,10 @@ import {
   MEMORY_TYPES,
   PRIORITY_LABELS,
   RESULT_OUTCOMES,
-  RISK_LABELS
+  RISK_LABELS,
+  SOURCE_STATUS,
+  SOURCE_TYPES,
+  SOURCE_TYPE_LABELS
 } from "../domain/types.js";
 
 const MEMORY_STATUS_ACTIONS = [
@@ -31,6 +34,7 @@ export function renderApp(state) {
       <main class="workspace">
         ${renderTopbar(project)}
         ${renderPipeline(project)}
+        ${renderInbox(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -111,10 +115,10 @@ function renderTopbar(project) {
 
 function renderPipeline(project) {
   const steps = [
-    ["上下文", project.contexts.length],
+    ["Source", project.sources?.length || 0],
+    ["Signal", project.signals?.length || 0],
     ["公司记忆", project.memories.length],
     ["下一步行动", project.actions.filter((action) => action.status !== "done").length],
-    ["行动 Brief", project.briefs.length],
     ["结果回流", project.results.length]
   ];
 
@@ -132,6 +136,126 @@ function renderPipeline(project) {
         )
         .join("")}
     </section>
+  `;
+}
+
+function renderInbox(project) {
+  const sources = project.sources || [];
+
+  return `
+    <section class="panel inbox-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Company Inbox</p>
+          <h3>手动 Source 录入</h3>
+        </div>
+        <span class="count-pill">${sources.length}</span>
+      </div>
+
+      <div class="inbox-layout">
+        <form class="stack-form" data-form="manual-source">
+          <div class="field-row">
+            <label>
+              信息类型
+              <select name="kind">
+                ${SOURCE_TYPES.map(
+                  (type) => `<option value="${type.id}">${escapeHtml(type.label)}</option>`
+                ).join("")}
+              </select>
+            </label>
+            <label>
+              标题
+              <input name="title" type="text" placeholder="例如：客户 A 预算反馈" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label>
+              发生时间
+              <input name="occurredAt" type="date" value="${escapeHtml(todayForInput())}" />
+            </label>
+            <label>
+              重要程度
+              <select name="importance">
+                ${CONTEXT_IMPORTANCE.map(
+                  (item) => `<option value="${item.id}" ${item.id === "medium" ? "selected" : ""}>${escapeHtml(item.label)}</option>`
+                ).join("")}
+              </select>
+            </label>
+          </div>
+          <div class="field-row">
+            <label>
+              参与对象
+              <input name="participants" type="text" placeholder="例如：客户 A, CFO, 李雷" />
+            </label>
+            <label>
+              原始来源
+              <input name="externalRef" type="text" placeholder="例如：邮件主题、文档链接或会议名" />
+            </label>
+          </div>
+          <label>
+            标签
+            <input name="tags" type="text" placeholder="例如：预算, 试点, 风险" />
+          </label>
+          <label>
+            原文
+            <textarea name="body" rows="7" placeholder="粘贴邮件、Slack、会议纪要、网页摘录或临时业务碎片" required></textarea>
+          </label>
+          <button class="primary-button" type="submit">
+            <span>保存为 Source</span>
+            <span>→</span>
+          </button>
+        </form>
+
+        ${renderSources(sources)}
+      </div>
+    </section>
+  `;
+}
+
+function renderSources(sources) {
+  if (!sources.length) {
+    return emptyState("暂无 Source，先粘贴一段真实业务信息。");
+  }
+
+  return `
+    <div class="source-list">
+      <div class="context-history-heading">
+        <strong>最近 Source</strong>
+        <span class="count-pill">${sources.length}</span>
+      </div>
+      ${sources.slice(0, 6).map(renderSourceItem).join("")}
+    </div>
+  `;
+}
+
+function renderSourceItem(source) {
+  const tags = Array.isArray(source.tags) ? source.tags : [];
+  const participants = Array.isArray(source.participants) ? source.participants : [];
+
+  return `
+    <article class="source-item" id="source-${escapeHtml(source.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(sourceTypeLabel(source.kind))}</span>
+        <span class="status ${escapeHtml(source.status || "new")}">${escapeHtml(sourceStatusLabel(source.status))}</span>
+        <span class="importance ${escapeHtml(source.importance || "medium")}">
+          ${escapeHtml(CONTEXT_IMPORTANCE_LABELS[source.importance] || CONTEXT_IMPORTANCE_LABELS.medium)}
+        </span>
+      </div>
+      <h4>${escapeHtml(source.title)}</h4>
+      <p>${escapeHtml(source.body)}</p>
+      <div class="context-meta">
+        <span>${escapeHtml(formatDateOnly(source.occurredAt || source.receivedAt))}</span>
+        ${participants.length ? `<span>${escapeHtml(participants.join("、"))}</span>` : ""}
+        ${source.externalRef ? `<span>${escapeHtml(source.externalRef)}</span>` : ""}
+      </div>
+      ${
+        tags.length
+          ? `<div class="context-tags">
+              ${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+            </div>`
+          : ""
+      }
+    </article>
   `;
 }
 
@@ -928,6 +1052,14 @@ function todayForInput() {
 
 function contextTypeLabel(kind) {
   return CONTEXT_TYPES.find((type) => type.id === kind)?.label || "其他上下文";
+}
+
+function sourceTypeLabel(kind) {
+  return SOURCE_TYPE_LABELS[kind] || "其他来源";
+}
+
+function sourceStatusLabel(status) {
+  return SOURCE_STATUS[status] || SOURCE_STATUS.new;
 }
 
 function escapeHtml(value) {
