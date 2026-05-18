@@ -14,10 +14,14 @@ TeamMind is a zero-backend MVP for a company-specific context agent. It helps an
 
 ## Product Docs
 
+- [最终产品形态.md](./最终产品形态.md)
+- [AI_HANDOFF.md](./AI_HANDOFF.md)
+- [当前系统状态.md](./当前系统状态.md)
 - [PRD.md](./PRD.md)
 - [PROJECT_FUNCTION_STRUCTURE.md](./PROJECT_FUNCTION_STRUCTURE.md)
 - [DATA_MODEL.md](./DATA_MODEL.md)
 - [docs/AI_DEVELOPMENT_GUIDE.md](./docs/AI_DEVELOPMENT_GUIDE.md)
+- [docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md](./docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md)
 - [docs/TEAM_DEV_LOG.md](./docs/TEAM_DEV_LOG.md)
 - [docs/FILE_FUNCTION_NOTES.md](./docs/FILE_FUNCTION_NOTES.md)
 - [docs/issues/README.md](./docs/issues/README.md)

@@ -8,6 +8,12 @@
 
 本文档定义 TeamMind v0.2 的核心数据对象。它是给队友和 AI 协作者看的“字段合同”。
 
+阶段关系说明：
+
+- 当前内容仍是 v0.2 / memory foundation 的基准合同。
+- Phase 3 Alpha 会在 `ARCH-00-core-domain-contract` 中扩展 Source、Signal、Entity、ProjectNode、Commitment、Risk、Opportunity 等对象。
+- 新字段或新对象正式进入代码前，必须先或同时更新本文档。
+
 开发规则：
 
 - 新增或修改字段时，必须同步更新本文档。

@@ -9,6 +9,13 @@
 
 这份 PRD 不再把 TeamMind 定义为一个“可演示 Demo”。v0.1 已经证明了基础闭环，但它产生的内容还不够有价值。v0.2 的目标是让 TeamMind 开始被真实团队使用和测试。
 
+阶段关系说明：
+
+- `最终产品形态.md` 是长期产品愿景。
+- 本 PRD 是早期可用版本的产品边界和需求基线。
+- Phase 3 Alpha 的具体开发顺序、并行规则和开发 prompt 以 `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md` 为准。
+- 新 Codex 对话接手项目时以 `AI_HANDOFF.md` 和 `当前系统状态.md` 判断当前进度。
+
 后续开发以 issue 为导向。每个 issue 必须对应一个功能领域，并回答：
 
 ```text
@@ -1064,19 +1071,19 @@ AI 协作者修改本项目时必须遵守：
 
 ## 12. 当前最优先的下一步
 
-建议立刻从 Milestone 1 开始：
+Milestone 1 memory foundation 已经进入集成基线。当前最优先的下一步是启动 Phase 3 Alpha，而不是继续沿用旧的 v0.2 单点 issue 顺序。
 
 ```text
-MEM-01 增加 memory status 和 sourceReferences
-MEM-02 支持编辑公司记忆
-CTX-03 建立上下文和记忆的来源引用
-REC-01 拆出 extractMemories pipeline
-REC-02 新增 reconcileMemories pipeline
+Wave 0：施工规则、核心数据合同、当前状态、handoff、smoke baseline
+Wave 1：Inbox 手动录入、Source -> Signal、review flow
+Wave 2：Entity Profile、Entity Linking、Project Node
+Wave 3：Memory Governance Live、Action Brief、Result Feedback
+Wave 4：Command Center Alpha
 ```
 
 原因：
 
-TeamMind 的价值不是“生成更多内容”，而是“建立可信的公司记忆”。如果记忆不可信，行动和 Brief 都不会可信。
+TeamMind 下一阶段要从“记忆可信”推进到“真实可用的公司操作闭环”。手动信息进入、整理、记忆治理、项目推进、行动 brief 和结果回流必须先跑通，再考虑外部集成、登录、计费和多租户。
 
 ## 13. 使用指南
 
@@ -1144,32 +1151,29 @@ README.md
 -> commit / push
 ```
 
-### 13.4 当前最建议先做的 issue
+### 13.4 当前最建议先做的阶段
 
-如果只能选一个，先做：
+如果只能选一个阶段，先做：
 
 ```text
-MEM-01-memory-status-source-references.md
+Phase 3 Alpha Wave 0
 ```
 
 原因：
 
-TeamMind 的第一价值不是生成行动，而是建立可信公司记忆。没有记忆状态和来源引用，用户就不知道哪些内容能信、哪些只是 AI 草稿。
+下一阶段要先把 AI 开发规则、核心数据合同、当前状态和 handoff 固化。否则后续并行开发会很快，但上下文容易分叉。
 
-如果可以做一组，建议按这个顺序：
+如果可以做一组，按这个顺序：
 
 ```text
-1. CTX-01-context-metadata.md
-2. CTX-03-context-memory-source-links.md
-3. MEM-01-memory-status-source-references.md
-4. MEM-02-edit-company-memory.md
-5. MEM-03-memory-status-transitions.md
-6. MEM-04-memory-detail-panel.md
-7. REC-01-extract-memories-pipeline.md
-8. REC-02-reconcile-memories-pipeline.md
+1. Wave 0：施工系统与核心数据合同
+2. Wave 1：Inbox 到 Source / Signal
+3. Wave 2：Entity Profile 与 Project Node
+4. Wave 3：Memory Governance 与 Action 回流
+5. Wave 4：Command Center Alpha
 ```
 
-这组完成后，TeamMind 才会从“看起来像 Demo”进入“可以让真实团队测试记忆可信度”的阶段。
+详细 issue 拆分见 `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`。
 
 ### 13.5 开发时不要做的事
 

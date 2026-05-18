@@ -1,339 +1,211 @@
 # TeamMind 团队开发共享日志
 
 文档名：`docs/TEAM_DEV_LOG.md`
-用途：团队协作看板、分支规则、开发决策和验收记录。
-最后更新：2026-05-13
+
+用途：记录团队协作状态、阶段分支、开发决策、验收记录和重要风险。
+
+最后更新：2026-05-18
 
 ## 1. 当前协作结论
 
-TeamMind 现在可以开始和队友协作开发。当前路线已经足够清晰，原因是：
-
-- `PRD.md` 已经定义 v0.2 的产品方向和不做范围。
-- `DATA_MODEL.md` 已经定义目标数据结构。
-- `PROJECT_FUNCTION_STRUCTURE.md` 已经定义模块边界。
-- `docs/issues/` 已经把 Milestone 1 拆成可执行 issue。
-- `scripts/smoke-test.mjs` 可以验证核心闭环没有断。
-
-但项目还处在 v0.1 到 v0.2 的过渡阶段，很多代码仍集中在 `src/main.js`、`src/ui/render.js`、`src/domain/agentEngine.js`。因此可以多人协作，但前几个 issue 需要控制并行度，避免多人同时大改同一文件。
-
-## 2. 仓库和分支现状
-
-远程仓库：
+TeamMind 后续开发采用“一个主对话跑一个 Wave”的默认方式：
 
 ```text
-https://github.com/skeleton2024/team-brain.git
+一个主对话 = 一个 Wave
+一个 Wave = 3-5 个 issue
+一个 issue = 单独分支 + 单独提交 + 单独 smoke test
 ```
 
-当前主分支：
+这套规则可以用于后续所有阶段。核心数据合同、全局状态、pipeline 协议必须串行确定；UI、测试、文档和互不重叠的小模块可以并行。
+
+## 2. 当前稳定基线
+
+当前主要集成分支：
+
+```text
+integration/CTX-01-MEM-01-MEM-03-REC-01-CTX-03-MEM-02-memory-foundation
+```
+
+当前基线已经集成：
+
+- CTX-01
+- CTX-03
+- MEM-01
+- MEM-02
+- MEM-03
+- MEM-04
+- REC-01
+- REC-02
+- `最终产品形态.md`
+
+该分支是后续 Phase 3 Alpha 的主要参考基线。后续不直接合 main，应继续走 integration 分支和 draft PR。
+
+## 3. 当前开发模式
+
+长期分支：
 
 ```text
 main
+integration/phase-3-alpha
 ```
 
-远程现在存在 `dev` 分支，但当前奇数线仍以 `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` 作为基线继续复合开发。`npm run dev` 只是本地开发服务器命令，不代表必须使用 GitHub 的 `dev` 分支。
-
-默认推荐协作方式：
+Wave 分支：
 
 ```text
-main
-  <- PR from skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation
-  <- PR from skeleton/CTX-03-context-memory-source-links
+integration/phase-3-wave-00
+integration/phase-3-wave-01
+integration/phase-3-wave-02
 ```
 
-重要 issue 建议从 `main` 或当前复合开发分支拉一个短生命周期分支，完成后通过 PR 或明确提交合回 `main`。但这不是僵硬审批规则：多个强相关 issue 可以合并在同一个分支中开发，多人也可以共同使用一个开发分支。当前阶段推荐更快的复合 issue 开发模式：先把强依赖或同一数据链路的 issue 连续做在同一个开发者分支中，再一次性 review/合并。分支名必须包含开发者前缀和 issue 编号组合，方便追溯范围。
-
-## 3. 草稿版本怎么改
-
-可以改仓库里的草稿版本，但要区分三类内容：
-
-- 产品/需求草稿：例如 `PRD.md`、`docs/issues/*.md`。这类可以直接通过文档 PR 修改。
-- 代码草稿：例如某个 issue 的未完成实现。重要或不确定改动建议放在 issue/spike 分支，不建议长期把半成品留在 `main`。
-- 本地运行草稿：浏览器 localStorage 里的数据只存在本机，不会自动进入仓库；需要变成共享内容时，应写入 `src/data/demo.js` 或文档。
-
-当前仓库里的 `main` 是共享基准版本，不是个人长期草稿区。个人实验可以开分支，例如：
+Issue 分支：
 
 ```text
-codex/spike-memory-reconciliation
-codex/CTX-01-context-metadata
-skeleton/CTX-01-MEM-01-context-memory-foundation
-teammate/MEM-02-edit-company-memory
+issue/ISSUE-ID-short-name
 ```
 
-## 4. v0.2 当前建议顺序
-
-Milestone 1：让公司记忆可信。
+合并顺序：
 
 ```text
-1. CTX-01-context-metadata.md
-2. CTX-03-context-memory-source-links.md
-3. MEM-01-memory-status-source-references.md
-4. MEM-02-edit-company-memory.md
-5. MEM-03-memory-status-transitions.md
-6. MEM-04-memory-detail-panel.md
-7. REC-01-extract-memories-pipeline.md
-8. REC-02-reconcile-memories-pipeline.md
+issue/*
+-> integration/phase-3-wave-xx
+-> integration/phase-3-alpha
+-> draft PR
+-> main
 ```
 
-推荐先做 `CTX-01`，因为它给后续 source references 提供更完整的原始上下文；如果团队只想先验证“记忆可信”的核心体验，也可以直接从 `MEM-01` 开始，但后续仍然要补 `CTX-01` 和 `CTX-03`。
-
-## 5. 当前任务看板
-
-| Issue | 状态 | 建议负责人 | 建议分支 | 备注 |
-| --- | --- | --- | --- | --- |
-| CTX-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，补上下文 metadata |
-| CTX-03 | 待开始 | 未分配 | `skeleton/CTX-03-context-memory-source-links` | 依赖 context 数据更完整 |
-| MEM-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，补 memory 状态、来源数和旧数据兼容 |
-| MEM-02 | 待开始 | 未分配 | `codex/MEM-02-edit-company-memory` | 会改 `render.js` 和 `main.js`，注意冲突 |
-| MEM-03 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` | 已纳入奇数复合分支，支持快捷状态切换、确认时间记录和行动证据过滤 |
-| MEM-04 | 待开始 | 未分配 | `codex/MEM-04-memory-detail-panel` | 可能和 CTX-03 的来源跳转有关 |
-| REC-01 | 待 review | skeleton / Codex | `skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation` | 已拆出 `extractMemories` domain pipeline |
-| REC-02 | 待开始 | 未分配 | `codex/REC-02-reconcile-memories-pipeline` | 依赖 REC-01 更清楚 |
-
-状态建议只用：
-
-```text
-待开始 / 开发中 / 待 review / 已合并 / 暂停
-```
-
-## 6. 分支和提交规则
-
-分支命名建议：
-
-```text
-codex/ISSUE-ID-short-name
-name/ISSUE-ID-short-name
-skeleton/ISSUE-ID-ISSUE-ID-short-name
-spike/topic-name
-```
-
-提交信息建议：
-
-```text
-CTX-01 Add context metadata fields
-MEM-01 Add memory status badges
-REC-01 Extract memory pipeline
-```
-
-默认建议一个 PR 对应一个 issue，但允许多个强相关 issue 合并在一个分支或 PR 中开发。当前 skeleton 开发节奏优先采用复合 issue 分支：分支名使用 `skeleton/ISSUE-ID-ISSUE-ID-short-name`，并在开发日志中写清楚包含哪些 issue、为什么合并开发、验证结果和遗留风险。关键要求不是形式上完美拆分，而是每次改动都能说明目的、影响文件、验证结果和遗留风险。
-
-## 7. 易冲突文件
-
-这些文件多人同时开发时最容易冲突：
-
-- `src/main.js`：事件绑定和状态更新集中在这里。
-- `src/ui/render.js`：大部分 UI 都在一个文件中。
-- `src/domain/agentEngine.js`：当前业务规则还没拆 pipeline。
-- `src/data/demo.js`：每个数据模型变化都可能要改 demo。
-- `DATA_MODEL.md`：新增字段时必须更新。
-
-协作建议：
-
-- 同一时间只让一个人主改 `render.js` 的同一区域。
-- UI issue 和 domain issue 可以并行，但要提前说明各自改哪些文件。
-- 数据模型变更先更新 `DATA_MODEL.md`，再改代码和 demo。
-
-## 8. 每个 issue 的完成标准
-
-完成一个 issue 前至少满足：
-
-- 当前页面可以打开。
-- 核心闭环没有断：上下文输入 -> 记忆 -> 行动 -> Brief -> 结果回流。
-- `node scripts/smoke-test.mjs` 通过。
-- Demo 数据能展示新增能力。
-- 数据模型变化已同步 `DATA_MODEL.md`。
-- 行为变化已同步对应 issue spec 或 PRD。
-- 没有新增自动外部执行能力。
-- 没有把主界面改成聊天产品。
-
-## 9. 本地验证命令
-
-运行静态服务：
-
-```bash
-npm run dev
-```
-
-或：
-
-```bash
-python -m http.server 4173
-```
-
-运行 smoke test：
+每合并一个 issue 必须运行：
 
 ```bash
 node scripts/smoke-test.mjs
 ```
 
-## 10. 日志记录格式
+## 4. 当前下一阶段
 
-每次开始或完成一个 issue，可以在这里追加一条记录：
+下一阶段是 Phase 3 Alpha。
+
+目标：
+
+```text
+Inbox
+-> Source / Signal
+-> Entity Profile
+-> Project Node
+-> Memory Governance
+-> Action Brief
+-> Result Feedback
+-> Command Center
+```
+
+详细计划见：
+
+```text
+docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
+```
+
+## 5. 当前任务看板
+
+| Wave | 目标 | 状态 | 备注 |
+| --- | --- | --- | --- |
+| Wave 0 | 施工系统与核心数据合同 | 准备中 | 先统一规则、数据合同、handoff、状态文档、smoke baseline |
+| Wave 1 | Inbox 到 Source / Signal | 待开始 | 手动录入优先，不接 Gmail / Slack API |
+| Wave 2 | Entity Profile 与 Project Node | 待开始 | 支持长期对象画像和项目多节点 |
+| Wave 3 | Memory Governance 与 Action 回流 | 待开始 | 让状态、brief、result 进入真实闭环 |
+| Wave 4 | Command Center Alpha | 待开始 | 公司级首页和优先级队列 |
+
+状态建议只用：
+
+```text
+待开始 / 准备中 / 开发中 / 待 review / 已合并 / 暂停
+```
+
+## 6. 易冲突文件
+
+这些文件多人或多个 AI 对话同时开发时最容易冲突：
+
+- `src/main.js`
+- `src/ui/render.js`
+- `src/domain/agentEngine.js`
+- `src/data/demo.js`
+- `src/services/store.js`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+
+协作建议：
+
+- 数据模型先定，再做 UI。
+- 同一时间只让一个任务主改 `render.js` 的同一区域。
+- 同一时间只让一个任务主改 `agentEngine.js` 的核心编排。
+- UI issue 和测试 issue 可以并行。
+- 文档 issue 可以与代码 issue 并行，但最后由主对话统一校对。
+
+## 7. 每个 issue 的完成标准
+
+每个 issue 合并前至少满足：
+
+- 符合 issue spec。
+- 当前页面可以打开。
+- 核心闭环没有断。
+- `node scripts/smoke-test.mjs` 通过。
+- Demo 数据能展示新增能力，或说明为什么不需要。
+- 数据模型变化已同步 `DATA_MODEL.md`。
+- 新增文件已同步 `docs/FILE_FUNCTION_NOTES.md`。
+- 行为变化已同步 PRD、阶段计划或 issue spec。
+- 没有新增自动外部执行能力。
+- 没有把主界面改成聊天产品。
+
+## 8. 日志记录格式
+
+每完成一个重要 issue 或 Wave，追加：
 
 ```text
 日期：
 负责人：
-Issue：
+范围：
 分支：
 状态：
 改动文件：
 验证结果：
 待决问题：
+下一步：
 ```
 
-## 11. 开发日志
+## 9. 开发日志
 
-### 2026-05-13
+### 2026-05-18
 
-负责人：skeleton / Codex
-Issue：REC-01 拆出 extractMemories pipeline
-分支：`skeleton/CTX-01-MEM-01-MEM-03-REC-01-context-memory-foundation`
-状态：待 review
+负责人：Codex
+
+范围：开发规则重协调
+
+分支：`integration/CTX-01-MEM-01-MEM-03-REC-01-CTX-03-MEM-02-memory-foundation`
+
+状态：完成文档调整，待后续提交/推送
+
 改动文件：
 
-- `src/domain/agentEngine.js`
-- `src/domain/pipelines/extractMemories.js`
-- `scripts/smoke-test.mjs`
-- `PROJECT_FUNCTION_STRUCTURE.md`
-- `docs/FILE_FUNCTION_NOTES.md`
-- `docs/TEAM_DEV_LOG.md`
-
-验证结果：
-
-- 从 `skeleton/CTX-01-MEM-01-MEM-03-context-memory-foundation` 拉出新的奇数复合分支，继续包含任务 1、3、5、7。
-- `agentEngine.js` 不再内联 memory 提取规则，改为调用 `extractMemories({ project, context, now })`。
-- 新 pipeline 返回 `{ memories, runSummary }`，每条候选 memory 继续带 `status = "draft"`、`sourceReferences`、`createdBy` 和时间戳。
-- `absorbContext()` 调用方不需要改变，context 写入、去重、action 生成仍由 orchestrator 处理。
-- `node scripts/smoke-test.mjs` 通过。
-
-待决问题：
-
-- 暂无。REC-02 可以在此基础上继续拆 reconciliation pipeline。
-
-### 2026-05-13
-
-负责人：skeleton / Codex
-Issue：MEM-03 支持记忆状态切换
-分支：`skeleton/MEM-03-memory-status-transitions`
-状态：待 review
-改动文件：
-
-- `src/domain/agentEngine.js`
-- `src/main.js`
-- `src/ui/render.js`
-- `src/styles.css`
-- `scripts/smoke-test.mjs`
-- `docs/TEAM_DEV_LOG.md`
-
-验证结果：
-
-- Memory 卡片新增确认、过期、争议、归档快捷操作。
-- 状态切换会更新 `updatedAt`，切到 `confirmed` 时记录 `lastVerifiedAt`。
-- 新行动生成会忽略 `archived` 和 `outdated` memory；`confirmed` 证据优先，`draft` / `disputed` 会在行动理由中提示人工复核。
-- `node scripts/smoke-test.mjs` 通过。
-- 本地静态页面服务 `http://127.0.0.1:4173` 返回 200。
-
-待决问题：
-
-- 当前分支基于 `skeleton/CTX-01-MEM-01-context-memory-foundation` 拉出；发布前需要确认远端目标分支，因为本地 `origin` 暂时指向上一份本地 clone，而不是 GitHub URL。
-
-### 2026-05-13
-
-负责人：skeleton / Codex
-Issue：CTX-01 + MEM-01 复合分支命名与协作规则
-分支：`skeleton/CTX-01-MEM-01-context-memory-foundation`
-状态：待 review
-改动文件：
-
-- `docs/TEAM_DEV_LOG.md`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`
 - `docs/AI_DEVELOPMENT_GUIDE.md`
 - `docs/issues/README.md`
-
-验证结果：
-
-- 将 GitHub 上原 `codex/CTX-01-context-metadata` 分支重命名为 `skeleton/CTX-01-MEM-01-context-memory-foundation`。
-- 明确该分支由 `CTX-01-context-metadata.md` 和 `MEM-01-memory-status-source-references.md` 复合开发而来。
-- 后续默认可以继续采用复合 issue 分支模式，加快强相关功能开发。
-
-待决问题：
-
-- 复合分支进入 PR 前，需要在 PR 描述中列出包含的 issue、验收结果和不做范围。
-- 如果后续团队成员增多，再决定是否恢复更严格的单 issue PR 节奏。
-
-### 2026-05-12
-
-负责人：Codex
-Issue：MEM-01 增加 memory status 和 sourceReferences
-分支：`skeleton/CTX-01-MEM-01-context-memory-foundation`
-状态：待 review
-改动文件：
-
-- `src/domain/types.js`
-- `src/domain/agentEngine.js`
-- `src/services/store.js`
-- `src/ui/render.js`
-- `src/styles.css`
-- `src/data/demo.js`
-- `scripts/smoke-test.mjs`
-- `DATA_MODEL.md`
-- `docs/FILE_FUNCTION_NOTES.md`
 - `docs/TEAM_DEV_LOG.md`
-
-验证结果：
-
-- 新生成 memory 默认 `status = "draft"`，并带 `sourceReferences`、`createdBy`、`updatedAt`。
-- Demo memory 已展示不同状态、来源数量和置信度。
-- 结果回流会生成可追溯的 result context，结果 memory 的 `sourceReferences` 指向真实 context。
-- 旧 memory 没有 `status` 时显示默认状态；有旧版 `source` 但没有 `sourceReferences` 时显示“旧来源”，不误报“来源待补”。
-- `node scripts/smoke-test.mjs` 通过。
-
-待决问题：
-
-- 当前分支基于 `CTX-01` 继续复合开发，后续以 `skeleton/CTX-01-MEM-01-context-memory-foundation` 作为 review 分支。
-- MEM-01 只展示状态，不提供编辑和状态切换；这些留给 MEM-02/MEM-03。
-
-### 2026-05-12
-
-负责人：Codex
-Issue：AI 开发规范指南
-分支：`main`
-状态：已完成
-改动文件：
-
-- `docs/AI_DEVELOPMENT_GUIDE.md`
 - `docs/FILE_FUNCTION_NOTES.md`
-- `docs/TEAM_DEV_LOG.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
 - `README.md`
 
 验证结果：
 
-- 新增 AI 和开发者通用开发规范指南。
-- 明确 AI 每次开发需要阅读的上下文文档。
-- 将开发规则调整为“允许试错，但必须可审计、可追溯、可恢复”。
-- 将分支规则调整为默认建议，允许强相关任务合并开发。
+- 将旧的 Milestone 1 复合开发规则升级为后续阶段通用的 Wave 开发规则。
+- 明确一个主对话跑一个 Wave，每个 issue 单独分支、单独提交、单独 smoke test。
+- 明确哪些任务可以并行，哪些必须串行。
+- 新增 `AI_HANDOFF.md` 和 `当前系统状态.md`，作为新 Codex 对话接手入口。
+- 新增 `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`，记录下一阶段 Wave 顺序和开发 prompt。
 
 待决问题：
 
-- 后续是否要把 GitHub PR 模板也按本指南固化。
+- 下一步应创建或更新 Phase 3 Alpha 的具体 issue spec。
+- Wave 0 需要正式落地核心数据合同，并同步 `DATA_MODEL.md`。
 
-### 2026-05-12
+下一步：
 
-负责人：Codex
-Issue：文档协作准备
-分支：`main`
-状态：已完成
-改动文件：
-
-- `docs/TEAM_DEV_LOG.md`
-- `docs/FILE_FUNCTION_NOTES.md`
-- `README.md`
-
-验证结果：
-
-- 新增团队共享开发日志。
-- 新增全文件功能备注文档。
-- 明确当前没有 `dev` 分支，推荐按 issue 分支开发后 PR 合回 `main`。
-
-待决问题：
-
-- 是否需要创建长期 `dev` 集成分支。
-- 是否要为 GitHub 仓库开启 branch protection 和 PR review 规则。
+- 从 `DEV-00` / `ARCH-00` 开始 Phase 3 Alpha Wave 0。

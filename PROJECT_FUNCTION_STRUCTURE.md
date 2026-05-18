@@ -11,7 +11,11 @@
 
 ```text
 README.md
+-> 最终产品形态.md
 -> docs/AI_DEVELOPMENT_GUIDE.md
+-> docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
+-> AI_HANDOFF.md
+-> 当前系统状态.md
 -> PRD.md
 -> PROJECT_FUNCTION_STRUCTURE.md
 -> DATA_MODEL.md
@@ -19,10 +23,13 @@ README.md
 -> 当前要实现的 issue spec
 ```
 
-`PRD.md` 回答“为什么做、先做什么”。  
-`docs/AI_DEVELOPMENT_GUIDE.md` 回答“AI 和开发者每次开发前后怎么留下可追溯记录”。  
-`PROJECT_FUNCTION_STRUCTURE.md` 回答“代码应该放在哪里、模块边界是什么”。  
-`DATA_MODEL.md` 回答“数据对象长什么样、状态怎么流转”。  
+`最终产品形态.md` 回答“长期要做成什么”。
+`docs/AI_DEVELOPMENT_GUIDE.md` 回答“AI 和开发者每次开发前后怎么留下可追溯记录”。
+`docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md` 回答“下一阶段按哪些 Wave 开发、哪些可以并行”。
+`AI_HANDOFF.md` 和 `当前系统状态.md` 回答“新的对话框从哪里接手”。
+`PRD.md` 回答“当前产品需求和阶段边界”。
+`PROJECT_FUNCTION_STRUCTURE.md` 回答“代码应该放在哪里、模块边界是什么”。
+`DATA_MODEL.md` 回答“数据对象长什么样、状态怎么流转”。
 `docs/issues/` 回答“某个具体 issue 怎么开发、怎么验收”。
 
 ## 1. 产品边界
@@ -80,11 +87,18 @@ TeamMind 是面向早期创业团队的公司专属上下文 Agent。核心闭�
 team-brain/
   index.html
   README.md
+  最终产品形态.md
+  AI_HANDOFF.md
+  当前系统状态.md
   PRD.md
   PROJECT_FUNCTION_STRUCTURE.md
   DATA_MODEL.md
   package.json
   docs/
+    PHASE3_ALPHA_DEVELOPMENT_PLAN.md
+    AI_DEVELOPMENT_GUIDE.md
+    TEAM_DEV_LOG.md
+    FILE_FUNCTION_NOTES.md
     issues/
       README.md
       CTX-01-context-metadata.md
