@@ -420,6 +420,25 @@ textarea:focus {
   border-left: 3px solid rgba(53, 109, 201, 0.32);
 }
 
+.signal-suggestions {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgba(53, 109, 201, 0.18);
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.signal-suggestions strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.compact-copy {
+  font-size: 13px;
+}
+
 .panel {
   min-width: 0;
   border: 1px solid var(--line);

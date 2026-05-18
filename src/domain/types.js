@@ -65,6 +65,26 @@ export const SIGNAL_STATUS = {
   converted: "已转化"
 };
 
+export const ENTITY_TYPES = {
+  person: "人",
+  company: "公司",
+  investor: "投资人",
+  customer: "客户",
+  partner: "合作方",
+  team_member: "团队成员",
+  product: "产品",
+  market: "市场",
+  vendor: "供应商",
+  other: "其他对象"
+};
+
+export const ENTITY_STATUS = {
+  active: "活跃",
+  inactive: "不活跃",
+  watching: "待确认",
+  archived: "已归档"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",

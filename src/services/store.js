@@ -2,6 +2,7 @@ import { DEMO_PROJECT } from "../data/demo.js";
 import {
   MEMORY_STATUS,
   MEMORY_TYPES,
+  ENTITY_TYPES,
   SIGNAL_TYPES,
   SOURCE_TYPE_LABELS
 } from "../domain/types.js";
@@ -149,7 +150,7 @@ function normalizeProject(project) {
     updatedAt: project.updatedAt || project.createdAt || now,
     sources: Array.isArray(project.sources) ? project.sources.map(normalizeSource) : [],
     signals: Array.isArray(project.signals) ? project.signals.map(normalizeSignal) : [],
-    entities: Array.isArray(project.entities) ? project.entities : [],
+    entities: Array.isArray(project.entities) ? project.entities.map(normalizeEntity) : [],
     entityRelations: Array.isArray(project.entityRelations) ? project.entityRelations : [],
     contexts: Array.isArray(project.contexts) ? project.contexts.map(normalizeContext) : [],
     memories: Array.isArray(project.memories) ? project.memories.map(normalizeMemory) : [],
@@ -210,6 +211,30 @@ function normalizeSignal(signal) {
     createdBy: signal.createdBy === "human" ? "human" : "ai",
     createdAt,
     updatedAt: signal.updatedAt || createdAt
+  };
+}
+
+function normalizeEntity(entity) {
+  const createdAt = entity.createdAt || new Date().toISOString();
+
+  return {
+    ...entity,
+    id: entity.id || makeId("ent"),
+    type: normalizeEntityType(entity.type),
+    name: entity.name || "未命名对象",
+    role: entity.role || "",
+    organization: entity.organization || "",
+    description: entity.description || "",
+    status: normalizeEntityStatus(entity.status),
+    relationshipStage: entity.relationshipStage || "",
+    ownerSuggestion: entity.ownerSuggestion || "",
+    tags: normalizeList(entity.tags),
+    relatedSourceIds: Array.isArray(entity.relatedSourceIds) ? entity.relatedSourceIds : [],
+    relatedSignalIds: Array.isArray(entity.relatedSignalIds) ? entity.relatedSignalIds : [],
+    relatedMemoryIds: Array.isArray(entity.relatedMemoryIds) ? entity.relatedMemoryIds : [],
+    relatedProjectIds: Array.isArray(entity.relatedProjectIds) ? entity.relatedProjectIds : [],
+    createdAt,
+    updatedAt: entity.updatedAt || createdAt
   };
 }
 
@@ -352,6 +377,14 @@ function normalizeSignalConfidence(value) {
   }
 
   return 0.5;
+}
+
+function normalizeEntityType(value) {
+  return ENTITY_TYPES[value] ? value : "other";
+}
+
+function normalizeEntityStatus(value) {
+  return ["active", "inactive", "watching", "archived"].includes(value) ? value : "watching";
 }
 
 function normalizeReconciliationOperation(value) {

@@ -21,7 +21,7 @@ export const DEMO_PROJECT = {
       occurredAt: twoDaysAgo,
       receivedAt: twoDaysAgo,
       participants: ["增长负责人", "创始人", "客户访谈小组"],
-      relatedEntityIds: [],
+      relatedEntityIds: ["ent-demo-founder", "ent-demo-customer-team"],
       relatedProjectIds: ["project-demo-northstar"],
       tags: ["客户发现", "权限", "MVP"],
       importance: "high",
@@ -39,7 +39,7 @@ export const DEMO_PROJECT = {
       summary: "客户愿意尝试公司记忆系统，但需要先确认敏感数据和权限边界。",
       quote: "客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。",
       confidence: 0.86,
-      suggestedEntityIds: [],
+      suggestedEntityIds: ["ent-demo-founder", "ent-demo-customer-team"],
       suggestedProjectIds: ["project-demo-northstar"],
       suggestedMemory: {
         type: "customer_concern",
@@ -63,7 +63,44 @@ export const DEMO_PROJECT = {
       updatedAt: oneDayAgo
     }
   ],
-  entities: [],
+  entities: [
+    {
+      id: "ent-demo-founder",
+      type: "team_member",
+      name: "创始人",
+      role: "决策人",
+      organization: "Northstar Copilot",
+      description: "参与客户访谈复盘和产品取舍确认。",
+      status: "active",
+      relationshipStage: "internal_owner",
+      ownerSuggestion: "",
+      tags: ["demo", "team"],
+      relatedSourceIds: ["src-demo-1"],
+      relatedSignalIds: ["sig-demo-1"],
+      relatedMemoryIds: ["mem-demo-product", "mem-demo-risk"],
+      relatedProjectIds: ["project-demo-northstar"],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    },
+    {
+      id: "ent-demo-customer-team",
+      type: "customer",
+      name: "客户访谈小组",
+      role: "早期反馈来源",
+      organization: "",
+      description: "提供权限边界、敏感数据和 follow-up 草稿需求反馈。",
+      status: "watching",
+      relationshipStage: "suggested_from_inbox",
+      ownerSuggestion: "",
+      tags: ["demo", "customer"],
+      relatedSourceIds: ["src-demo-1"],
+      relatedSignalIds: ["sig-demo-1"],
+      relatedMemoryIds: ["mem-demo-customer"],
+      relatedProjectIds: ["project-demo-northstar"],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    }
+  ],
   entityRelations: [],
   contexts: [
     {
