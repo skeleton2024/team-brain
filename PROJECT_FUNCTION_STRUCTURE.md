@@ -109,6 +109,11 @@ team-brain/
       MEM-04-memory-detail-panel.md
       REC-01-extract-memories-pipeline.md
       REC-02-reconcile-memories-pipeline.md
+      DEV-00-ai-development-rules.md
+      ARCH-00-core-domain-contract.md
+      QA-00-smoke-test-baseline.md
+      DOC-00-current-system-status.md
+      DOC-01-ai-handoff.md
   scripts/
     smoke-test.mjs
   src/
@@ -121,15 +126,17 @@ team-brain/
       types.js
       pipelines/
         extractMemories.js
+        reconcileMemories.js
     services/
       store.js
     ui/
       render.js
+      source-references.css
 ```
 
-## 4. v0.2 目标架构
+## 4. v0.2 / Phase 3 Alpha 目标架构
 
-v0.2 不重写产品，而是基于现有代码拆清楚边界。
+v0.2 不重写产品，而是基于现有代码拆清楚边界。Phase 3 Alpha 在此基础上增加 Source / Signal、Entity、ProjectNode、Commitment、Risk、Opportunity 等对象合同，仍然保持静态本地 MVP，不引入后端、鉴权或真实外部自动执行。
 
 目标结构：
 
@@ -144,11 +151,14 @@ Domain Orchestrator
   src/domain/agentEngine.js
 
 Domain Pipelines
+  src/domain/pipelines/sourceToSignals.js
   src/domain/pipelines/extractMemories.js
   src/domain/pipelines/reconcileMemories.js
+  src/domain/pipelines/linkSignals.js
   src/domain/pipelines/planActions.js
   src/domain/pipelines/composeBrief.js
   src/domain/pipelines/processResult.js
+  src/domain/pipelines/buildCommandCenter.js
 
 Domain Types and Schemas
   src/domain/types.js
@@ -188,6 +198,7 @@ Domain Pipelines：
 
 - 每个 pipeline 负责一个明确的 Agent 能力。
 - 输入和输出必须是结构化对象。
+- Source / Signal / Memory / Entity / Project / Action / Result 的输入输出协议必须先按 `DATA_MODEL.md` 固定。
 - 未来接 LLM 时，pipeline 仍然负责 schema 校验、fallback 和安全规则。
 
 Services：
@@ -199,6 +210,7 @@ Data：
 
 - 提供 demo 项目和测试样本。
 - demo 数据必须覆盖核心闭环。
+- Phase 3 Alpha 的 demo 数据应逐步覆盖 Source、Signal、Entity、ProjectNode、Commitment、Risk、Opportunity。
 
 ## 5. 当前模块职责
 
@@ -300,13 +312,34 @@ REC-01 已新增。
 
 ### `src/domain/pipelines/reconcileMemories.js`
 
-v0.2 计划新增。
+REC-02 已新增。
 
 职责：
 
 - 比较候选记忆和已有记忆。
 - 判断 `new`、`duplicate`、`update`、`conflict`、`outdate`。
 - 输出 reconciliation result，由 orchestrator 决定如何写入 state。
+
+### `src/domain/pipelines/sourceToSignals.js`
+
+Phase 3 Alpha 计划新增。
+
+职责：
+
+- 从 `Source` 中抽取结构化 `Signal`。
+- 保留原始 Source，不直接覆盖正文。
+- 输出 `{ signals, runSummary }`，不直接改 state。
+- 第一版可以使用本地规则或 mock AI，不接真实外部集成。
+
+### `src/domain/pipelines/linkSignals.js`
+
+Phase 3 Alpha 计划新增。
+
+职责：
+
+- 为 Signal 建议关联 Entity、Project、ProjectNode 和 Memory。
+- 输出可人工确认的建议，不自动覆盖已有对象。
+- 为 Inbox review flow 和 Entity/Profile linkage 提供统一协议。
 
 ### `src/domain/pipelines/planActions.js`
 
@@ -337,6 +370,16 @@ v0.2 计划新增。
 - 处理行动结果回流。
 - 判断哪些记忆被确认、更新、废弃或产生冲突。
 - 生成必要的后续行动。
+
+### `src/domain/pipelines/buildCommandCenter.js`
+
+Phase 3 Alpha 计划新增。
+
+职责：
+
+- 汇总 inbox、memory、project、node、action、commitment、risk 和 opportunity。
+- 生成今日优先级队列。
+- 输出可追溯的 Dashboard 数据，不直接执行外部动作。
 
 ### `src/services/store.js`
 
@@ -373,10 +416,17 @@ saveState(state)
 createProject(input)
 updateProject(project)
 addContext(projectId, context)
+addSource(projectId, source)
+addSignal(projectId, signal)
 updateMemory(projectId, memory)
+upsertEntity(projectId, entity)
+upsertProjectNode(projectId, node)
 addAction(projectId, action)
 addBrief(projectId, brief)
 addResult(projectId, result)
+upsertCommitment(projectId, commitment)
+upsertRisk(projectId, risk)
+upsertOpportunity(projectId, opportunity)
 ```
 
 ### `src/services/agentProvider.js`
@@ -460,12 +510,33 @@ node scripts/smoke-test.mjs
 
 ## 6. 功能领域
 
+Phase 3 Alpha 的功能领域以 `DATA_MODEL.md` 的对象合同为边界：
+
+```text
+Inbox: Source -> Signal
+Memory: Signal -> Memory / Reconciliation
+Entity: Signal / Memory -> Entity Profile
+Project: Project -> ProjectNode
+Action: Memory / Signal / Node -> Action -> Brief
+Result: ActionResult -> Memory Update / Follow-up Action
+Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Priority Queue
+```
+
+原则：
+
+- UI 只消费这些对象，不临时发明业务字段。
+- pipeline 输出建议，controller 决定如何写入 state。
+- store / repository 只负责持久化，不承载业务判断。
+- 高风险 action、brief、commitment 仍然保留人工确认，不自动执行。
+
 ### 6.1 Context Intake
 
 目标：让每段上下文成为可追溯证据。
 
 负责内容：
 
+- Phase 3 Alpha 的 `Source`。
+- 从 Source 抽取的 `Signal`。
 - 原始文本。
 - 上下文类型。
 - 发生时间。
@@ -479,6 +550,8 @@ node scripts/smoke-test.mjs
 - `src/main.js`
 - `src/ui/render.js`
 - `src/domain/types.js`
+- 未来 `src/domain/pipelines/sourceToSignals.js`
+- 未来 `src/domain/pipelines/linkSignals.js`
 - `src/domain/pipelines/extractMemories.js`
 - `src/data/demo.js`
 
@@ -600,6 +673,63 @@ node scripts/smoke-test.mjs
 - `src/services/store.js`
 - `src/ui/render.js`
 
+### 6.8 Entity and Relations
+
+目标：让系统理解客户、投资人、伙伴、团队成员、产品和市场等长期对象。
+
+负责内容：
+
+- Entity Profile。
+- EntityRelation。
+- Entity 与 Source / Signal / Memory / Project / Action 的关联。
+- 最近互动和下一步建议。
+
+主要文件：
+
+- 未来 `src/domain/pipelines/linkSignals.js`
+- `src/domain/types.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/data/demo.js`
+
+### 6.9 Project Nodes
+
+目标：让项目从单一事项演化为可推进、可复盘的节点结构。
+
+负责内容：
+
+- 默认单节点。
+- 多节点拆分建议。
+- 节点目标、状态、成功标准、等待项、风险和结果。
+
+主要文件：
+
+- `src/domain/types.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/data/demo.js`
+- 未来 `src/domain/pipelines/planActions.js`
+
+### 6.10 Command Center Inputs
+
+目标：为公司级首页提供可排序、可追溯的优先级输入。
+
+负责内容：
+
+- Commitment。
+- Waiting / Dependency / Follow-up。
+- Risk。
+- Opportunity。
+- Priority Queue。
+
+主要文件：
+
+- 未来 `src/domain/pipelines/buildCommandCenter.js`
+- 未来 `src/domain/pipelines/processResult.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/data/demo.js`
+
 ## 7. Issue 开发流程
 
 以后开发不要直接说“优化记忆”或“加点 AI”。应该用 issue 驱动：
@@ -626,25 +756,22 @@ node scripts/smoke-test.mjs
 
 ## 8. 当前建议开发顺序
 
-Milestone 1 建议顺序：
+Milestone 1 已完成 memory foundation。Phase 3 Alpha 建议顺序：
 
 ```text
-1. CTX-01 增加上下文元数据
-2. CTX-03 建立上下文和记忆来源引用
-3. MEM-01 增加 memory status 和 sourceReferences
-4. MEM-02 支持编辑公司记忆
-5. MEM-03 支持记忆状态切换
-6. MEM-04 增加记忆详情面板
-7. REC-01 拆出 extractMemories pipeline
-8. REC-02 新增 reconcileMemories pipeline
+Wave 0: DEV-00 -> ARCH-00 -> QA-00 -> DOC-00 -> DOC-01
+Wave 1: INBOX-01 -> PIPE-01 -> LINK-01 -> UI-01 -> QA-01
+Wave 2: ENTITY-01 -> ENTITY-02 -> PROJECT-01 -> PROJECT-02 -> QA-02
+Wave 3: MEM-05 -> ACTION-01 -> ACTION-02 -> REC-03 -> QA-03
+Wave 4: DASH-01 -> COMMIT-01 -> RISK-01 -> PRIORITY-01 -> QA-04
 ```
 
 理由：
 
-- 先让原始上下文更完整。
-- 再让记忆可以追溯。
-- 再让用户能修正和确认记忆。
-- 最后处理新增、重复、冲突、过期。
+- 先定核心数据合同，再做深实现。
+- 先把信息进入系统跑通，再做对象画像和项目节点。
+- 先让 memory / action / result 闭环可信，再做公司级 Command Center。
+- 每个 Wave 完成后更新 handoff、当前系统状态和团队开发日志。
 
 ## 9. 本地运行和验证
 
