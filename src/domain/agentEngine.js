@@ -76,6 +76,34 @@ const MEMORY_TRANSITION_STATUS = new Set([
   "archived"
 ]);
 
+export function addManualSource(project, input) {
+  const now = new Date().toISOString();
+  const source = {
+    id: makeId("src"),
+    kind: input.kind || "manual_note",
+    title: input.title || "未命名来源",
+    body: input.body,
+    origin: "manual",
+    externalRef: input.externalRef || undefined,
+    occurredAt: input.occurredAt || now,
+    receivedAt: now,
+    participants: normalizeList(input.participants),
+    relatedEntityIds: [],
+    relatedProjectIds: [project.id],
+    tags: normalizeList(input.tags),
+    importance: normalizeImportance(input.importance),
+    status: "new",
+    createdAt: now,
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: [source, ...(project.sources || [])]
+  };
+}
+
 export function absorbContext(project, input) {
   const now = new Date().toISOString();
   const context = {

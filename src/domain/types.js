@@ -17,6 +17,34 @@ export const CONTEXT_IMPORTANCE_LABELS = Object.fromEntries(
   CONTEXT_IMPORTANCE.map((item) => [item.id, item.label])
 );
 
+export const SOURCE_TYPES = [
+  { id: "email", label: "邮件" },
+  { id: "slack_message", label: "Slack 消息" },
+  { id: "meeting_note", label: "会议纪要" },
+  { id: "customer_feedback", label: "客户反馈" },
+  { id: "investor_question", label: "投资人问题" },
+  { id: "engineering_update", label: "工程进展" },
+  { id: "founder_note", label: "创始人笔记" },
+  { id: "sales_note", label: "销售记录" },
+  { id: "support_note", label: "支持记录" },
+  { id: "document", label: "文档" },
+  { id: "web_note", label: "网页摘录" },
+  { id: "manual_note", label: "手动笔记" },
+  { id: "result_feedback", label: "结果回流" },
+  { id: "other", label: "其他来源" }
+];
+
+export const SOURCE_TYPE_LABELS = Object.fromEntries(
+  SOURCE_TYPES.map((item) => [item.id, item.label])
+);
+
+export const SOURCE_STATUS = {
+  new: "待整理",
+  processed: "已整理",
+  ignored: "已忽略",
+  archived: "已归档"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",

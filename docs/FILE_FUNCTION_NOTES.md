@@ -416,6 +416,26 @@ AI handoff 维护 issue。
 - 让下一个 Codex 对话能从 Wave 1 的 Inbox / Source / Signal 起点接手。
 - 同步 `docs/TEAM_DEV_LOG.md`。
 
+### `docs/issues/INBOX-01-manual-source-inbox.md`
+
+Phase 3 Alpha Wave 1 的手动 Source Inbox issue。
+
+主要作用：
+
+- 要求落地 `Project.sources` 和 `Source` 的本地持久化。
+- 要求 Company Inbox 支持用户手动录入邮件、会议纪要、网页摘录或业务碎片。
+- 明确本 issue 不做 Signal 抽取、外部 API 接入或自动外部动作。
+
+通常会改：
+
+- `src/domain/types.js`
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`

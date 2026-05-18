@@ -9,6 +9,30 @@ export const DEMO_PROJECT = {
   stage: "客户发现 / Pre-seed",
   createdAt: now,
   updatedAt: now,
+  sources: [
+    {
+      id: "src-demo-1",
+      kind: "meeting_note",
+      title: "周一增长和客户访谈复盘原文",
+      body:
+        "我们采访了 5 个早期 SaaS 团队。客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+      origin: "manual",
+      externalRef: "周一增长复盘",
+      occurredAt: twoDaysAgo,
+      receivedAt: twoDaysAgo,
+      participants: ["增长负责人", "创始人", "客户访谈小组"],
+      relatedEntityIds: [],
+      relatedProjectIds: ["project-demo-northstar"],
+      tags: ["客户发现", "权限", "MVP"],
+      importance: "high",
+      status: "new",
+      createdAt: twoDaysAgo,
+      updatedAt: twoDaysAgo
+    }
+  ],
+  signals: [],
+  entities: [],
+  entityRelations: [],
   contexts: [
     {
       id: demoContextId,

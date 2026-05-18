@@ -322,6 +322,52 @@ textarea:focus {
   align-items: start;
 }
 
+.inbox-panel {
+  margin-bottom: 18px;
+}
+
+.inbox-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(320px, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.source-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px 16px 16px 0;
+}
+
+.source-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfa;
+}
+
+.source-item h4,
+.source-item p {
+  margin: 0;
+}
+
+.source-item h4 {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.source-item p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
 .panel {
   min-width: 0;
   border: 1px solid var(--line);
@@ -788,6 +834,19 @@ textarea:focus {
   color: var(--green);
 }
 
+.status.new {
+  color: var(--blue);
+}
+
+.status.processed {
+  color: var(--green);
+}
+
+.status.ignored,
+.status.archived {
+  color: var(--muted);
+}
+
 .importance.low {
   color: var(--muted);
 }
@@ -997,6 +1056,14 @@ textarea:focus {
     grid-template-areas:
       "intake actions"
       "memory brief";
+  }
+
+  .inbox-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .source-list {
+    padding: 0 16px 16px;
   }
 }
 
