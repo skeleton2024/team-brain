@@ -185,9 +185,27 @@ REC-01-extract-memories-pipeline.md
 REC-02-reconcile-memories-pipeline.md
 ```
 
-后续新增 Phase 3 Alpha issue 时，应按 Wave 放入本目录，并在本文件或阶段计划中更新顺序。
+## 9. Phase 3 Alpha Wave 0 issue
 
-## 9. 推荐开工提示词
+Wave 0 的目标是建立 Phase 3 Alpha 的施工系统和核心合同。当前建议按以下顺序串行执行：
+
+```text
+DEV-00-ai-development-rules.md
+ARCH-00-core-domain-contract.md
+QA-00-smoke-test-baseline.md
+DOC-00-current-system-status.md
+DOC-01-ai-handoff.md
+```
+
+执行原则：
+
+- 每个 issue 单独分支。
+- `ARCH-00` 必须在 Wave 1 深实现前完成。
+- `QA-00` 应在核心数据合同稳定后增强 smoke baseline。
+- `DOC-00` 和 `DOC-01` 在 Wave 结束时记录最终状态。
+- 每个 issue 完成后运行 `node scripts/smoke-test.mjs`。
+
+## 10. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。
