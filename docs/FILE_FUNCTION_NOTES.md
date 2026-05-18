@@ -499,6 +499,21 @@ Phase 3 Alpha Wave 1 的 Inbox review flow issue。
 - `DATA_MODEL.md`
 - `docs/FILE_FUNCTION_NOTES.md`
 
+### `docs/issues/QA-01-inbox-smoke-flow.md`
+
+Phase 3 Alpha Wave 1 的 Inbox smoke test issue。
+
+主要作用：
+
+- 要求 `scripts/smoke-test.mjs` 覆盖手动 Source、Signal 抽取、Entity / Project 建议和 Signal review。
+- 确认 Inbox 相关 UI 控件可以由 `renderApp()` 渲染。
+- 不新增产品功能或外部 API。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
