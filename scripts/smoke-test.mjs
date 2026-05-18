@@ -1,7 +1,9 @@
 import { DEMO_PROJECT } from "../src/data/demo.js";
 import {
+  addManualSource,
   absorbContext,
   generateBrief,
+  processSource,
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
@@ -161,6 +163,97 @@ if (
   convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id
 ) {
   throw new Error(`Expected Signal to convert into evidence-backed action: ${JSON.stringify(convertedActionProject)}`);
+}
+
+let inboxFlowProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [],
+  signals: [],
+  entities: [],
+  entityRelations: [],
+  contexts: [],
+  memories: [],
+  actions: [],
+  briefs: [],
+  results: [],
+  reconciliationResults: [],
+  pendingMemoryUpdates: []
+};
+inboxFlowProject = addManualSource(inboxFlowProject, {
+  kind: "meeting_note",
+  title: "Wave 1 Inbox smoke",
+  body:
+    "客户 A 愿意下周试点，但担心预算审批和敏感数据权限。投资人 B 追问市场壁垒和 ARR 证据。工程确认 Slack API 暂不接入，本周只做手动录入闭环。",
+  occurredAt: "2026-05-14",
+  externalRef: "手动会议纪要",
+  participants: ["客户 A", "投资人 B", "工程负责人"],
+  tags: ["inbox", "smoke"],
+  importance: "high"
+});
+const inboxSource = inboxFlowProject.sources[0];
+if (
+  !inboxSource ||
+  inboxSource.status !== "new" ||
+  inboxSource.origin !== "manual" ||
+  inboxSource.body.includes("自动发送")
+) {
+  throw new Error(`Manual Source inbox flow failed at source creation: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+inboxFlowProject = processSource(inboxFlowProject, inboxSource.id);
+if (
+  inboxFlowProject.sources[0].status !== "processed" ||
+  inboxFlowProject.signals.length < 2 ||
+  inboxFlowProject.signals.some((signal) => signal.sourceId !== inboxSource.id)
+) {
+  throw new Error(`Manual Source inbox flow failed at signal extraction: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxSignalForMemory = inboxFlowProject.signals[0];
+inboxFlowProject = suggestSignalLinks(inboxFlowProject, inboxSignalForMemory.id);
+if (
+  inboxFlowProject.entities.length < 1 ||
+  !inboxFlowProject.signals.find((signal) => signal.id === inboxSignalForMemory.id)?.suggestedEntityIds.length
+) {
+  throw new Error(`Manual Source inbox flow failed at link suggestion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+inboxFlowProject = reviewSignal(inboxFlowProject, inboxSignalForMemory.id, "memory");
+const inboxMemory = inboxFlowProject.memories[0];
+if (
+  !inboxMemory ||
+  inboxMemory.status !== "draft" ||
+  inboxMemory.sourceReferences[0]?.sourceId !== inboxSource.id ||
+  inboxFlowProject.signals.find((signal) => signal.id === inboxSignalForMemory.id)?.status !== "converted"
+) {
+  throw new Error(`Manual Source inbox flow failed at memory conversion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxSignalForAction = inboxFlowProject.signals.find((signal) => signal.status === "new");
+inboxFlowProject = reviewSignal(inboxFlowProject, inboxSignalForAction.id, "action");
+const inboxAction = inboxFlowProject.actions[0];
+if (
+  !inboxAction ||
+  inboxAction.status !== "pending" ||
+  !inboxAction.evidenceMemoryIds.includes(inboxFlowProject.memories[0].id) ||
+  !inboxAction.requiresHumanConfirmation
+) {
+  throw new Error(`Manual Source inbox flow failed at action conversion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxFlowHtml = renderApp({
+  activeProjectId: inboxFlowProject.id,
+  selectedActionId: inboxAction.id,
+  projects: [inboxFlowProject]
+});
+if (
+  !inboxFlowHtml.includes('data-form="manual-source"') ||
+  !inboxFlowHtml.includes('data-action="process-source"') ||
+  !inboxFlowHtml.includes('data-action="suggest-signal-links"') ||
+  !inboxFlowHtml.includes('data-signal-review="memory"') ||
+  !inboxFlowHtml.includes("Company Inbox")
+) {
+  throw new Error("Expected Inbox review flow controls to render in smoke HTML.");
 }
 
 const priceConcernMemory = {
@@ -652,6 +745,9 @@ if (!legacyHtml.includes("待确认") || !legacyHtml.includes("旧来源") || le
 
 const summary = {
   contexts: project.contexts.length,
+  sources: inboxFlowProject.sources.length,
+  signals: inboxFlowProject.signals.length,
+  entities: inboxFlowProject.entities.length,
   memories: project.memories.length,
   actions: project.actions.length,
   briefs: project.briefs.length,
