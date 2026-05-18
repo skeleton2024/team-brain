@@ -23,10 +23,16 @@ TeamMind 后续开发采用“一个主对话跑一个 Wave”的默认方式：
 当前主要集成分支：
 
 ```text
-integration/CTX-01-MEM-01-MEM-03-REC-01-CTX-03-MEM-02-memory-foundation
+integration/phase-3-alpha
 ```
 
-当前基线已经集成：
+当前本地 Wave 0 集成分支：
+
+```text
+integration/phase-3-wave-00
+```
+
+历史 memory foundation 分支已经集成：
 
 - CTX-01
 - CTX-03
@@ -38,7 +44,7 @@ integration/CTX-01-MEM-01-MEM-03-REC-01-CTX-03-MEM-02-memory-foundation
 - REC-02
 - `最终产品形态.md`
 
-该分支是后续 Phase 3 Alpha 的主要参考基线。后续不直接合 main，应继续走 integration 分支和 draft PR。
+后续 Phase 3 Alpha 以 `integration/phase-3-alpha` 为阶段集成分支，不直接合 main，应继续走 issue 分支、wave integration、阶段 integration 和 draft PR。
 
 ## 3. 当前开发模式
 
@@ -106,7 +112,7 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 | Wave | 目标 | 状态 | 备注 |
 | --- | --- | --- | --- |
-| Wave 0 | 施工系统与核心数据合同 | 准备中 | 先统一规则、数据合同、handoff、状态文档、smoke baseline |
+| Wave 0 | 施工系统与核心数据合同 | 开发中 | DEV-00 / ARCH-00 / QA-00 已完成并通过 smoke，文档收尾中 |
 | Wave 1 | Inbox 到 Source / Signal | 待开始 | 手动录入优先，不接 Gmail / Slack API |
 | Wave 2 | Entity Profile 与 Project Node | 待开始 | 支持长期对象画像和项目多节点 |
 | Wave 3 | Memory Governance 与 Action 回流 | 待开始 | 让状态、brief、result 进入真实闭环 |
@@ -209,3 +215,47 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 下一步：
 
 - 从 `DEV-00` / `ARCH-00` 开始 Phase 3 Alpha Wave 0。
+
+### 2026-05-18
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 0 施工系统、数据合同和 smoke baseline
+
+分支：`integration/phase-3-wave-00`
+
+状态：开发中，DOC-00 当前系统状态已更新，待 DOC-01 handoff 收尾
+
+改动文件：
+
+- `docs/issues/DEV-00-ai-development-rules.md`
+- `docs/issues/ARCH-00-core-domain-contract.md`
+- `docs/issues/QA-00-smoke-test-baseline.md`
+- `docs/issues/DOC-00-current-system-status.md`
+- `docs/issues/DOC-01-ai-handoff.md`
+- `docs/issues/README.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+- `src/data/demo.js`
+- `当前系统状态.md`
+
+验证结果：
+
+- `DEV-00` 提交：`02451cf`，完成 Wave 0 issue spec。
+- `ARCH-00` 提交：`31d3309`，完成 Phase 3 Alpha 核心数据合同。
+- `QA-00` 提交：`a77f8e4`，增强 smoke baseline，并补齐 action / brief / result 的证据字段。
+- 每个 issue 分支完成后运行 `node scripts/smoke-test.mjs` 通过。
+- 每次合回 `integration/phase-3-wave-00` 后再次运行 `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- `DOC-01` 需要更新 `AI_HANDOFF.md`，把下一步明确指向 Wave 1。
+- Wave 0 完成后需要合入 `integration/phase-3-alpha`。
+- 远端分支和 draft PR 需要在用户确认外部动作后再推送/创建。
+
+下一步：
+
+- 完成 `DOC-01-ai-handoff`。
