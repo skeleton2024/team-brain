@@ -431,6 +431,9 @@ AI handoff 维护 issue。
 - 调用 `recordActionResult()` 写入结果回流。
 - 检查 contexts、memories、actions、briefs、results 都存在。
 - 直接检查 `extractMemories()` pipeline 输出 `{ memories, runSummary }`，并确认候选记忆带 `sourceReferences`。
+- 检查新生成 action 的 `whyNow`、`evidenceMemoryIds`、`expectedArtifact`。
+- 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
+- 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
 
 修改时注意：
 
