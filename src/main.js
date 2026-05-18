@@ -4,6 +4,7 @@ import {
   generateBrief,
   processSource,
   recordActionResult,
+  reviewSignal,
   suggestSignalLinks,
   updateMemoryStatus
 } from "./domain/agentEngine.js";
@@ -46,6 +47,14 @@ function bindEvents() {
   app.querySelectorAll('[data-action="suggest-signal-links"]').forEach((button) => {
     button.addEventListener("click", () => {
       updateActiveProject((project) => suggestSignalLinks(project, button.dataset.signalId));
+    });
+  });
+
+  app.querySelectorAll("[data-signal-review]").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        reviewSignal(project, button.dataset.signalId, button.dataset.signalReview)
+      );
     });
   });
 

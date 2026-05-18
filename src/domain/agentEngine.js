@@ -194,6 +194,58 @@ export function suggestSignalLinks(project, signalId) {
   };
 }
 
+export function reviewSignal(project, signalId, reviewAction) {
+  const signal = (project.signals || []).find((item) => item.id === signalId);
+  if (!signal) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  if (reviewAction === "confirm" || reviewAction === "ignore") {
+    return {
+      ...project,
+      updatedAt: now,
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId
+          ? { ...item, status: reviewAction === "confirm" ? "confirmed" : "ignored", updatedAt: now }
+          : item
+      )
+    };
+  }
+
+  if (signal.status === "converted") {
+    return project;
+  }
+
+  if (reviewAction === "memory") {
+    const memory = buildMemoryFromSignal(project, signal, now);
+    return {
+      ...project,
+      updatedAt: now,
+      memories: [memory, ...project.memories],
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
+      )
+    };
+  }
+
+  if (reviewAction === "action") {
+    const memory = buildMemoryFromSignal(project, signal, now);
+    const action = buildActionFromSignal(signal, memory, now);
+    return {
+      ...project,
+      updatedAt: now,
+      memories: [memory, ...project.memories],
+      actions: mergeActions([action], project.actions),
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
+      )
+    };
+  }
+
+  return project;
+}
+
 export function absorbContext(project, input) {
   const now = new Date().toISOString();
   const context = {
@@ -768,6 +820,87 @@ function mergeEntities(incoming, existing) {
     (entity, index, items) =>
       items.findIndex((item) => normalize(item.name) === normalize(entity.name)) === index
   );
+}
+
+function buildMemoryFromSignal(project, signal, now) {
+  const source = sourceForSignal(project, signal);
+  const suggested = signal.suggestedMemory || {};
+  const content = suggested.content || suggested.detail || signal.summary;
+  const confidence = confidenceLabel(suggested.confidence ?? signal.confidence);
+
+  return {
+    id: makeId("mem"),
+    type: suggested.type || "fact",
+    title: suggested.title || signal.title,
+    detail: content,
+    content,
+    source: source?.title || "Inbox Signal",
+    confidence,
+    status: "draft",
+    sourceReferences: [
+      {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        quote: signal.quote || signal.summary,
+        note: source?.title || signal.title,
+        confidence: typeof signal.confidence === "number" ? signal.confidence : 0.5
+      }
+    ],
+    createdBy: "ai",
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function buildActionFromSignal(signal, memory, now) {
+  const suggested = signal.suggestedAction || {};
+  const type = suggested.type || "learning_loop";
+  const title = suggested.title || `处理 Signal：${signal.title}`;
+  const whyNow = suggested.whyNow || signal.summary;
+  const expectedArtifact = suggested.expectedArtifact || "人工确认后的下一步行动草稿";
+
+  return {
+    id: makeId("act"),
+    type,
+    title,
+    rationale: whyNow,
+    whyNow,
+    priority: suggested.priority || "medium",
+    riskLevel: suggested.riskLevel || "medium",
+    expectedOutput: expectedArtifact,
+    expectedArtifact,
+    sourceMemoryIds: [memory.id],
+    evidenceMemoryIds: [memory.id],
+    status: "pending",
+    requiresHumanConfirmation: true,
+    humanConfirmationChecklist: suggested.humanConfirmationChecklist || [
+      "确认 Signal 判断准确",
+      "确认对外内容只作为草稿",
+      "确认不会自动执行外部动作"
+    ],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function sourceForSignal(project, signal) {
+  return (project.sources || []).find((source) => source.id === signal.sourceId);
+}
+
+function confidenceLabel(confidence) {
+  if (typeof confidence === "number") {
+    if (confidence >= 0.8) {
+      return "high";
+    }
+
+    if (confidence >= 0.6) {
+      return "medium";
+    }
+
+    return "low";
+  }
+
+  return ["low", "medium", "high"].includes(confidence) ? confidence : "medium";
 }
 
 function unique(values) {

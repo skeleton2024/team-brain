@@ -3,6 +3,7 @@ import {
   absorbContext,
   generateBrief,
   recordActionResult,
+  reviewSignal,
   suggestSignalLinks,
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
@@ -129,6 +130,37 @@ if (
   )
 ) {
   throw new Error(`Signal link suggestion failed: ${JSON.stringify(linkProbeProject)}`);
+}
+
+const reviewSignalId = linkedSignal.id;
+let confirmedSignalProject = reviewSignal(linkProbeProject, reviewSignalId, "confirm");
+if (confirmedSignalProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "confirmed") {
+  throw new Error("Expected Signal review confirm to mark signal confirmed.");
+}
+
+let convertedMemoryProject = reviewSignal(linkProbeProject, reviewSignalId, "memory");
+const convertedMemory = convertedMemoryProject.memories[0];
+if (
+  convertedMemoryProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
+  convertedMemory.status !== "draft" ||
+  convertedMemory.createdBy !== "ai" ||
+  convertedMemory.sourceReferences[0]?.sourceId !== sourceProbe.id ||
+  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId
+) {
+  throw new Error(`Expected Signal to convert into traceable draft memory: ${JSON.stringify(convertedMemoryProject)}`);
+}
+
+let convertedActionProject = reviewSignal(linkProbeProject, reviewSignalId, "action");
+const convertedAction = convertedActionProject.actions[0];
+if (
+  convertedActionProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
+  !convertedAction ||
+  convertedAction.status !== "pending" ||
+  !convertedAction.requiresHumanConfirmation ||
+  !Array.isArray(convertedAction.evidenceMemoryIds) ||
+  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id
+) {
+  throw new Error(`Expected Signal to convert into evidence-backed action: ${JSON.stringify(convertedActionProject)}`);
 }
 
 const priceConcernMemory = {
