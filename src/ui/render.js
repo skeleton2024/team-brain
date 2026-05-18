@@ -9,6 +9,8 @@ import {
   PRIORITY_LABELS,
   RESULT_OUTCOMES,
   RISK_LABELS,
+  SIGNAL_STATUS,
+  SIGNAL_TYPES,
   SOURCE_STATUS,
   SOURCE_TYPES,
   SOURCE_TYPE_LABELS
@@ -206,7 +208,10 @@ function renderInbox(project) {
           </button>
         </form>
 
-        ${renderSources(sources)}
+        <div class="inbox-review-column">
+          ${renderSources(sources)}
+          ${renderSignals(project)}
+        </div>
       </div>
     </section>
   `;
@@ -255,6 +260,49 @@ function renderSourceItem(source) {
             </div>`
           : ""
       }
+      <div class="source-actions">
+        <button class="secondary-button compact-button" data-action="process-source" data-source-id="${escapeHtml(source.id)}" type="button">
+          提取 Signal
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderSignals(project) {
+  const signals = project.signals || [];
+  if (!signals.length) {
+    return "";
+  }
+
+  return `
+    <div class="signal-list">
+      <div class="context-history-heading">
+        <strong>最新 Signal</strong>
+        <span class="count-pill">${signals.length}</span>
+      </div>
+      ${signals.slice(0, 6).map((signal) => renderSignalItem(project, signal)).join("")}
+    </div>
+  `;
+}
+
+function renderSignalItem(project, signal) {
+  const source = (project.sources || []).find((item) => item.id === signal.sourceId);
+
+  return `
+    <article class="signal-item" id="signal-${escapeHtml(signal.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(signalTypeLabel(signal.type))}</span>
+        <span class="status ${escapeHtml(signal.status || "new")}">${escapeHtml(signalStatusLabel(signal.status))}</span>
+        <span>${escapeHtml(confidenceScoreLabel(signal.confidence))}</span>
+      </div>
+      <h4>${escapeHtml(signal.title)}</h4>
+      <p>${escapeHtml(signal.summary)}</p>
+      <blockquote>${escapeHtml(signal.quote || signal.summary)}</blockquote>
+      <div class="context-meta">
+        <span>${escapeHtml(source?.title || "未知 Source")}</span>
+        <span>${escapeHtml(formatDateOnly(signal.createdAt))}</span>
+      </div>
     </article>
   `;
 }
@@ -1060,6 +1108,22 @@ function sourceTypeLabel(kind) {
 
 function sourceStatusLabel(status) {
   return SOURCE_STATUS[status] || SOURCE_STATUS.new;
+}
+
+function signalTypeLabel(type) {
+  return SIGNAL_TYPES[type] || "业务信号";
+}
+
+function signalStatusLabel(status) {
+  return SIGNAL_STATUS[status] || SIGNAL_STATUS.new;
+}
+
+function confidenceScoreLabel(confidence) {
+  if (typeof confidence !== "number") {
+    return "待评分";
+  }
+
+  return `${Math.round(confidence * 100)}%`;
 }
 
 function escapeHtml(value) {

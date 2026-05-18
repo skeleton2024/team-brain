@@ -1,5 +1,6 @@
 import { ACTION_TYPES } from "./types.js";
 import { extractMemories, makeSourceReference, summarizeTitle } from "./pipelines/extractMemories.js";
+import { extractSignals } from "./pipelines/extractSignals.js";
 import { reconcileMemories } from "./pipelines/reconcileMemories.js";
 import { makeId } from "../services/store.js";
 
@@ -101,6 +102,31 @@ export function addManualSource(project, input) {
     ...project,
     updatedAt: now,
     sources: [source, ...(project.sources || [])]
+  };
+}
+
+export function processSource(project, sourceId) {
+  const source = (project.sources || []).find((item) => item.id === sourceId);
+  if (!source || source.status === "ignored" || source.status === "archived") {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const { signals } = extractSignals({ project, source, now });
+  const existingSignalKeys = new Set(
+    (project.signals || []).map((signal) => `${signal.sourceId}:${normalize(signal.summary)}`)
+  );
+  const newSignals = signals.filter(
+    (signal) => !existingSignalKeys.has(`${signal.sourceId}:${normalize(signal.summary)}`)
+  );
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: (project.sources || []).map((item) =>
+      item.id === sourceId ? { ...item, status: "processed", updatedAt: now } : item
+    ),
+    signals: [...newSignals, ...(project.signals || [])]
   };
 }
 

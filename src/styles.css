@@ -339,6 +339,20 @@ textarea:focus {
   padding: 16px 16px 16px 0;
 }
 
+.inbox-review-column,
+.signal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.inbox-review-column {
+  padding: 16px 16px 16px 0;
+}
+
+.source-list {
+  padding: 0;
+}
+
 .source-item {
   display: grid;
   gap: 8px;
@@ -366,6 +380,44 @@ textarea:focus {
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
+}
+
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.signal-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(53, 109, 201, 0.26);
+  border-radius: var(--radius);
+  background: #f8fbff;
+}
+
+.signal-item h4,
+.signal-item p,
+.signal-item blockquote {
+  margin: 0;
+}
+
+.signal-item h4 {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.signal-item p,
+.signal-item blockquote {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.signal-item blockquote {
+  padding-left: 10px;
+  border-left: 3px solid rgba(53, 109, 201, 0.32);
 }
 
 .panel {
@@ -1062,7 +1114,7 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
-  .source-list {
+  .inbox-review-column {
     padding: 0 16px 16px;
   }
 }

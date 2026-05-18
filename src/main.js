@@ -2,6 +2,7 @@ import {
   addManualSource,
   absorbContext,
   generateBrief,
+  processSource,
   recordActionResult,
   updateMemoryStatus
 } from "./domain/agentEngine.js";
@@ -33,6 +34,12 @@ function bindEvents() {
   app.querySelector('[data-form="record-result"]')?.addEventListener("submit", handleRecordResult);
   app.querySelectorAll('[data-form="edit-memory"]').forEach((form) => {
     form.addEventListener("submit", handleEditMemory);
+  });
+
+  app.querySelectorAll('[data-action="process-source"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) => processSource(project, button.dataset.sourceId));
+    });
   });
 
   app.querySelectorAll('[data-action="update-memory-status"]').forEach((button) => {
