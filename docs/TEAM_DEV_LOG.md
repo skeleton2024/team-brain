@@ -4,7 +4,7 @@
 
 用途：记录团队协作状态、阶段分支、开发决策、验收记录和重要风险。
 
-最后更新：2026-05-18
+最后更新：2026-05-19
 
 ## 1. 当前协作结论
 
@@ -26,10 +26,10 @@ TeamMind 后续开发采用“一个主对话跑一个 Wave”的默认方式：
 integration/phase-3-alpha
 ```
 
-当前本地 Wave 1 集成分支：
+当前本地 Wave 2 集成分支：
 
 ```text
-integration/phase-3-wave-01
+integration/phase-3-wave-02
 ```
 
 历史 memory foundation 分支已经集成：
@@ -113,8 +113,8 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 | Wave | 目标 | 状态 | 备注 |
 | --- | --- | --- | --- |
 | Wave 0 | 施工系统与核心数据合同 | 已合并 | DEV-00 / ARCH-00 / QA-00 / DOC-00 / DOC-01 已完成并合入 main |
-| Wave 1 | Inbox 到 Source / Signal | 待 review | INBOX-01 / PIPE-01 / LINK-01 / UI-01 / QA-01 已完成并通过 smoke，待阶段 integration / draft PR review |
-| Wave 2 | Entity Profile 与 Project Node | 待开始 | 支持长期对象画像和项目多节点 |
+| Wave 1 | Inbox 到 Source / Signal | 待 review | INBOX-01 / PIPE-01 / LINK-01 / UI-01 / QA-01 已完成并通过 smoke，PR #8 仍为 draft/open |
+| Wave 2 | Entity Profile 与 Project Node | 待 review | ENTITY-01 / ENTITY-02 / PROJECT-01 / PROJECT-02 / QA-02 已完成并通过 smoke，待合入阶段 integration / draft PR |
 | Wave 3 | Memory Governance 与 Action 回流 | 待开始 | 让状态、brief、result 进入真实闭环 |
 | Wave 4 | Command Center Alpha | 待开始 | 公司级首页和优先级队列 |
 
@@ -315,3 +315,55 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 下一步：
 
 - 合入 `integration/phase-3-alpha`，推送远端分支，创建面向 `main` 的 draft PR。
+
+### 2026-05-19
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 2：Entity Profile + Project Node
+
+分支：`integration/phase-3-wave-02`
+
+状态：Wave 2 已完成，待合入 `integration/phase-3-alpha` 并开 draft PR
+
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/issues/ENTITY-01-entity-profile.md`
+- `docs/issues/ENTITY-02-entity-linking.md`
+- `docs/issues/PROJECT-01-project-nodes.md`
+- `docs/issues/PROJECT-02-node-detail-panel.md`
+- `docs/issues/QA-02-entity-project-flow.md`
+
+验证结果：
+
+- `ENTITY-01` 提交：`f1c9ae7`，完成 Entity Profile 面板、详情展示、状态治理和 Entity 字段兼容迁移。
+- `ENTITY-02` 提交：`562a073`，完成 Entity 与 Source / Signal / Memory / Project / Action 的持续链接。
+- `PROJECT-01` 提交：`65fece0`，完成 Project Node 数据结构、默认单节点、节点列表和状态治理。
+- `PROJECT-02` 提交：`9facecb`，完成 Node Detail Panel，展示目标、输入上下文、证据链、action 和 result。
+- `QA-02` 提交：`628d84d`，扩展 smoke test 覆盖 Source -> Signal -> Entity -> Memory / Action -> Project Node -> Result 的贯通路径。
+- 每个 issue 分支完成后运行 `node scripts/smoke-test.mjs` 通过。
+- 每次合回 `integration/phase-3-wave-02` 后再次运行 `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Wave 2 尚未推送远端，也尚未合入 `integration/phase-3-alpha`。
+- Entity Relation Graph、实体合并、节点编辑、AI 自动拆分节点仍留给后续阶段。
+- Action Brief 和 Result Feedback 仍需要 Wave 3 完整化。
+
+下一步：
+
+- 合入 `integration/phase-3-alpha`，推送远端分支，创建 draft PR。
