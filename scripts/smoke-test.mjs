@@ -129,10 +129,51 @@ if (
     (entity) =>
       entity.status !== "watching" ||
       !entity.relatedSourceIds.includes(sourceProbe.id) ||
-      !entity.relatedProjectIds.includes(linkProbeProject.id)
+      !entity.sourceIds.includes(sourceProbe.id) ||
+      !entity.relatedSignalIds.includes(linkedSignal.id) ||
+      !entity.signalIds.includes(linkedSignal.id) ||
+      !entity.relatedProjectIds.includes(linkProbeProject.id) ||
+      !entity.projectIds.includes(linkProbeProject.id)
   )
 ) {
   throw new Error(`Signal link suggestion failed: ${JSON.stringify(linkProbeProject)}`);
+}
+
+let existingEntityLinkProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [sourceProbe],
+  signals: signalProbe.signals,
+  entities: [
+    {
+      id: "ent-existing-customer-a",
+      type: "customer",
+      name: "客户 A",
+      status: "watching",
+      tags: [],
+      sourceIds: [],
+      signalIds: [],
+      memoryIds: [],
+      projectIds: [],
+      relatedSourceIds: [],
+      relatedSignalIds: [],
+      relatedMemoryIds: [],
+      relatedProjectIds: [],
+      createdAt: "2026-05-13T00:00:00.000Z",
+      updatedAt: "2026-05-13T00:00:00.000Z"
+    }
+  ],
+  entityRelations: []
+};
+existingEntityLinkProject = suggestSignalLinks(existingEntityLinkProject, signalProbe.signals[0].id);
+const existingLinkedEntity = existingEntityLinkProject.entities.find(
+  (entity) => entity.id === "ent-existing-customer-a"
+);
+if (
+  !existingLinkedEntity?.sourceIds.includes(sourceProbe.id) ||
+  !existingLinkedEntity?.signalIds.includes(signalProbe.signals[0].id) ||
+  !existingLinkedEntity?.projectIds.includes(existingEntityLinkProject.id)
+) {
+  throw new Error(`Expected existing Entity to receive Source / Signal / Project links: ${JSON.stringify(existingEntityLinkProject)}`);
 }
 
 const reviewSignalId = linkedSignal.id;
@@ -143,25 +184,33 @@ if (confirmedSignalProject.signals.find((signal) => signal.id === reviewSignalId
 
 let convertedMemoryProject = reviewSignal(linkProbeProject, reviewSignalId, "memory");
 const convertedMemory = convertedMemoryProject.memories[0];
+const convertedMemoryEntity = convertedMemoryProject.entities.find((entity) =>
+  entity.memoryIds?.includes(convertedMemory.id)
+);
 if (
   convertedMemoryProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
   convertedMemory.status !== "draft" ||
   convertedMemory.createdBy !== "ai" ||
   convertedMemory.sourceReferences[0]?.sourceId !== sourceProbe.id ||
-  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId
+  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId ||
+  !convertedMemoryEntity
 ) {
   throw new Error(`Expected Signal to convert into traceable draft memory: ${JSON.stringify(convertedMemoryProject)}`);
 }
 
 let convertedActionProject = reviewSignal(linkProbeProject, reviewSignalId, "action");
 const convertedAction = convertedActionProject.actions[0];
+const convertedActionEntity = convertedActionProject.entities.find(
+  (entity) => entity.nextSuggestedActionId === convertedAction.id
+);
 if (
   convertedActionProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
   !convertedAction ||
   convertedAction.status !== "pending" ||
   !convertedAction.requiresHumanConfirmation ||
   !Array.isArray(convertedAction.evidenceMemoryIds) ||
-  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id
+  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id ||
+  !convertedActionEntity?.memoryIds.includes(convertedActionProject.memories[0].id)
 ) {
   throw new Error(`Expected Signal to convert into evidence-backed action: ${JSON.stringify(convertedActionProject)}`);
 }
