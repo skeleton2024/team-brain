@@ -92,6 +92,7 @@ function bindEvents() {
         editingMemoryId: null,
         selectedEntityId: null,
         selectedMemoryId: null,
+        selectedNodeId: null,
         selectedActionId:
           state.projects.find((project) => project.id === button.dataset.projectId)?.actions[0]?.id ??
           null
@@ -125,6 +126,22 @@ function bindEvents() {
     setState({
       ...state,
       selectedEntityId: null
+    });
+  });
+
+  app.querySelectorAll('[data-action="open-node-detail"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedNodeId: button.dataset.nodeId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-node-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedNodeId: null
     });
   });
 
@@ -207,6 +224,7 @@ function handleCreateProject(event) {
     editingMemoryId: null,
     selectedEntityId: null,
     selectedMemoryId: null,
+    selectedNodeId: null,
     selectedActionId: null,
     projects: [project, ...state.projects]
   });
@@ -237,6 +255,7 @@ function handleAbsorbContext(event) {
       editingMemoryId: null,
       selectedEntityId: null,
       selectedMemoryId: next.contexts[0]?.memoryIds[0] ?? state.selectedMemoryId,
+      selectedNodeId: null,
       selectedActionId: newActionId
     };
     return next;
@@ -267,7 +286,8 @@ function handleManualSource(event) {
       ...state,
       editingMemoryId: null,
       selectedEntityId: null,
-      selectedMemoryId: null
+      selectedMemoryId: null,
+      selectedNodeId: null
     };
     return next;
   });
