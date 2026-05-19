@@ -78,6 +78,13 @@ const MEMORY_TRANSITION_STATUS = new Set([
   "archived"
 ]);
 const ENTITY_TRANSITION_STATUS = new Set(["active", "inactive", "watching", "archived"]);
+const PROJECT_NODE_TRANSITION_STATUS = new Set([
+  "planned",
+  "active",
+  "blocked",
+  "done",
+  "archived"
+]);
 
 export function addManualSource(project, input) {
   const now = new Date().toISOString();
@@ -409,6 +416,38 @@ export function updateEntityStatus(project, entityId, status) {
     ...project,
     updatedAt: now,
     entities
+  };
+}
+
+export function updateProjectNodeStatus(project, nodeId, status) {
+  if (!PROJECT_NODE_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const nodes = (project.nodes || []).map((node) => {
+    if (node.id !== nodeId || node.status === status) {
+      return node;
+    }
+
+    changed = true;
+    return {
+      ...node,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    nodes
   };
 }
 

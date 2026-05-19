@@ -3,6 +3,7 @@ import {
   MEMORY_STATUS,
   MEMORY_TYPES,
   ENTITY_TYPES,
+  PROJECT_NODE_STATUS,
   SIGNAL_TYPES,
   SOURCE_TYPE_LABELS
 } from "../domain/types.js";
@@ -50,17 +51,22 @@ export function resetState() {
 
 export function makeProject(name) {
   const now = new Date().toISOString();
-
-  return {
-    id: makeId("project"),
+  const projectId = makeId("project");
+  const project = {
+    id: projectId,
     name,
     stage: "探索中",
     createdAt: now,
-    updatedAt: now,
+    updatedAt: now
+  };
+
+  return {
+    ...project,
     sources: [],
     signals: [],
     entities: [],
     entityRelations: [],
+    nodes: [makeDefaultProjectNode(project)],
     contexts: [],
     memories: [],
     actions: [],
@@ -152,6 +158,7 @@ function normalizeProject(project) {
     signals: Array.isArray(project.signals) ? project.signals.map(normalizeSignal) : [],
     entities: Array.isArray(project.entities) ? project.entities.map(normalizeEntity) : [],
     entityRelations: Array.isArray(project.entityRelations) ? project.entityRelations : [],
+    nodes: normalizeProjectNodes(project),
     contexts: Array.isArray(project.contexts) ? project.contexts.map(normalizeContext) : [],
     memories: Array.isArray(project.memories) ? project.memories.map(normalizeMemory) : [],
     actions: Array.isArray(project.actions) ? project.actions : [],
@@ -163,6 +170,63 @@ function normalizeProject(project) {
     pendingMemoryUpdates: Array.isArray(project.pendingMemoryUpdates)
       ? project.pendingMemoryUpdates.map(normalizeRelatedMemoryUpdate)
       : []
+  };
+}
+
+function normalizeProjectNodes(project) {
+  const nodes = Array.isArray(project.nodes) ? project.nodes.map((node) => normalizeProjectNode(node, project)) : [];
+  return nodes.length ? nodes : [makeDefaultProjectNode(project)];
+}
+
+function normalizeProjectNode(node, project) {
+  const createdAt = node.createdAt || project.createdAt || new Date().toISOString();
+
+  return {
+    ...node,
+    id: node.id || makeId("node"),
+    projectId: node.projectId || project.id,
+    title: node.title || `${project.name || "项目"} 默认节点`,
+    goal: node.goal || project.description || project.stage || "推进当前项目的下一步闭环。",
+    status: normalizeProjectNodeStatus(node.status),
+    ownerSuggestion: node.ownerSuggestion || "",
+    dueAt: node.dueAt || "",
+    successCriteria: normalizeList(node.successCriteria),
+    inputContextIds: normalizeIds(node.inputContextIds),
+    sourceIds: normalizeIds(node.sourceIds),
+    signalIds: normalizeIds(node.signalIds),
+    memoryIds: normalizeIds(node.memoryIds),
+    actionIds: normalizeIds(node.actionIds),
+    waitingIds: normalizeIds(node.waitingIds),
+    riskIds: normalizeIds(node.riskIds),
+    resultIds: normalizeIds(node.resultIds),
+    createdAt,
+    updatedAt: node.updatedAt || createdAt
+  };
+}
+
+function makeDefaultProjectNode(project) {
+  const createdAt = project.createdAt || new Date().toISOString();
+  const projectId = project.id || makeId("project");
+
+  return {
+    id: `node-${projectId}-default`,
+    projectId,
+    title: `${project.name || "项目"} 默认推进节点`,
+    goal: project.description || project.stage || "把当前项目推进到下一步可验证结果。",
+    status: "active",
+    ownerSuggestion: "",
+    dueAt: "",
+    successCriteria: ["下一步行动明确", "关键记忆和结果可追溯"],
+    inputContextIds: [],
+    sourceIds: [],
+    signalIds: [],
+    memoryIds: [],
+    actionIds: [],
+    waitingIds: [],
+    riskIds: [],
+    resultIds: [],
+    createdAt,
+    updatedAt: project.updatedAt || createdAt
   };
 }
 
@@ -397,6 +461,10 @@ function normalizeEntityType(value) {
 
 function normalizeEntityStatus(value) {
   return ["active", "inactive", "watching", "archived"].includes(value) ? value : "watching";
+}
+
+function normalizeProjectNodeStatus(value) {
+  return PROJECT_NODE_STATUS[value] ? value : "planned";
 }
 
 function normalizeReconciliationOperation(value) {

@@ -86,6 +86,14 @@ export const ENTITY_STATUS = {
   archived: "已归档"
 };
 
+export const PROJECT_NODE_STATUS = {
+  planned: "计划中",
+  active: "推进中",
+  blocked: "阻塞",
+  done: "已完成",
+  archived: "已归档"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",

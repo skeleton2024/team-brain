@@ -556,6 +556,29 @@ Phase 3 Alpha Wave 2 的 Entity Linking issue。
 - `src/ui/render.js`
 - `scripts/smoke-test.mjs`
 
+### `docs/issues/PROJECT-01-project-nodes.md`
+
+Phase 3 Alpha Wave 2 的 Project Nodes issue。
+
+主要作用：
+
+- 要求落地 `Project.nodes` 和默认单节点。
+- 要求 Project Nodes 面板展示节点目标、状态、成功标准和关联对象数量。
+- 要求用户可以切换节点状态，但不自动执行节点动作。
+- 明确 Node Detail Panel 留给 `PROJECT-02`。
+
+通常会改：
+
+- `src/data/demo.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
