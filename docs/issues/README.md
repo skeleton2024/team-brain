@@ -205,7 +205,29 @@ DOC-01-ai-handoff.md
 - `DOC-00` 和 `DOC-01` 在 Wave 结束时记录最终状态。
 - 每个 issue 完成后运行 `node scripts/smoke-test.mjs`。
 
-## 10. 推荐开工提示词
+## 10. Phase 3 Alpha Wave 1 issue
+
+Wave 1 的目标是落地 Inbox -> Source / Signal 的第一版可用闭环。当前已按以下顺序完成：
+
+```text
+INBOX-01-manual-source-inbox.md
+PIPE-01-source-to-signal.md
+LINK-01-project-entity-suggestion.md
+UI-01-inbox-review-flow.md
+QA-01-inbox-smoke-flow.md
+```
+
+执行原则：
+
+- `INBOX-01` 先落地手动 Source Inbox 和 `Project.sources`。
+- `PIPE-01` 在 Source 合同稳定后落地 `extractSignals()`。
+- `LINK-01` 在 Signal 合同稳定后落地 `linkSignals()` 和 Entity / Project 建议。
+- `UI-01` 消费前面三个 issue 的能力，补 review flow。
+- `QA-01` 最后增强 smoke，覆盖录入、提取、建议、review 和渲染断言。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 11. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。

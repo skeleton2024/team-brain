@@ -9,6 +9,99 @@ export const DEMO_PROJECT = {
   stage: "客户发现 / Pre-seed",
   createdAt: now,
   updatedAt: now,
+  sources: [
+    {
+      id: "src-demo-1",
+      kind: "meeting_note",
+      title: "周一增长和客户访谈复盘原文",
+      body:
+        "我们采访了 5 个早期 SaaS 团队。客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+      origin: "manual",
+      externalRef: "周一增长复盘",
+      occurredAt: twoDaysAgo,
+      receivedAt: twoDaysAgo,
+      participants: ["增长负责人", "创始人", "客户访谈小组"],
+      relatedEntityIds: ["ent-demo-founder", "ent-demo-customer-team"],
+      relatedProjectIds: ["project-demo-northstar"],
+      tags: ["客户发现", "权限", "MVP"],
+      importance: "high",
+      status: "processed",
+      createdAt: twoDaysAgo,
+      updatedAt: twoDaysAgo
+    }
+  ],
+  signals: [
+    {
+      id: "sig-demo-1",
+      sourceId: "src-demo-1",
+      type: "customer_need",
+      title: "客户愿意试用但担心权限边界",
+      summary: "客户愿意尝试公司记忆系统，但需要先确认敏感数据和权限边界。",
+      quote: "客户愿意尝试把会议纪要和客户反馈放进一个公司记忆系统，但他们担心敏感数据和权限边界。",
+      confidence: 0.86,
+      suggestedEntityIds: ["ent-demo-founder", "ent-demo-customer-team"],
+      suggestedProjectIds: ["project-demo-northstar"],
+      suggestedMemory: {
+        type: "customer_concern",
+        title: "客户愿意试用但担心权限边界",
+        content: "客户愿意尝试公司记忆系统，但需要先确认敏感数据和权限边界。",
+        confidence: 0.86
+      },
+      suggestedAction: {
+        type: "customer_followup",
+        title: "准备客户 follow-up 草稿",
+        whyNow: "客户已经表达试用兴趣，但权限边界仍需人工确认。",
+        priority: "high",
+        riskLevel: "medium",
+        expectedArtifact: "客户 follow-up 草稿和待确认问题",
+        status: "pending",
+        humanConfirmationChecklist: ["确认事实准确", "确认不会自动对外发送"]
+      },
+      status: "new",
+      createdBy: "ai",
+      createdAt: oneDayAgo,
+      updatedAt: oneDayAgo
+    }
+  ],
+  entities: [
+    {
+      id: "ent-demo-founder",
+      type: "team_member",
+      name: "创始人",
+      role: "决策人",
+      organization: "Northstar Copilot",
+      description: "参与客户访谈复盘和产品取舍确认。",
+      status: "active",
+      relationshipStage: "internal_owner",
+      ownerSuggestion: "",
+      tags: ["demo", "team"],
+      relatedSourceIds: ["src-demo-1"],
+      relatedSignalIds: ["sig-demo-1"],
+      relatedMemoryIds: ["mem-demo-product", "mem-demo-risk"],
+      relatedProjectIds: ["project-demo-northstar"],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    },
+    {
+      id: "ent-demo-customer-team",
+      type: "customer",
+      name: "客户访谈小组",
+      role: "早期反馈来源",
+      organization: "",
+      description: "提供权限边界、敏感数据和 follow-up 草稿需求反馈。",
+      status: "watching",
+      relationshipStage: "suggested_from_inbox",
+      ownerSuggestion: "",
+      tags: ["demo", "customer"],
+      relatedSourceIds: ["src-demo-1"],
+      relatedSignalIds: ["sig-demo-1"],
+      relatedMemoryIds: ["mem-demo-customer"],
+      relatedProjectIds: ["project-demo-northstar"],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    }
+  ],
+  entityRelations: [],
   contexts: [
     {
       id: demoContextId,

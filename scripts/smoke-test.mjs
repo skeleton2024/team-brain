@@ -1,11 +1,16 @@
 import { DEMO_PROJECT } from "../src/data/demo.js";
 import {
+  addManualSource,
   absorbContext,
   generateBrief,
+  processSource,
   recordActionResult,
+  reviewSignal,
+  suggestSignalLinks,
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
+import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
 import { updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
@@ -57,6 +62,198 @@ if (
   project.memories.length !== memoryCountBeforePipelineProbe
 ) {
   throw new Error(`extractMemories pipeline contract failed: ${JSON.stringify(pipelineProbe)}`);
+}
+
+const sourceProbe = {
+  id: "src-smoke-1",
+  kind: "customer_feedback",
+  title: "客户预算和权限反馈",
+  body: "客户愿意下周试点，但担心预算审批和敏感数据权限。工程上 Slack 导入还没做，本周只能手动粘贴。",
+  origin: "manual",
+  occurredAt: "2026-05-13",
+  receivedAt: "2026-05-13T00:00:00.000Z",
+  participants: ["客户 A", "销售负责人"],
+  relatedEntityIds: [],
+  relatedProjectIds: [project.id],
+  tags: ["试点", "预算"],
+  importance: "high",
+  status: "new",
+  createdAt: "2026-05-13T00:00:00.000Z",
+  updatedAt: "2026-05-13T00:00:00.000Z"
+};
+const signalProbe = extractSignals({
+  project,
+  source: sourceProbe,
+  now: "2026-05-13T00:00:00.000Z"
+});
+
+if (
+  !Array.isArray(signalProbe.signals) ||
+  signalProbe.signals.length < 1 ||
+  typeof signalProbe.runSummary !== "string" ||
+  !signalProbe.runSummary.includes("Signal") ||
+  signalProbe.signals.some(
+    (signal) =>
+      signal.sourceId !== sourceProbe.id ||
+      signal.status !== "new" ||
+      signal.createdBy !== "ai" ||
+      signal.createdAt !== "2026-05-13T00:00:00.000Z" ||
+      !signal.summary ||
+      !signal.quote ||
+      typeof signal.confidence !== "number" ||
+      !Array.isArray(signal.suggestedProjectIds) ||
+      !signal.suggestedMemory
+  )
+) {
+  throw new Error(`extractSignals pipeline contract failed: ${JSON.stringify(signalProbe)}`);
+}
+
+let linkProbeProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [sourceProbe],
+  signals: signalProbe.signals,
+  entities: [],
+  entityRelations: []
+};
+linkProbeProject = suggestSignalLinks(linkProbeProject, signalProbe.signals[0].id);
+const linkedSignal = linkProbeProject.signals.find((signal) => signal.id === signalProbe.signals[0].id);
+const linkedSource = linkProbeProject.sources.find((source) => source.id === sourceProbe.id);
+
+if (
+  linkProbeProject.entities.length < 1 ||
+  !linkedSignal?.suggestedEntityIds?.length ||
+  !linkedSignal?.suggestedProjectIds?.includes(linkProbeProject.id) ||
+  !linkedSource?.relatedEntityIds?.length ||
+  linkProbeProject.entities.some(
+    (entity) =>
+      entity.status !== "watching" ||
+      !entity.relatedSourceIds.includes(sourceProbe.id) ||
+      !entity.relatedProjectIds.includes(linkProbeProject.id)
+  )
+) {
+  throw new Error(`Signal link suggestion failed: ${JSON.stringify(linkProbeProject)}`);
+}
+
+const reviewSignalId = linkedSignal.id;
+let confirmedSignalProject = reviewSignal(linkProbeProject, reviewSignalId, "confirm");
+if (confirmedSignalProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "confirmed") {
+  throw new Error("Expected Signal review confirm to mark signal confirmed.");
+}
+
+let convertedMemoryProject = reviewSignal(linkProbeProject, reviewSignalId, "memory");
+const convertedMemory = convertedMemoryProject.memories[0];
+if (
+  convertedMemoryProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
+  convertedMemory.status !== "draft" ||
+  convertedMemory.createdBy !== "ai" ||
+  convertedMemory.sourceReferences[0]?.sourceId !== sourceProbe.id ||
+  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId
+) {
+  throw new Error(`Expected Signal to convert into traceable draft memory: ${JSON.stringify(convertedMemoryProject)}`);
+}
+
+let convertedActionProject = reviewSignal(linkProbeProject, reviewSignalId, "action");
+const convertedAction = convertedActionProject.actions[0];
+if (
+  convertedActionProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
+  !convertedAction ||
+  convertedAction.status !== "pending" ||
+  !convertedAction.requiresHumanConfirmation ||
+  !Array.isArray(convertedAction.evidenceMemoryIds) ||
+  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id
+) {
+  throw new Error(`Expected Signal to convert into evidence-backed action: ${JSON.stringify(convertedActionProject)}`);
+}
+
+let inboxFlowProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [],
+  signals: [],
+  entities: [],
+  entityRelations: [],
+  contexts: [],
+  memories: [],
+  actions: [],
+  briefs: [],
+  results: [],
+  reconciliationResults: [],
+  pendingMemoryUpdates: []
+};
+inboxFlowProject = addManualSource(inboxFlowProject, {
+  kind: "meeting_note",
+  title: "Wave 1 Inbox smoke",
+  body:
+    "客户 A 愿意下周试点，但担心预算审批和敏感数据权限。投资人 B 追问市场壁垒和 ARR 证据。工程确认 Slack API 暂不接入，本周只做手动录入闭环。",
+  occurredAt: "2026-05-14",
+  externalRef: "手动会议纪要",
+  participants: ["客户 A", "投资人 B", "工程负责人"],
+  tags: ["inbox", "smoke"],
+  importance: "high"
+});
+const inboxSource = inboxFlowProject.sources[0];
+if (
+  !inboxSource ||
+  inboxSource.status !== "new" ||
+  inboxSource.origin !== "manual" ||
+  inboxSource.body.includes("自动发送")
+) {
+  throw new Error(`Manual Source inbox flow failed at source creation: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+inboxFlowProject = processSource(inboxFlowProject, inboxSource.id);
+if (
+  inboxFlowProject.sources[0].status !== "processed" ||
+  inboxFlowProject.signals.length < 2 ||
+  inboxFlowProject.signals.some((signal) => signal.sourceId !== inboxSource.id)
+) {
+  throw new Error(`Manual Source inbox flow failed at signal extraction: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxSignalForMemory = inboxFlowProject.signals[0];
+inboxFlowProject = suggestSignalLinks(inboxFlowProject, inboxSignalForMemory.id);
+if (
+  inboxFlowProject.entities.length < 1 ||
+  !inboxFlowProject.signals.find((signal) => signal.id === inboxSignalForMemory.id)?.suggestedEntityIds.length
+) {
+  throw new Error(`Manual Source inbox flow failed at link suggestion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+inboxFlowProject = reviewSignal(inboxFlowProject, inboxSignalForMemory.id, "memory");
+const inboxMemory = inboxFlowProject.memories[0];
+if (
+  !inboxMemory ||
+  inboxMemory.status !== "draft" ||
+  inboxMemory.sourceReferences[0]?.sourceId !== inboxSource.id ||
+  inboxFlowProject.signals.find((signal) => signal.id === inboxSignalForMemory.id)?.status !== "converted"
+) {
+  throw new Error(`Manual Source inbox flow failed at memory conversion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxSignalForAction = inboxFlowProject.signals.find((signal) => signal.status === "new");
+inboxFlowProject = reviewSignal(inboxFlowProject, inboxSignalForAction.id, "action");
+const inboxAction = inboxFlowProject.actions[0];
+if (
+  !inboxAction ||
+  inboxAction.status !== "pending" ||
+  !inboxAction.evidenceMemoryIds.includes(inboxFlowProject.memories[0].id) ||
+  !inboxAction.requiresHumanConfirmation
+) {
+  throw new Error(`Manual Source inbox flow failed at action conversion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxFlowHtml = renderApp({
+  activeProjectId: inboxFlowProject.id,
+  selectedActionId: inboxAction.id,
+  projects: [inboxFlowProject]
+});
+if (
+  !inboxFlowHtml.includes('data-form="manual-source"') ||
+  !inboxFlowHtml.includes('data-action="process-source"') ||
+  !inboxFlowHtml.includes('data-action="suggest-signal-links"') ||
+  !inboxFlowHtml.includes('data-signal-review="memory"') ||
+  !inboxFlowHtml.includes("Company Inbox")
+) {
+  throw new Error("Expected Inbox review flow controls to render in smoke HTML.");
 }
 
 const priceConcernMemory = {
@@ -548,6 +745,9 @@ if (!legacyHtml.includes("待确认") || !legacyHtml.includes("旧来源") || le
 
 const summary = {
   contexts: project.contexts.length,
+  sources: inboxFlowProject.sources.length,
+  signals: inboxFlowProject.signals.length,
+  entities: inboxFlowProject.entities.length,
   memories: project.memories.length,
   actions: project.actions.length,
   briefs: project.briefs.length,

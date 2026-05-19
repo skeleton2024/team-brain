@@ -1,5 +1,7 @@
 import { ACTION_TYPES } from "./types.js";
 import { extractMemories, makeSourceReference, summarizeTitle } from "./pipelines/extractMemories.js";
+import { extractSignals } from "./pipelines/extractSignals.js";
+import { linkSignals } from "./pipelines/linkSignals.js";
 import { reconcileMemories } from "./pipelines/reconcileMemories.js";
 import { makeId } from "../services/store.js";
 
@@ -75,6 +77,174 @@ const MEMORY_TRANSITION_STATUS = new Set([
   "disputed",
   "archived"
 ]);
+
+export function addManualSource(project, input) {
+  const now = new Date().toISOString();
+  const source = {
+    id: makeId("src"),
+    kind: input.kind || "manual_note",
+    title: input.title || "未命名来源",
+    body: input.body,
+    origin: "manual",
+    externalRef: input.externalRef || undefined,
+    occurredAt: input.occurredAt || now,
+    receivedAt: now,
+    participants: normalizeList(input.participants),
+    relatedEntityIds: [],
+    relatedProjectIds: [project.id],
+    tags: normalizeList(input.tags),
+    importance: normalizeImportance(input.importance),
+    status: "new",
+    createdAt: now,
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: [source, ...(project.sources || [])]
+  };
+}
+
+export function processSource(project, sourceId) {
+  const source = (project.sources || []).find((item) => item.id === sourceId);
+  if (!source || source.status === "ignored" || source.status === "archived") {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const { signals } = extractSignals({ project, source, now });
+  const existingSignalKeys = new Set(
+    (project.signals || []).map((signal) => `${signal.sourceId}:${normalize(signal.summary)}`)
+  );
+  const newSignals = signals.filter(
+    (signal) => !existingSignalKeys.has(`${signal.sourceId}:${normalize(signal.summary)}`)
+  );
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: (project.sources || []).map((item) =>
+      item.id === sourceId ? { ...item, status: "processed", updatedAt: now } : item
+    ),
+    signals: [...newSignals, ...(project.signals || [])]
+  };
+}
+
+export function suggestSignalLinks(project, signalId) {
+  const targetSignals = signalId
+    ? (project.signals || []).filter((signal) => signal.id === signalId)
+    : (project.signals || []).filter((signal) => signal.status === "new");
+
+  if (!targetSignals.length) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const linking = linkSignals({ project, signals: targetSignals, now });
+  const entityIdsBySignal = new Map(
+    linking.signalUpdates.map((update) => [update.id, update.suggestedEntityIds])
+  );
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: (project.sources || []).map((source) => {
+      const update = linking.sourceUpdates.find((item) => item.sourceId === source.id);
+      if (!update) {
+        return source;
+      }
+
+      return {
+        ...source,
+        relatedEntityIds: unique([...(source.relatedEntityIds || []), ...update.relatedEntityIds]),
+        relatedProjectIds: unique([...(source.relatedProjectIds || []), ...update.relatedProjectIds]),
+        updatedAt: now
+      };
+    }),
+    signals: (project.signals || []).map((signal) => {
+      const update = linking.signalUpdates.find((item) => item.id === signal.id);
+      if (!update) {
+        return signal;
+      }
+
+      return {
+        ...signal,
+        suggestedEntityIds: update.suggestedEntityIds,
+        suggestedProjectIds: update.suggestedProjectIds,
+        updatedAt: now
+      };
+    }).map((signal) => ({
+      ...signal,
+      suggestedEntityIds: unique(signal.suggestedEntityIds || []),
+      suggestedProjectIds: unique(signal.suggestedProjectIds || [])
+    })),
+    entities: mergeEntities(
+      linking.entities.map((entity) => ({
+        ...entity,
+        relatedSignalIds: unique([
+          ...(entity.relatedSignalIds || []),
+          ...targetSignals
+            .filter((signal) => entityIdsBySignal.get(signal.id)?.includes(entity.id))
+            .map((signal) => signal.id)
+        ])
+      })),
+      project.entities || []
+    )
+  };
+}
+
+export function reviewSignal(project, signalId, reviewAction) {
+  const signal = (project.signals || []).find((item) => item.id === signalId);
+  if (!signal) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  if (reviewAction === "confirm" || reviewAction === "ignore") {
+    return {
+      ...project,
+      updatedAt: now,
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId
+          ? { ...item, status: reviewAction === "confirm" ? "confirmed" : "ignored", updatedAt: now }
+          : item
+      )
+    };
+  }
+
+  if (signal.status === "converted") {
+    return project;
+  }
+
+  if (reviewAction === "memory") {
+    const memory = buildMemoryFromSignal(project, signal, now);
+    return {
+      ...project,
+      updatedAt: now,
+      memories: [memory, ...project.memories],
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
+      )
+    };
+  }
+
+  if (reviewAction === "action") {
+    const memory = buildMemoryFromSignal(project, signal, now);
+    const action = buildActionFromSignal(signal, memory, now);
+    return {
+      ...project,
+      updatedAt: now,
+      memories: [memory, ...project.memories],
+      actions: mergeActions([action], project.actions),
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
+      )
+    };
+  }
+
+  return project;
+}
 
 export function absorbContext(project, input) {
   const now = new Date().toISOString();
@@ -643,6 +813,98 @@ function hasSimilarAction(existing, action) {
   return existing.some(
     (item) => item.status !== "done" && normalize(item.title) === normalize(action.title)
   );
+}
+
+function mergeEntities(incoming, existing) {
+  return [...incoming, ...existing].filter(
+    (entity, index, items) =>
+      items.findIndex((item) => normalize(item.name) === normalize(entity.name)) === index
+  );
+}
+
+function buildMemoryFromSignal(project, signal, now) {
+  const source = sourceForSignal(project, signal);
+  const suggested = signal.suggestedMemory || {};
+  const content = suggested.content || suggested.detail || signal.summary;
+  const confidence = confidenceLabel(suggested.confidence ?? signal.confidence);
+
+  return {
+    id: makeId("mem"),
+    type: suggested.type || "fact",
+    title: suggested.title || signal.title,
+    detail: content,
+    content,
+    source: source?.title || "Inbox Signal",
+    confidence,
+    status: "draft",
+    sourceReferences: [
+      {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        quote: signal.quote || signal.summary,
+        note: source?.title || signal.title,
+        confidence: typeof signal.confidence === "number" ? signal.confidence : 0.5
+      }
+    ],
+    createdBy: "ai",
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function buildActionFromSignal(signal, memory, now) {
+  const suggested = signal.suggestedAction || {};
+  const type = suggested.type || "learning_loop";
+  const title = suggested.title || `处理 Signal：${signal.title}`;
+  const whyNow = suggested.whyNow || signal.summary;
+  const expectedArtifact = suggested.expectedArtifact || "人工确认后的下一步行动草稿";
+
+  return {
+    id: makeId("act"),
+    type,
+    title,
+    rationale: whyNow,
+    whyNow,
+    priority: suggested.priority || "medium",
+    riskLevel: suggested.riskLevel || "medium",
+    expectedOutput: expectedArtifact,
+    expectedArtifact,
+    sourceMemoryIds: [memory.id],
+    evidenceMemoryIds: [memory.id],
+    status: "pending",
+    requiresHumanConfirmation: true,
+    humanConfirmationChecklist: suggested.humanConfirmationChecklist || [
+      "确认 Signal 判断准确",
+      "确认对外内容只作为草稿",
+      "确认不会自动执行外部动作"
+    ],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function sourceForSignal(project, signal) {
+  return (project.sources || []).find((source) => source.id === signal.sourceId);
+}
+
+function confidenceLabel(confidence) {
+  if (typeof confidence === "number") {
+    if (confidence >= 0.8) {
+      return "high";
+    }
+
+    if (confidence >= 0.6) {
+      return "medium";
+    }
+
+    return "low";
+  }
+
+  return ["low", "medium", "high"].includes(confidence) ? confidence : "medium";
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function adaptActionTitle(title, memory) {

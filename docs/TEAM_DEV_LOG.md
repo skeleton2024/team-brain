@@ -26,10 +26,10 @@ TeamMind 后续开发采用“一个主对话跑一个 Wave”的默认方式：
 integration/phase-3-alpha
 ```
 
-当前本地 Wave 0 集成分支：
+当前本地 Wave 1 集成分支：
 
 ```text
-integration/phase-3-wave-00
+integration/phase-3-wave-01
 ```
 
 历史 memory foundation 分支已经集成：
@@ -112,8 +112,8 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 | Wave | 目标 | 状态 | 备注 |
 | --- | --- | --- | --- |
-| Wave 0 | 施工系统与核心数据合同 | 待 review | DEV-00 / ARCH-00 / QA-00 / DOC-00 / DOC-01 已完成并通过 smoke，待合入阶段 integration |
-| Wave 1 | Inbox 到 Source / Signal | 待开始 | 手动录入优先，不接 Gmail / Slack API |
+| Wave 0 | 施工系统与核心数据合同 | 已合并 | DEV-00 / ARCH-00 / QA-00 / DOC-00 / DOC-01 已完成并合入 main |
+| Wave 1 | Inbox 到 Source / Signal | 待 review | INBOX-01 / PIPE-01 / LINK-01 / UI-01 / QA-01 已完成并通过 smoke，待阶段 integration / draft PR review |
 | Wave 2 | Entity Profile 与 Project Node | 待开始 | 支持长期对象画像和项目多节点 |
 | Wave 3 | Memory Governance 与 Action 回流 | 待开始 | 让状态、brief、result 进入真实闭环 |
 | Wave 4 | Command Center Alpha | 待开始 | 公司级首页和优先级队列 |
@@ -261,3 +261,57 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 下一步：
 
 - 合入 `integration/phase-3-alpha`，然后准备 draft PR。
+
+### 2026-05-18
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 1：Inbox -> Source / Signal
+
+分支：`integration/phase-3-wave-01`
+
+状态：Wave 1 已完成，待合入 `integration/phase-3-alpha` 并开 draft PR
+
+改动文件：
+
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/extractSignals.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/issues/INBOX-01-manual-source-inbox.md`
+- `docs/issues/PIPE-01-source-to-signal.md`
+- `docs/issues/LINK-01-project-entity-suggestion.md`
+- `docs/issues/UI-01-inbox-review-flow.md`
+- `docs/issues/QA-01-inbox-smoke-flow.md`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- `INBOX-01` 提交：`b16cab5`，完成手动 Source Inbox 和本地持久化。
+- `PIPE-01` 提交：`869ba12`，完成 Source -> Signal 本地规则 pipeline。
+- `LINK-01` 提交：`ddf3e82`，完成 Signal 到 Entity / Project 建议关联。
+- `UI-01` 提交：`e7e455a`，完成 Signal review flow，支持确认、忽略、转 Memory、转 Action。
+- `QA-01` 提交：`3bc16d6`，扩展 smoke test 覆盖完整 Inbox flow 和 UI 渲染断言。
+- 每个 issue 分支完成后运行 `node scripts/smoke-test.mjs` 通过。
+- 每次合回 `integration/phase-3-wave-01` 后再次运行 `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- 本地浏览器插件访问 `127.0.0.1:4173` / `localhost:4173` 被环境策略拦截，UI 验证以 `renderApp()` smoke 断言为准。
+- Entity 目前仍是建议和最小对象，完整 Entity Profile 留给 Wave 2。
+- Project Node 尚未落地，留给 Wave 2。
+
+下一步：
+
+- 合入 `integration/phase-3-alpha`，推送远端分支，创建面向 `main` 的 draft PR。

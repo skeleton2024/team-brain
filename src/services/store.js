@@ -1,5 +1,11 @@
 import { DEMO_PROJECT } from "../data/demo.js";
-import { MEMORY_STATUS, MEMORY_TYPES } from "../domain/types.js";
+import {
+  MEMORY_STATUS,
+  MEMORY_TYPES,
+  ENTITY_TYPES,
+  SIGNAL_TYPES,
+  SOURCE_TYPE_LABELS
+} from "../domain/types.js";
 
 const STORAGE_KEY = "teammind.mvp.state.v1";
 
@@ -51,6 +57,10 @@ export function makeProject(name) {
     stage: "探索中",
     createdAt: now,
     updatedAt: now,
+    sources: [],
+    signals: [],
+    entities: [],
+    entityRelations: [],
     contexts: [],
     memories: [],
     actions: [],
@@ -138,6 +148,10 @@ function normalizeProject(project) {
     ...project,
     createdAt: project.createdAt || now,
     updatedAt: project.updatedAt || project.createdAt || now,
+    sources: Array.isArray(project.sources) ? project.sources.map(normalizeSource) : [],
+    signals: Array.isArray(project.signals) ? project.signals.map(normalizeSignal) : [],
+    entities: Array.isArray(project.entities) ? project.entities.map(normalizeEntity) : [],
+    entityRelations: Array.isArray(project.entityRelations) ? project.entityRelations : [],
     contexts: Array.isArray(project.contexts) ? project.contexts.map(normalizeContext) : [],
     memories: Array.isArray(project.memories) ? project.memories.map(normalizeMemory) : [],
     actions: Array.isArray(project.actions) ? project.actions : [],
@@ -149,6 +163,78 @@ function normalizeProject(project) {
     pendingMemoryUpdates: Array.isArray(project.pendingMemoryUpdates)
       ? project.pendingMemoryUpdates.map(normalizeRelatedMemoryUpdate)
       : []
+  };
+}
+
+function normalizeSource(source) {
+  const createdAt = source.createdAt || new Date().toISOString();
+  const receivedAt = source.receivedAt || createdAt;
+
+  return {
+    ...source,
+    id: source.id || makeId("src"),
+    kind: normalizeSourceKind(source.kind),
+    title: source.title || "未命名来源",
+    body: source.body || "",
+    origin: normalizeSourceOrigin(source.origin),
+    externalRef: source.externalRef ? String(source.externalRef).trim() : undefined,
+    occurredAt: source.occurredAt || receivedAt,
+    receivedAt,
+    participants: normalizeList(source.participants),
+    relatedEntityIds: Array.isArray(source.relatedEntityIds) ? source.relatedEntityIds : [],
+    relatedProjectIds: Array.isArray(source.relatedProjectIds) ? source.relatedProjectIds : [],
+    tags: normalizeList(source.tags),
+    importance: normalizeImportance(source.importance),
+    status: normalizeSourceStatus(source.status),
+    createdAt,
+    updatedAt: source.updatedAt || createdAt
+  };
+}
+
+function normalizeSignal(signal) {
+  const createdAt = signal.createdAt || new Date().toISOString();
+
+  return {
+    ...signal,
+    id: signal.id || makeId("sig"),
+    sourceId: signal.sourceId || "",
+    type: normalizeSignalType(signal.type),
+    title: signal.title || "未命名 Signal",
+    summary: signal.summary || signal.quote || "",
+    quote: signal.quote ? String(signal.quote).trim() : undefined,
+    confidence: normalizeSignalConfidence(signal.confidence),
+    suggestedEntityIds: Array.isArray(signal.suggestedEntityIds) ? signal.suggestedEntityIds : [],
+    suggestedProjectIds: Array.isArray(signal.suggestedProjectIds) ? signal.suggestedProjectIds : [],
+    suggestedMemory: signal.suggestedMemory || undefined,
+    suggestedAction: signal.suggestedAction || undefined,
+    status: normalizeSignalStatus(signal.status),
+    createdBy: signal.createdBy === "human" ? "human" : "ai",
+    createdAt,
+    updatedAt: signal.updatedAt || createdAt
+  };
+}
+
+function normalizeEntity(entity) {
+  const createdAt = entity.createdAt || new Date().toISOString();
+
+  return {
+    ...entity,
+    id: entity.id || makeId("ent"),
+    type: normalizeEntityType(entity.type),
+    name: entity.name || "未命名对象",
+    role: entity.role || "",
+    organization: entity.organization || "",
+    description: entity.description || "",
+    status: normalizeEntityStatus(entity.status),
+    relationshipStage: entity.relationshipStage || "",
+    ownerSuggestion: entity.ownerSuggestion || "",
+    tags: normalizeList(entity.tags),
+    relatedSourceIds: Array.isArray(entity.relatedSourceIds) ? entity.relatedSourceIds : [],
+    relatedSignalIds: Array.isArray(entity.relatedSignalIds) ? entity.relatedSignalIds : [],
+    relatedMemoryIds: Array.isArray(entity.relatedMemoryIds) ? entity.relatedMemoryIds : [],
+    relatedProjectIds: Array.isArray(entity.relatedProjectIds) ? entity.relatedProjectIds : [],
+    createdAt,
+    updatedAt: entity.updatedAt || createdAt
   };
 }
 
@@ -245,6 +331,8 @@ function normalizeSourceReferences(value) {
   return value
     .map((reference) => ({
       contextId: String(reference?.contextId || "").trim(),
+      sourceId: String(reference?.sourceId || "").trim(),
+      signalId: String(reference?.signalId || "").trim(),
       quote: String(reference?.quote || "").trim(),
       note: reference?.note ? String(reference.note).trim() : undefined,
       confidence:
@@ -252,10 +340,10 @@ function normalizeSourceReferences(value) {
           ? Math.max(0, Math.min(1, reference.confidence))
           : undefined
     }))
-    .filter((reference) => reference.contextId || reference.quote)
+    .filter((reference) => reference.contextId || reference.sourceId || reference.quote)
     .map((reference) => ({
       ...reference,
-      contextId: reference.contextId || "ctx-unknown-source"
+      contextId: reference.contextId || (reference.sourceId ? "" : "ctx-unknown-source")
     }));
 }
 
@@ -263,6 +351,42 @@ function normalizeMemoryStatus(value) {
   return ["draft", "confirmed", "outdated", "disputed", "archived"].includes(value)
     ? value
     : "draft";
+}
+
+function normalizeSourceKind(value) {
+  return SOURCE_TYPE_LABELS[value] ? value : "other";
+}
+
+function normalizeSourceOrigin(value) {
+  return ["manual", "imported", "integration", "result"].includes(value) ? value : "manual";
+}
+
+function normalizeSourceStatus(value) {
+  return ["new", "processed", "ignored", "archived"].includes(value) ? value : "new";
+}
+
+function normalizeSignalType(value) {
+  return SIGNAL_TYPES[value] ? value : "fact";
+}
+
+function normalizeSignalStatus(value) {
+  return ["new", "confirmed", "ignored", "converted"].includes(value) ? value : "new";
+}
+
+function normalizeSignalConfidence(value) {
+  if (typeof value === "number") {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  return 0.5;
+}
+
+function normalizeEntityType(value) {
+  return ENTITY_TYPES[value] ? value : "other";
+}
+
+function normalizeEntityStatus(value) {
+  return ["active", "inactive", "watching", "archived"].includes(value) ? value : "watching";
 }
 
 function normalizeReconciliationOperation(value) {

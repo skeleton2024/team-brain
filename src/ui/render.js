@@ -4,11 +4,18 @@ import {
   CONTEXT_IMPORTANCE,
   CONTEXT_IMPORTANCE_LABELS,
   CONTEXT_TYPES,
+  ENTITY_STATUS,
+  ENTITY_TYPES,
   MEMORY_STATUS,
   MEMORY_TYPES,
   PRIORITY_LABELS,
   RESULT_OUTCOMES,
-  RISK_LABELS
+  RISK_LABELS,
+  SIGNAL_STATUS,
+  SIGNAL_TYPES,
+  SOURCE_STATUS,
+  SOURCE_TYPES,
+  SOURCE_TYPE_LABELS
 } from "../domain/types.js";
 
 const MEMORY_STATUS_ACTIONS = [
@@ -31,6 +38,7 @@ export function renderApp(state) {
       <main class="workspace">
         ${renderTopbar(project)}
         ${renderPipeline(project)}
+        ${renderInbox(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -111,10 +119,10 @@ function renderTopbar(project) {
 
 function renderPipeline(project) {
   const steps = [
-    ["上下文", project.contexts.length],
+    ["Source", project.sources?.length || 0],
+    ["Signal", project.signals?.length || 0],
     ["公司记忆", project.memories.length],
     ["下一步行动", project.actions.filter((action) => action.status !== "done").length],
-    ["行动 Brief", project.briefs.length],
     ["结果回流", project.results.length]
   ];
 
@@ -132,6 +140,234 @@ function renderPipeline(project) {
         )
         .join("")}
     </section>
+  `;
+}
+
+function renderInbox(project) {
+  const sources = project.sources || [];
+
+  return `
+    <section class="panel inbox-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Company Inbox</p>
+          <h3>手动 Source 录入</h3>
+        </div>
+        <span class="count-pill">${sources.length}</span>
+      </div>
+
+      <div class="inbox-layout">
+        <form class="stack-form" data-form="manual-source">
+          <div class="field-row">
+            <label>
+              信息类型
+              <select name="kind">
+                ${SOURCE_TYPES.map(
+                  (type) => `<option value="${type.id}">${escapeHtml(type.label)}</option>`
+                ).join("")}
+              </select>
+            </label>
+            <label>
+              标题
+              <input name="title" type="text" placeholder="例如：客户 A 预算反馈" />
+            </label>
+          </div>
+          <div class="field-row">
+            <label>
+              发生时间
+              <input name="occurredAt" type="date" value="${escapeHtml(todayForInput())}" />
+            </label>
+            <label>
+              重要程度
+              <select name="importance">
+                ${CONTEXT_IMPORTANCE.map(
+                  (item) => `<option value="${item.id}" ${item.id === "medium" ? "selected" : ""}>${escapeHtml(item.label)}</option>`
+                ).join("")}
+              </select>
+            </label>
+          </div>
+          <div class="field-row">
+            <label>
+              参与对象
+              <input name="participants" type="text" placeholder="例如：客户 A, CFO, 李雷" />
+            </label>
+            <label>
+              原始来源
+              <input name="externalRef" type="text" placeholder="例如：邮件主题、文档链接或会议名" />
+            </label>
+          </div>
+          <label>
+            标签
+            <input name="tags" type="text" placeholder="例如：预算, 试点, 风险" />
+          </label>
+          <label>
+            原文
+            <textarea name="body" rows="7" placeholder="粘贴邮件、Slack、会议纪要、网页摘录或临时业务碎片" required></textarea>
+          </label>
+          <button class="primary-button" type="submit">
+            <span>保存为 Source</span>
+            <span>→</span>
+          </button>
+        </form>
+
+        <div class="inbox-review-column">
+          ${renderSources(sources)}
+          ${renderSignals(project)}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderSources(sources) {
+  if (!sources.length) {
+    return emptyState("暂无 Source，先粘贴一段真实业务信息。");
+  }
+
+  return `
+    <div class="source-list">
+      <div class="context-history-heading">
+        <strong>最近 Source</strong>
+        <span class="count-pill">${sources.length}</span>
+      </div>
+      ${sources.slice(0, 6).map(renderSourceItem).join("")}
+    </div>
+  `;
+}
+
+function renderSourceItem(source) {
+  const tags = Array.isArray(source.tags) ? source.tags : [];
+  const participants = Array.isArray(source.participants) ? source.participants : [];
+
+  return `
+    <article class="source-item" id="source-${escapeHtml(source.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(sourceTypeLabel(source.kind))}</span>
+        <span class="status ${escapeHtml(source.status || "new")}">${escapeHtml(sourceStatusLabel(source.status))}</span>
+        <span class="importance ${escapeHtml(source.importance || "medium")}">
+          ${escapeHtml(CONTEXT_IMPORTANCE_LABELS[source.importance] || CONTEXT_IMPORTANCE_LABELS.medium)}
+        </span>
+      </div>
+      <h4>${escapeHtml(source.title)}</h4>
+      <p>${escapeHtml(source.body)}</p>
+      <div class="context-meta">
+        <span>${escapeHtml(formatDateOnly(source.occurredAt || source.receivedAt))}</span>
+        ${participants.length ? `<span>${escapeHtml(participants.join("、"))}</span>` : ""}
+        ${source.externalRef ? `<span>${escapeHtml(source.externalRef)}</span>` : ""}
+      </div>
+      ${
+        tags.length
+          ? `<div class="context-tags">
+              ${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+            </div>`
+          : ""
+      }
+      <div class="source-actions">
+        <button class="secondary-button compact-button" data-action="process-source" data-source-id="${escapeHtml(source.id)}" type="button">
+          提取 Signal
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderSignals(project) {
+  const signals = project.signals || [];
+  if (!signals.length) {
+    return "";
+  }
+
+  return `
+    <div class="signal-list">
+      <div class="context-history-heading">
+        <strong>最新 Signal</strong>
+        <span class="count-pill">${signals.length}</span>
+      </div>
+      ${signals.slice(0, 6).map((signal) => renderSignalItem(project, signal)).join("")}
+    </div>
+  `;
+}
+
+function renderSignalItem(project, signal) {
+  const source = (project.sources || []).find((item) => item.id === signal.sourceId);
+  const entities = (signal.suggestedEntityIds || [])
+    .map((entityId) => (project.entities || []).find((entity) => entity.id === entityId))
+    .filter(Boolean);
+  const projects = (signal.suggestedProjectIds || [])
+    .map((projectId) => (projectId === project.id ? project : null))
+    .filter(Boolean);
+
+  return `
+    <article class="signal-item" id="signal-${escapeHtml(signal.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(signalTypeLabel(signal.type))}</span>
+        <span class="status ${escapeHtml(signal.status || "new")}">${escapeHtml(signalStatusLabel(signal.status))}</span>
+        <span>${escapeHtml(confidenceScoreLabel(signal.confidence))}</span>
+      </div>
+      <h4>${escapeHtml(signal.title)}</h4>
+      <p>${escapeHtml(signal.summary)}</p>
+      <blockquote>${escapeHtml(signal.quote || signal.summary)}</blockquote>
+      <div class="context-meta">
+        <span>${escapeHtml(source?.title || "未知 Source")}</span>
+        <span>${escapeHtml(formatDateOnly(signal.createdAt))}</span>
+      </div>
+      ${renderSignalSuggestions(entities, projects)}
+      <div class="source-actions">
+        <button class="secondary-button compact-button" data-action="suggest-signal-links" data-signal-id="${escapeHtml(signal.id)}" type="button">
+          建议关联
+        </button>
+        ${renderSignalReviewActions(signal)}
+      </div>
+    </article>
+  `;
+}
+
+function renderSignalReviewActions(signal) {
+  if (signal.status === "converted" || signal.status === "ignored") {
+    return "";
+  }
+
+  return `
+    <button class="secondary-button compact-button" data-signal-review="confirm" data-signal-id="${escapeHtml(signal.id)}" type="button">确认</button>
+    <button class="ghost-button compact-button" data-signal-review="ignore" data-signal-id="${escapeHtml(signal.id)}" type="button">忽略</button>
+    <button class="secondary-button compact-button" data-signal-review="memory" data-signal-id="${escapeHtml(signal.id)}" type="button">转 Memory</button>
+    <button class="secondary-button compact-button" data-signal-review="action" data-signal-id="${escapeHtml(signal.id)}" type="button">转 Action</button>
+  `;
+}
+
+function renderSignalSuggestions(entities, projects) {
+  if (!entities.length && !projects.length) {
+    return `<p class="muted compact-copy">尚未建议 Entity / Project。</p>`;
+  }
+
+  return `
+    <div class="signal-suggestions">
+      ${
+        entities.length
+          ? `<div>
+              <strong>Entity</strong>
+              <div class="context-tags">
+                ${entities
+                  .map(
+                    (entity) =>
+                      `<span>${escapeHtml(entity.name)} · ${escapeHtml(entityTypeLabel(entity.type))} · ${escapeHtml(entityStatusLabel(entity.status))}</span>`
+                  )
+                  .join("")}
+              </div>
+            </div>`
+          : ""
+      }
+      ${
+        projects.length
+          ? `<div>
+              <strong>Project</strong>
+              <div class="context-tags">
+                ${projects.map((item) => `<span>${escapeHtml(item.name)}</span>`).join("")}
+              </div>
+            </div>`
+          : ""
+      }
+    </div>
   `;
 }
 
@@ -406,7 +642,7 @@ function renderMemoryDetailPanel(project, memoryId) {
 
 function renderMemoryDetailSources(project, memory) {
   const sourceReferences = Array.isArray(memory.sourceReferences)
-    ? memory.sourceReferences.filter((reference) => reference?.contextId || reference?.quote)
+    ? memory.sourceReferences.filter((reference) => reference?.contextId || reference?.sourceId || reference?.quote)
     : [];
 
   if (!sourceReferences.length) {
@@ -418,11 +654,12 @@ function renderMemoryDetailSources(project, memory) {
       ${sourceReferences
         .map((reference) => {
           const context = project.contexts.find((item) => item.id === reference.contextId);
+          const source = (project.sources || []).find((item) => item.id === reference.sourceId);
           return `
             <article class="memory-detail-source">
               <div>
-                <strong>${escapeHtml(context?.title || reference.note || "未知上下文")}</strong>
-                <span>${escapeHtml(formatDateOnly(context?.occurredAt || context?.createdAt))}</span>
+                <strong>${escapeHtml(context?.title || source?.title || reference.note || "未知来源")}</strong>
+                <span>${escapeHtml(formatDateOnly(context?.occurredAt || context?.createdAt || source?.occurredAt || source?.receivedAt))}</span>
               </div>
               <blockquote>${escapeHtml(reference.quote || memoryContent(memory))}</blockquote>
               ${
@@ -432,6 +669,12 @@ function renderMemoryDetailSources(project, memory) {
                       <p>${escapeHtml(context.body)}</p>
                     </details>
                     <a class="secondary-link compact-button" href="#context-${escapeHtml(context.id)}">跳到原文</a>`
+                  : source?.body
+                    ? `<details class="source-context">
+                        <summary>Source 原文</summary>
+                        <p>${escapeHtml(source.body)}</p>
+                      </details>
+                      <a class="secondary-link compact-button" href="#source-${escapeHtml(source.id)}">跳到 Source</a>`
                   : ""
               }
             </article>
@@ -513,14 +756,14 @@ function renderRelatedMemoryUpdates(result, memoryId) {
 
 function renderMemorySources(project, memory) {
   const sourceReferences = Array.isArray(memory.sourceReferences)
-    ? memory.sourceReferences.filter((reference) => reference?.contextId && reference?.quote)
+    ? memory.sourceReferences.filter((reference) => (reference?.contextId || reference?.sourceId) && reference?.quote)
     : [];
 
   if (!sourceReferences.length) {
     return `<small>${escapeHtml(memory.source || "来源待补")} · ${confidenceLabel(memory.confidence)}</small>`;
   }
 
-  const firstSourceTitle = contextTitle(project, sourceReferences[0].contextId);
+  const firstSourceTitle = referenceTitle(project, sourceReferences[0]);
 
   return `
     <div class="memory-sources">
@@ -531,9 +774,9 @@ function renderMemorySources(project, memory) {
           .map(
             (reference) => `
               <blockquote>
-                <strong>${escapeHtml(contextTitle(project, reference.contextId))}</strong>
+                <strong>${escapeHtml(referenceTitle(project, reference))}</strong>
                 <p>${escapeHtml(reference.quote)}</p>
-                ${renderSourceContext(project, reference.contextId)}
+                ${renderSourceEvidence(project, reference)}
               </blockquote>
             `
           )
@@ -570,6 +813,18 @@ function contextTitle(project, contextId) {
   return project.contexts.find((context) => context.id === contextId)?.title || "未知上下文";
 }
 
+function referenceTitle(project, reference) {
+  if (reference?.contextId) {
+    return contextTitle(project, reference.contextId);
+  }
+
+  if (reference?.sourceId) {
+    return (project.sources || []).find((source) => source.id === reference.sourceId)?.title || "未知 Source";
+  }
+
+  return "未知来源";
+}
+
 function renderSourceContext(project, contextId) {
   const context = project.contexts.find((item) => item.id === contextId);
   if (!context?.body) {
@@ -580,6 +835,24 @@ function renderSourceContext(project, contextId) {
     <details class="source-context">
       <summary>查看 Context 原文</summary>
       <p>${escapeHtml(context.body)}</p>
+    </details>
+  `;
+}
+
+function renderSourceEvidence(project, reference) {
+  if (reference?.contextId) {
+    return renderSourceContext(project, reference.contextId);
+  }
+
+  const source = (project.sources || []).find((item) => item.id === reference?.sourceId);
+  if (!source?.body) {
+    return "";
+  }
+
+  return `
+    <details class="source-context">
+      <summary>查看 Source 原文</summary>
+      <p>${escapeHtml(source.body)}</p>
     </details>
   `;
 }
@@ -928,6 +1201,38 @@ function todayForInput() {
 
 function contextTypeLabel(kind) {
   return CONTEXT_TYPES.find((type) => type.id === kind)?.label || "其他上下文";
+}
+
+function sourceTypeLabel(kind) {
+  return SOURCE_TYPE_LABELS[kind] || "其他来源";
+}
+
+function sourceStatusLabel(status) {
+  return SOURCE_STATUS[status] || SOURCE_STATUS.new;
+}
+
+function signalTypeLabel(type) {
+  return SIGNAL_TYPES[type] || "业务信号";
+}
+
+function signalStatusLabel(status) {
+  return SIGNAL_STATUS[status] || SIGNAL_STATUS.new;
+}
+
+function entityTypeLabel(type) {
+  return ENTITY_TYPES[type] || ENTITY_TYPES.other;
+}
+
+function entityStatusLabel(status) {
+  return ENTITY_STATUS[status] || ENTITY_STATUS.watching;
+}
+
+function confidenceScoreLabel(confidence) {
+  if (typeof confidence !== "number") {
+    return "待评分";
+  }
+
+  return `${Math.round(confidence * 100)}%`;
 }
 
 function escapeHtml(value) {

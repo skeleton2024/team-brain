@@ -53,6 +53,12 @@ Wave 0 本地集成分支：
 integration/phase-3-wave-00
 ```
 
+Wave 1 本地集成分支：
+
+```text
+integration/phase-3-wave-01
+```
+
 历史 memory foundation 分支仍可作为上下文参考，但不再作为后续开发主 base：
 
 ```text
@@ -81,9 +87,9 @@ DOC-01：AI handoff
 - result 已带 `whatChanged`、`newEvidence`、`followUpNeeded`。
 - 每个 issue 分支完成后和合回 wave 后均运行 `node scripts/smoke-test.mjs` 通过。
 
-## 6. 下一步：Wave 1
+## 6. Phase 3 Alpha Wave 1 状态
 
-下一轮应从 Wave 1 开始：
+Wave 1 已完成 Inbox 到 Source / Signal 的第一版闭环：
 
 ```text
 INBOX-01-manual-source-inbox
@@ -93,16 +99,14 @@ UI-01-inbox-review-flow
 QA-01-inbox-smoke-flow
 ```
 
-Wave 1 目标：
+关键结果：
 
-```text
-用户手动录入真实业务信息
--> 生成 Source
--> 抽取 Signal
--> 建议关联 Entity / Project
--> 人工 review
--> 转为 Memory / Action
-```
+- 用户可以手动录入真实业务信息并生成 `Source`。
+- `Source` 可以通过本地规则提取为结构化 `Signal`。
+- `Signal` 可以建议关联 Entity / Project，Entity 默认保持 `watching`，不自动确认为事实。
+- Inbox review flow 支持确认、忽略、转 Memory、转 Action。
+- 转 Action 仍保留 `requiresHumanConfirmation`，不执行任何外部动作。
+- `scripts/smoke-test.mjs` 已覆盖 `addManualSource -> processSource -> suggestSignalLinks -> reviewSignal -> renderApp`。
 
 Wave 1 明确不做：
 
@@ -111,7 +115,38 @@ Wave 1 明确不做：
 - 不自动发送消息或承诺。
 - 不把主界面改成聊天产品。
 
-## 7. 不要做
+本轮 issue 分支：
+
+```text
+issue/INBOX-01-manual-source-inbox
+issue/PIPE-01-source-to-signal
+issue/LINK-01-project-entity-suggestion
+issue/UI-01-inbox-review-flow
+issue/QA-01-inbox-smoke-flow
+```
+
+每个 issue 完成后、每次合回 `integration/phase-3-wave-01` 后均运行 `node scripts/smoke-test.mjs` 通过。
+
+## 7. 下一步：Wave 2
+
+下一轮建议从 Entity Profile 与 Project Node 开始：
+
+```text
+ENTITY-01-entity-profile
+ENTITY-02-entity-linking
+PROJECT-01-project-nodes
+PROJECT-02-node-detail-panel
+QA-02-entity-project-flow
+```
+
+Wave 2 重点：
+
+- 把 Wave 1 生成的 Entity 建议升级为可查看、可治理的 Entity Profile。
+- 展示 Inbox / Signal / Memory / Project 与 Entity 的关联。
+- 落地 Project Node 的最小结构和状态。
+- 继续保持人工确认边界，不接外部自动执行。
+
+## 8. 不要做
 
 - 不要把主界面改成聊天产品。
 - 不要优先接 Gmail / Slack / Notion / Linear / GitHub 自动执行。
@@ -121,7 +156,7 @@ Wave 1 明确不做：
 - 不要修改核心数据结构但不更新 `DATA_MODEL.md`。
 - 不要新增文件但不更新 `docs/FILE_FUNCTION_NOTES.md`。
 
-## 8. 完成后必须记录
+## 9. 完成后必须记录
 
 完成一个 issue 或一个 Wave 后，至少记录：
 

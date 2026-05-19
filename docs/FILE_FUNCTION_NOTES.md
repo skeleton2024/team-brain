@@ -416,6 +416,104 @@ AI handoff 维护 issue。
 - 让下一个 Codex 对话能从 Wave 1 的 Inbox / Source / Signal 起点接手。
 - 同步 `docs/TEAM_DEV_LOG.md`。
 
+### `docs/issues/INBOX-01-manual-source-inbox.md`
+
+Phase 3 Alpha Wave 1 的手动 Source Inbox issue。
+
+主要作用：
+
+- 要求落地 `Project.sources` 和 `Source` 的本地持久化。
+- 要求 Company Inbox 支持用户手动录入邮件、会议纪要、网页摘录或业务碎片。
+- 明确本 issue 不做 Signal 抽取、外部 API 接入或自动外部动作。
+
+通常会改：
+
+- `src/domain/types.js`
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+
+### `docs/issues/PIPE-01-source-to-signal.md`
+
+Phase 3 Alpha Wave 1 的 Source 到 Signal pipeline issue。
+
+主要作用：
+
+- 要求新增本地 `extractSignals()` pipeline。
+- 要求 Source 可以被处理成结构化 Signal。
+- 明确本 issue 不做人工 review、转 memory、转 action 或真实外部 AI provider。
+
+通常会改：
+
+- `src/domain/pipelines/extractSignals.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+
+### `docs/issues/LINK-01-project-entity-suggestion.md`
+
+Phase 3 Alpha Wave 1 的 Signal 到 Entity / Project 建议关联 issue。
+
+主要作用：
+
+- 要求新增本地 `linkSignals()` pipeline。
+- 要求 Signal 能产生 `suggestedEntityIds` 和 `suggestedProjectIds`。
+- 要求 Source 同步保留 `relatedEntityIds` 和 `relatedProjectIds`。
+- 明确本 issue 不做复杂关系图、CRM 集成或自动确认为事实。
+
+通常会改：
+
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/UI-01-inbox-review-flow.md`
+
+Phase 3 Alpha Wave 1 的 Inbox review flow issue。
+
+主要作用：
+
+- 要求 Signal 支持确认、忽略、转 Memory、转 Action。
+- 要求 Signal 转化后的 Memory 能追溯到 Source 和 Signal。
+- 要求转 Action 时保留人工确认边界，不自动执行外部动作。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `DATA_MODEL.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+### `docs/issues/QA-01-inbox-smoke-flow.md`
+
+Phase 3 Alpha Wave 1 的 Inbox smoke test issue。
+
+主要作用：
+
+- 要求 `scripts/smoke-test.mjs` 覆盖手动 Source、Signal 抽取、Entity / Project 建议和 Signal review。
+- 确认 Inbox 相关 UI 控件可以由 `renderApp()` 渲染。
+- 不新增产品功能或外部 API。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -555,6 +653,41 @@ AI handoff 维护 issue。
 - 不在这里做 reconciliation，也不直接过滤已有记忆；去重仍由 `agentEngine.js` 编排。
 - 后续接真实 AI provider 时，应保持输出结构稳定并补 schema 校验。
 - 每条 AI 生成的 memory 必须能追溯到 `context.id`。
+
+### `src/domain/pipelines/extractSignals.js`
+
+Source 到 Signal pipeline。
+
+主要作用：
+
+- 暴露 `extractSignals({ project, source, now })`。
+- 用本地关键词规则把 `Source.body` 拆成候选 `Signal`。
+- 为每条 Signal 补齐 `sourceId`、`type`、`summary`、`quote`、`confidence`、`suggestedMemory`、`suggestedAction`、`status`、`createdBy` 和时间字段。
+- 返回 `{ signals, runSummary }`，不直接保存或修改 project state。
+
+修改时注意：
+
+- 不在这里做人工确认、转 memory 或转 action。
+- 不调用真实外部 provider，也不执行 Gmail / Slack 等外部动作。
+- 后续可替换为真实 AI provider，但输出结构必须保持稳定。
+
+### `src/domain/pipelines/linkSignals.js`
+
+Signal 到 Entity / Project 建议关联 pipeline。
+
+主要作用：
+
+- 暴露 `linkSignals({ project, signals, now })`。
+- 基于 Source 参与对象建议 Entity。
+- 为 Signal 补齐 `suggestedEntityIds` 和 `suggestedProjectIds`。
+- 为 Source 生成 `relatedEntityIds` 和 `relatedProjectIds` 更新建议。
+- 返回结构化更新，不直接写入 project state。
+
+修改时注意：
+
+- 不把建议自动确认为事实，Entity 默认 `watching`。
+- 不做复杂实体合并或关系图可视化。
+- 不接 CRM、Gmail、Slack 等外部系统。
 
 ### `src/services/store.js`
 

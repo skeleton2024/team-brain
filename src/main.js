@@ -1,7 +1,11 @@
 import {
+  addManualSource,
   absorbContext,
   generateBrief,
+  processSource,
   recordActionResult,
+  reviewSignal,
+  suggestSignalLinks,
   updateMemoryStatus
 } from "./domain/agentEngine.js";
 import {
@@ -27,10 +31,31 @@ function render() {
 
 function bindEvents() {
   app.querySelector('[data-form="create-project"]')?.addEventListener("submit", handleCreateProject);
+  app.querySelector('[data-form="manual-source"]')?.addEventListener("submit", handleManualSource);
   app.querySelector('[data-form="absorb-context"]')?.addEventListener("submit", handleAbsorbContext);
   app.querySelector('[data-form="record-result"]')?.addEventListener("submit", handleRecordResult);
   app.querySelectorAll('[data-form="edit-memory"]').forEach((form) => {
     form.addEventListener("submit", handleEditMemory);
+  });
+
+  app.querySelectorAll('[data-action="process-source"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) => processSource(project, button.dataset.sourceId));
+    });
+  });
+
+  app.querySelectorAll('[data-action="suggest-signal-links"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) => suggestSignalLinks(project, button.dataset.signalId));
+    });
+  });
+
+  app.querySelectorAll("[data-signal-review]").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        reviewSignal(project, button.dataset.signalId, button.dataset.signalReview)
+      );
+    });
   });
 
   app.querySelectorAll('[data-action="update-memory-status"]').forEach((button) => {
@@ -176,6 +201,35 @@ function handleAbsorbContext(event) {
       editingMemoryId: null,
       selectedMemoryId: next.contexts[0]?.memoryIds[0] ?? state.selectedMemoryId,
       selectedActionId: newActionId
+    };
+    return next;
+  });
+}
+
+function handleManualSource(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const input = {
+    kind: String(form.get("kind") || "manual_note"),
+    title: String(form.get("title") || "").trim(),
+    body: String(form.get("body") || "").trim(),
+    externalRef: String(form.get("externalRef") || "").trim(),
+    occurredAt: String(form.get("occurredAt") || "").trim(),
+    participants: parseList(form.get("participants")),
+    tags: parseList(form.get("tags")),
+    importance: String(form.get("importance") || "medium")
+  };
+
+  if (!input.body) {
+    return;
+  }
+
+  updateActiveProject((project) => {
+    const next = addManualSource(project, input);
+    state = {
+      ...state,
+      editingMemoryId: null,
+      selectedMemoryId: null
     };
     return next;
   });
