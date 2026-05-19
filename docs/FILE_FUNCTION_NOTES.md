@@ -597,6 +597,22 @@ Phase 3 Alpha Wave 2 的 Node Detail Panel issue。
 - `src/styles.css`
 - `scripts/smoke-test.mjs`
 
+### `docs/issues/QA-02-entity-project-flow.md`
+
+Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
+
+主要作用：
+
+- 要求 smoke test 覆盖手动 Source -> Signal -> Entity -> Memory / Action -> Project Node -> Result 的核心路径。
+- 要求 ProjectNode 自动维护 Source、Signal、Memory、Action 和 Result 链接。
+- 要求 Entity Profile 与 Node Detail Panel 能在同一条 flow 中展示关联证据。
+- 明确本 issue 不做外部 API、自动执行或浏览器 e2e 框架。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`

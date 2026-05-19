@@ -123,6 +123,7 @@ team-brain/
       ENTITY-02-entity-linking.md
       PROJECT-01-project-nodes.md
       PROJECT-02-node-detail-panel.md
+      QA-02-entity-project-flow.md
   scripts/
     smoke-test.mjs
   src/
