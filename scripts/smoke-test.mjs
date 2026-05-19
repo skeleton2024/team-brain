@@ -346,17 +346,23 @@ if (
 
 const projectNodeHtml = renderApp({
   activeProjectId: DEMO_PROJECT.id,
+  selectedNodeId: "node-demo-customer-discovery",
   selectedActionId: null,
   projects: [DEMO_PROJECT]
 });
 if (
   !projectNodeHtml.includes("Project Nodes") ||
+  !projectNodeHtml.includes("Node Detail") ||
   !projectNodeHtml.includes("项目推进节点") ||
   !projectNodeHtml.includes("客户试点与权限边界确认") ||
+  !projectNodeHtml.includes("节点目标") ||
+  !projectNodeHtml.includes("输入上下文") ||
   !projectNodeHtml.includes('data-action="update-project-node-status"') ||
+  !projectNodeHtml.includes('data-action="open-node-detail"') ||
+  !projectNodeHtml.includes('data-action-id="act-demo-customer"') ||
   !projectNodeHtml.includes("Memory 2")
 ) {
-  throw new Error("Expected Project Nodes list and status controls to render in smoke HTML.");
+  throw new Error("Expected Project Nodes list, detail panel, and status controls to render in smoke HTML.");
 }
 
 let nodeStatusProject = structuredClone(DEMO_PROJECT);

@@ -56,7 +56,7 @@ export function renderApp(state) {
         ${renderPipeline(project)}
         ${renderInbox(project)}
         ${renderEntityProfiles(project, state.selectedEntityId)}
-        ${renderProjectNodes(project)}
+        ${renderProjectNodes(project, state.selectedNodeId)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -576,8 +576,9 @@ function renderEntityStatusActions(entity) {
   `;
 }
 
-function renderProjectNodes(project) {
+function renderProjectNodes(project, selectedNodeId) {
   const nodes = project?.nodes || [];
+  const selectedNode = selectedNodeId ? nodes.find((node) => node.id === selectedNodeId) : null;
 
   return `
     <section class="panel node-panel">
@@ -590,8 +591,11 @@ function renderProjectNodes(project) {
       </div>
       ${
         nodes.length
-          ? `<div class="node-list">
-              ${nodes.map((node) => renderProjectNodeCard(project, node)).join("")}
+          ? `<div class="node-layout">
+              <div class="node-list">
+                ${nodes.map((node) => renderProjectNodeCard(project, node, node.id === selectedNode?.id)).join("")}
+              </div>
+              ${selectedNode ? renderProjectNodeDetailPanel(project, selectedNode) : emptyState("选择一个节点查看详情。")}
             </div>`
           : emptyState("暂无节点。小项目会自动补一个默认推进节点。")
       }
@@ -599,7 +603,7 @@ function renderProjectNodes(project) {
   `;
 }
 
-function renderProjectNodeCard(project, node) {
+function renderProjectNodeCard(project, node, isSelected = false) {
   const metrics = [
     ["Source", node.sourceIds?.length || 0],
     ["Signal", node.signalIds?.length || 0],
@@ -609,7 +613,7 @@ function renderProjectNodeCard(project, node) {
   ];
 
   return `
-    <article class="node-card" id="node-${escapeHtml(node.id)}">
+    <article class="node-card ${isSelected ? "selected" : ""}" id="node-${escapeHtml(node.id)}">
       <div class="node-card-main">
         <div class="context-item-top">
           <span class="status ${escapeHtml(node.status || "planned")}">${escapeHtml(projectNodeStatusLabel(node.status))}</span>
@@ -624,8 +628,66 @@ function renderProjectNodeCard(project, node) {
         <div class="entity-metrics">
           ${metrics.map(([label, value]) => `<span>${escapeHtml(label)} ${value}</span>`).join("")}
         </div>
+        <button class="secondary-button compact-button" data-action="open-node-detail" data-node-id="${escapeHtml(node.id)}" type="button">详情</button>
         ${renderProjectNodeStatusActions(node)}
       </div>
+    </article>
+  `;
+}
+
+function renderProjectNodeDetailPanel(project, node) {
+  const contexts = nodeLinkedItems(project.contexts || [], node.inputContextIds);
+  const sources = nodeLinkedItems(project.sources || [], node.sourceIds);
+  const signals = nodeLinkedItems(project.signals || [], node.signalIds);
+  const memories = nodeLinkedItems(project.memories || [], node.memoryIds);
+  const actions = nodeLinkedItems(project.actions || [], node.actionIds);
+  const results = nodeLinkedItems(project.results || [], node.resultIds);
+
+  return `
+    <article class="node-detail-panel" aria-label="节点详情">
+      <div class="memory-detail-heading">
+        <div>
+          <p class="eyebrow">Node Detail</p>
+          <h4>${escapeHtml(node.title)}</h4>
+        </div>
+        <button class="ghost-button compact-button" data-action="close-node-detail" type="button">关闭</button>
+      </div>
+
+      <div class="memory-detail-meta">
+        <span class="status ${escapeHtml(node.status || "planned")}">${escapeHtml(projectNodeStatusLabel(node.status))}</span>
+        ${node.ownerSuggestion ? `<span>${escapeHtml(node.ownerSuggestion)}</span>` : ""}
+        ${node.dueAt ? `<span>${escapeHtml(formatDateOnly(node.dueAt))}</span>` : ""}
+      </div>
+
+      <section class="memory-detail-section">
+        <h5>节点目标</h5>
+        <p>${escapeHtml(node.goal || "目标待补")}</p>
+        ${renderProjectNodeSuccessCriteria(node)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>输入上下文</h5>
+        ${renderNodeRelatedList("Context", contexts, (context) => context.title, (context) => `#context-${context.id}`)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>证据链</h5>
+        <div class="entity-relation-grid">
+          ${renderNodeRelatedList("Source", sources, (source) => source.title, (source) => `#source-${source.id}`)}
+          ${renderNodeRelatedList("Signal", signals, (signal) => signal.title, (signal) => `#signal-${signal.id}`)}
+          ${renderNodeRelatedList("Memory", memories, (memory) => memory.title, null)}
+        </div>
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>关联行动</h5>
+        ${renderNodeActions(actions)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>结果回流</h5>
+        ${renderNodeResults(results)}
+      </section>
     </article>
   `;
 }
@@ -659,6 +721,70 @@ function renderProjectNodeStatusActions(node) {
             >
               ${escapeHtml(action.label)}
             </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderNodeRelatedList(label, items, getTitle, getHref) {
+  if (!items.length) {
+    return `<p class="muted">暂无关联 ${escapeHtml(label)}</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${items
+        .slice(0, 5)
+        .map((item) => {
+          const title = escapeHtml(getTitle(item));
+          const href = getHref?.(item);
+          return href
+            ? `<a class="secondary-link compact-button" href="${escapeHtml(href)}">${title}</a>`
+            : `<span class="node-related-pill">${title}</span>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderNodeActions(actions) {
+  if (!actions.length) {
+    return `<p class="muted">暂无关联 action</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${actions
+        .map(
+          (action) => `
+            <button class="memory-related-action" data-action-id="${escapeHtml(action.id)}" type="button">
+              <span>${escapeHtml(ACTION_TYPES[action.type] || action.type)}</span>
+              <strong>${escapeHtml(action.title)}</strong>
+              <small>${escapeHtml(ACTION_STATUS[action.status] || action.status)}</small>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderNodeResults(results) {
+  if (!results.length) {
+    return `<p class="muted">暂无 result</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${results
+        .map(
+          (result) => `
+            <article class="memory-detail-result">
+              <strong>${escapeHtml(result.summary || result.outcome || "执行结果")}</strong>
+              <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+            </article>
           `
         )
         .join("")}
@@ -1448,6 +1574,11 @@ function entityNextAction(project, entity, memories) {
       action.status !== "done" &&
       actionMemoryIds(action).some((memoryId) => memoryIds.has(memoryId))
   );
+}
+
+function nodeLinkedItems(items, ids = []) {
+  const idSet = new Set(Array.isArray(ids) ? ids : []);
+  return items.filter((item) => idSet.has(item.id));
 }
 
 function actionsForMemory(project, memoryId) {

@@ -579,6 +579,24 @@ Phase 3 Alpha Wave 2 的 Project Nodes issue。
 - `scripts/smoke-test.mjs`
 - `DATA_MODEL.md`
 
+### `docs/issues/PROJECT-02-node-detail-panel.md`
+
+Phase 3 Alpha Wave 2 的 Node Detail Panel issue。
+
+主要作用：
+
+- 要求用户可以打开单个 Project Node 详情。
+- 要求详情展示节点目标、输入上下文、成功标准、Source / Signal / Memory / Action / Result 关联。
+- 要求相关 Action 沿用现有 action 选择逻辑，继续只生成 Brief 和人工确认项。
+- 明确本 issue 不做节点编辑表单、自动拆分节点或自动执行动作。
+
+通常会改：
+
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
