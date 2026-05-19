@@ -75,6 +75,7 @@ export const ENTITY_TYPES = {
   product: "产品",
   market: "市场",
   vendor: "供应商",
+  competitor: "竞争对手",
   other: "其他对象"
 };
 

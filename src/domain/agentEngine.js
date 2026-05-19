@@ -77,6 +77,7 @@ const MEMORY_TRANSITION_STATUS = new Set([
   "disputed",
   "archived"
 ]);
+const ENTITY_TRANSITION_STATUS = new Set(["active", "inactive", "watching", "archived"]);
 
 export function addManualSource(project, input) {
   const now = new Date().toISOString();
@@ -350,6 +351,38 @@ export function updateMemoryStatus(project, memoryId, status) {
     ...project,
     updatedAt: now,
     memories
+  };
+}
+
+export function updateEntityStatus(project, entityId, status) {
+  if (!ENTITY_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const entities = (project.entities || []).map((entity) => {
+    if (entity.id !== entityId || entity.status === status) {
+      return entity;
+    }
+
+    changed = true;
+    return {
+      ...entity,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    entities
   };
 }
 

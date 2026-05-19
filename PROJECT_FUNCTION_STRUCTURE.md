@@ -119,6 +119,7 @@ team-brain/
       LINK-01-project-entity-suggestion.md
       UI-01-inbox-review-flow.md
       QA-01-inbox-smoke-flow.md
+      ENTITY-01-entity-profile.md
   scripts/
     smoke-test.mjs
   src/

@@ -216,6 +216,10 @@ function normalizeSignal(signal) {
 
 function normalizeEntity(entity) {
   const createdAt = entity.createdAt || new Date().toISOString();
+  const sourceIds = normalizeIds(entity.sourceIds, entity.relatedSourceIds);
+  const signalIds = normalizeIds(entity.signalIds, entity.relatedSignalIds);
+  const memoryIds = normalizeIds(entity.memoryIds, entity.relatedMemoryIds);
+  const projectIds = normalizeIds(entity.projectIds, entity.relatedProjectIds);
 
   return {
     ...entity,
@@ -229,10 +233,16 @@ function normalizeEntity(entity) {
     relationshipStage: entity.relationshipStage || "",
     ownerSuggestion: entity.ownerSuggestion || "",
     tags: normalizeList(entity.tags),
-    relatedSourceIds: Array.isArray(entity.relatedSourceIds) ? entity.relatedSourceIds : [],
-    relatedSignalIds: Array.isArray(entity.relatedSignalIds) ? entity.relatedSignalIds : [],
-    relatedMemoryIds: Array.isArray(entity.relatedMemoryIds) ? entity.relatedMemoryIds : [],
-    relatedProjectIds: Array.isArray(entity.relatedProjectIds) ? entity.relatedProjectIds : [],
+    sourceIds,
+    signalIds,
+    memoryIds,
+    projectIds,
+    relatedSourceIds: sourceIds,
+    relatedSignalIds: signalIds,
+    relatedMemoryIds: memoryIds,
+    relatedProjectIds: projectIds,
+    lastInteractionAt: entity.lastInteractionAt || "",
+    nextSuggestedActionId: entity.nextSuggestedActionId || "",
     createdAt,
     updatedAt: entity.updatedAt || createdAt
   };
@@ -418,6 +428,17 @@ function normalizeList(value) {
   }
 
   return [];
+}
+
+function normalizeIds(primary, fallback) {
+  return unique([
+    ...(Array.isArray(primary) ? primary : []),
+    ...(Array.isArray(fallback) ? fallback : [])
+  ].map((item) => String(item).trim()).filter(Boolean));
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function normalizeImportance(value) {
