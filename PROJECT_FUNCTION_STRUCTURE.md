@@ -114,6 +114,11 @@ team-brain/
       QA-00-smoke-test-baseline.md
       DOC-00-current-system-status.md
       DOC-01-ai-handoff.md
+      INBOX-01-manual-source-inbox.md
+      PIPE-01-source-to-signal.md
+      LINK-01-project-entity-suggestion.md
+      UI-01-inbox-review-flow.md
+      QA-01-inbox-smoke-flow.md
   scripts/
     smoke-test.mjs
   src/
@@ -151,7 +156,7 @@ Domain Orchestrator
   src/domain/agentEngine.js
 
 Domain Pipelines
-  src/domain/pipelines/sourceToSignals.js
+  src/domain/pipelines/extractSignals.js
   src/domain/pipelines/extractMemories.js
   src/domain/pipelines/reconcileMemories.js
   src/domain/pipelines/linkSignals.js
@@ -320,9 +325,9 @@ REC-02 已新增。
 - 判断 `new`、`duplicate`、`update`、`conflict`、`outdate`。
 - 输出 reconciliation result，由 orchestrator 决定如何写入 state。
 
-### `src/domain/pipelines/sourceToSignals.js`
+### `src/domain/pipelines/extractSignals.js`
 
-Phase 3 Alpha 计划新增。
+Phase 3 Alpha Wave 1 已新增。
 
 职责：
 
@@ -333,7 +338,7 @@ Phase 3 Alpha 计划新增。
 
 ### `src/domain/pipelines/linkSignals.js`
 
-Phase 3 Alpha 计划新增。
+Phase 3 Alpha Wave 1 已新增。
 
 职责：
 
@@ -497,6 +502,10 @@ v0.2 demo 至少覆盖：
 职责：
 
 - 模拟上下文输入。
+- 模拟手动 Source 输入。
+- 验证 Source 能生成 Signal。
+- 验证 Signal 能建议 Entity / Project。
+- 验证 Signal review 可以转 Memory / Action。
 - 验证能生成记忆。
 - 验证能生成行动。
 - 验证能生成 Brief。
@@ -550,8 +559,8 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - `src/main.js`
 - `src/ui/render.js`
 - `src/domain/types.js`
-- 未来 `src/domain/pipelines/sourceToSignals.js`
-- 未来 `src/domain/pipelines/linkSignals.js`
+- `src/domain/pipelines/extractSignals.js`
+- `src/domain/pipelines/linkSignals.js`
 - `src/domain/pipelines/extractMemories.js`
 - `src/data/demo.js`
 
@@ -686,7 +695,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 
 主要文件：
 
-- 未来 `src/domain/pipelines/linkSignals.js`
+- `src/domain/pipelines/linkSignals.js`
 - `src/domain/types.js`
 - `src/ui/render.js`
 - `src/main.js`
