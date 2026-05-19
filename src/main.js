@@ -6,6 +6,7 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
+  updateEntityStatus,
   updateMemoryStatus
 } from "./domain/agentEngine.js";
 import {
@@ -66,12 +67,21 @@ function bindEvents() {
     });
   });
 
+  app.querySelectorAll('[data-action="update-entity-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateEntityStatus(project, button.dataset.entityId, button.dataset.entityStatus)
+      );
+    });
+  });
+
   app.querySelectorAll("[data-project-id]").forEach((button) => {
     button.addEventListener("click", () => {
       setState({
         ...state,
         activeProjectId: button.dataset.projectId,
         editingMemoryId: null,
+        selectedEntityId: null,
         selectedMemoryId: null,
         selectedActionId:
           state.projects.find((project) => project.id === button.dataset.projectId)?.actions[0]?.id ??
@@ -90,6 +100,22 @@ function bindEvents() {
         ...state,
         selectedActionId: button.dataset.actionId
       });
+    });
+  });
+
+  app.querySelectorAll("[data-entity-open-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedEntityId: button.dataset.entityOpenId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-entity-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedEntityId: null
     });
   });
 
@@ -170,6 +196,7 @@ function handleCreateProject(event) {
     ...state,
     activeProjectId: project.id,
     editingMemoryId: null,
+    selectedEntityId: null,
     selectedMemoryId: null,
     selectedActionId: null,
     projects: [project, ...state.projects]
@@ -199,6 +226,7 @@ function handleAbsorbContext(event) {
     state = {
       ...state,
       editingMemoryId: null,
+      selectedEntityId: null,
       selectedMemoryId: next.contexts[0]?.memoryIds[0] ?? state.selectedMemoryId,
       selectedActionId: newActionId
     };
@@ -229,6 +257,7 @@ function handleManualSource(event) {
     state = {
       ...state,
       editingMemoryId: null,
+      selectedEntityId: null,
       selectedMemoryId: null
     };
     return next;

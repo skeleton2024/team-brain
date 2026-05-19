@@ -684,6 +684,7 @@ competitor
 - Entity Profile 用于长期业务对象画像，不是简单标签。
 - 轻量 detail 可以先挂在 Entity 上，重要信息再提升为 Memory。
 - Entity 与 Project / Memory / Action 的关联必须可追溯。
+- Wave 2 起代码优先消费 `sourceIds`、`signalIds`、`memoryIds`、`projectIds`；为兼容 Wave 1 本地数据，store 会同步保留 `relatedSourceIds`、`relatedSignalIds`、`relatedMemoryIds`、`relatedProjectIds`。
 
 ### 13.5 EntityRelation
 

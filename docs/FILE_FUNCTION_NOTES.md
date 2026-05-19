@@ -514,6 +514,30 @@ Phase 3 Alpha Wave 1 的 Inbox smoke test issue。
 - `scripts/smoke-test.mjs`
 - `docs/FILE_FUNCTION_NOTES.md`
 
+### `docs/issues/ENTITY-01-entity-profile.md`
+
+Phase 3 Alpha Wave 2 的 Entity Profile issue。
+
+主要作用：
+
+- 要求把 Wave 1 的 Entity 建议升级为可查看、可治理的画像。
+- 要求 Entity Profile 展示基础信息、状态、来源、Signal、Memory、Project 和下一步建议。
+- 要求兼容目标字段 `sourceIds` / `signalIds` / `memoryIds` / `projectIds` 与 Wave 1 的 `related*` 字段。
+- 明确本 issue 不做复杂关系图、外部 CRM / Gmail / Slack 同步或完整编辑表单。
+
+通常会改：
+
+- `src/data/demo.js`
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`

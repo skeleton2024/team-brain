@@ -7,6 +7,7 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
+  updateEntityStatus,
   updateMemoryStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
@@ -254,6 +255,33 @@ if (
   !inboxFlowHtml.includes("Company Inbox")
 ) {
   throw new Error("Expected Inbox review flow controls to render in smoke HTML.");
+}
+
+const entityProfileHtml = renderApp({
+  activeProjectId: DEMO_PROJECT.id,
+  selectedEntityId: "ent-demo-customer-team",
+  selectedActionId: null,
+  projects: [DEMO_PROJECT]
+});
+if (
+  !entityProfileHtml.includes("Entity Profile") ||
+  !entityProfileHtml.includes("业务对象画像") ||
+  !entityProfileHtml.includes("客户访谈小组") ||
+  !entityProfileHtml.includes("关联证据") ||
+  !entityProfileHtml.includes('data-entity-open-id="ent-demo-customer-team"') ||
+  !entityProfileHtml.includes('data-action="update-entity-status"') ||
+  !entityProfileHtml.includes("准备付费意向客户 follow-up 草稿")
+) {
+  throw new Error("Expected Entity Profile list and detail to render in smoke HTML.");
+}
+
+let entityStatusProject = structuredClone(DEMO_PROJECT);
+entityStatusProject = updateEntityStatus(entityStatusProject, "ent-demo-customer-team", "active");
+if (
+  entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.status !== "active" ||
+  !entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.updatedAt
+) {
+  throw new Error("Expected Entity status governance action to update the profile locally.");
 }
 
 const priceConcernMemory = {
