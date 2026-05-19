@@ -378,6 +378,89 @@ if (
   throw new Error("Expected Project Node status governance action to update locally.");
 }
 
+let qaFlowProject = makeProject("QA Entity Project Flow");
+qaFlowProject = addManualSource(qaFlowProject, {
+  kind: "customer_feedback",
+  title: "QA 客户试点反馈",
+  body:
+    "客户 QA 愿意下周试点，但担心权限边界和预算审批。工程负责人确认本周只做手动录入和节点闭环，不接 Slack API。",
+  occurredAt: "2026-05-15",
+  participants: ["客户 QA", "工程负责人"],
+  tags: ["qa", "entity", "node"],
+  importance: "high"
+});
+const qaSource = qaFlowProject.sources[0];
+const qaDefaultNodeId = qaFlowProject.nodes[0].id;
+if (!qaFlowProject.nodes[0].sourceIds.includes(qaSource.id)) {
+  throw new Error("Expected manual Source to attach to the default Project Node.");
+}
+
+qaFlowProject = processSource(qaFlowProject, qaSource.id);
+const qaSignals = qaFlowProject.signals;
+if (
+  qaSignals.length < 2 ||
+  !qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId)?.signalIds.includes(qaSignals[0].id)
+) {
+  throw new Error("Expected extracted Signals to attach to the default Project Node.");
+}
+
+qaFlowProject = suggestSignalLinks(qaFlowProject, qaSignals[0].id);
+qaFlowProject = suggestSignalLinks(qaFlowProject, qaSignals[1].id);
+const qaEntity = qaFlowProject.entities.find((entity) => entity.name === "客户 QA");
+if (!qaEntity?.sourceIds.includes(qaSource.id) || !qaEntity.signalIds.includes(qaSignals[0].id)) {
+  throw new Error("Expected QA Entity to receive Source and Signal links.");
+}
+
+qaFlowProject = reviewSignal(qaFlowProject, qaSignals[0].id, "memory");
+const qaMemory = qaFlowProject.memories[0];
+const qaEntityAfterMemory = qaFlowProject.entities.find((entity) => entity.id === qaEntity.id);
+const qaNodeAfterMemory = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (
+  !qaEntityAfterMemory.memoryIds.includes(qaMemory.id) ||
+  !qaNodeAfterMemory.memoryIds.includes(qaMemory.id)
+) {
+  throw new Error("Expected Signal -> Memory conversion to update Entity and Project Node links.");
+}
+
+qaFlowProject = reviewSignal(qaFlowProject, qaSignals[1].id, "action");
+const qaAction = qaFlowProject.actions[0];
+const qaEntityAfterAction = qaFlowProject.entities.find((entity) => entity.id === qaEntity.id);
+const qaNodeAfterAction = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (
+  !qaAction ||
+  qaEntityAfterAction.nextSuggestedActionId !== qaAction.id ||
+  !qaNodeAfterAction.actionIds.includes(qaAction.id)
+) {
+  throw new Error("Expected Signal -> Action conversion to update Entity next action and Project Node action links.");
+}
+
+qaFlowProject = recordActionResult(qaFlowProject, qaAction.id, {
+  outcome: "positive",
+  summary: "客户 QA 同意继续试点，但要求权限边界先确认。"
+});
+const qaResult = qaFlowProject.results[0];
+const qaNodeAfterResult = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (!qaNodeAfterResult.resultIds.includes(qaResult.id)) {
+  throw new Error("Expected Action Result to attach back to the Project Node.");
+}
+
+const qaFlowHtml = renderApp({
+  activeProjectId: qaFlowProject.id,
+  selectedEntityId: qaEntity.id,
+  selectedNodeId: qaDefaultNodeId,
+  selectedActionId: qaAction.id,
+  projects: [qaFlowProject]
+});
+if (
+  !qaFlowHtml.includes("QA Entity Project Flow") ||
+  !qaFlowHtml.includes("客户 QA") ||
+  !qaFlowHtml.includes("Node Detail") ||
+  !qaFlowHtml.includes("Entity Profile") ||
+  !qaFlowHtml.includes("客户 QA 同意继续试点")
+) {
+  throw new Error("Expected QA entity/project flow to render linked Entity and Node details.");
+}
+
 const priceConcernMemory = {
   id: "mem-price-concern",
   type: "customer_concern",

@@ -110,6 +110,11 @@ export function addManualSource(project, input) {
   return {
     ...project,
     updatedAt: now,
+    nodes: linkProjectNodes(project.nodes || [], {
+      sourceId: source.id,
+      projectId: project.id,
+      now
+    }),
     sources: [source, ...(project.sources || [])]
   };
 }
@@ -132,6 +137,12 @@ export function processSource(project, sourceId) {
   return {
     ...project,
     updatedAt: now,
+    nodes: linkProjectNodes(project.nodes || [], {
+      sourceId,
+      signalIds: newSignals.map((signal) => signal.id),
+      projectId: project.id,
+      now
+    }),
     sources: (project.sources || []).map((item) =>
       item.id === sourceId ? { ...item, status: "processed", updatedAt: now } : item
     ),
@@ -239,6 +250,13 @@ export function reviewSignal(project, signalId, reviewAction) {
     return {
       ...project,
       updatedAt: now,
+      nodes: linkProjectNodes(project.nodes || [], {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        projectId: project.id,
+        now
+      }),
       entities: linkEntitiesForSignal(project.entities || [], signal, {
         sourceId: signal.sourceId,
         signalId: signal.id,
@@ -260,6 +278,14 @@ export function reviewSignal(project, signalId, reviewAction) {
     return {
       ...project,
       updatedAt: now,
+      nodes: linkProjectNodes(project.nodes || [], {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        actionId: action.id,
+        projectId: project.id,
+        now
+      }),
       entities: linkEntitiesForSignal(project.entities || [], signal, {
         sourceId: signal.sourceId,
         signalId: signal.id,
@@ -314,6 +340,13 @@ export function absorbContext(project, input) {
   return {
     ...project,
     updatedAt: now,
+    nodes: linkProjectNodes(project.nodes || [], {
+      contextId: context.id,
+      memoryIds: context.memoryIds,
+      actionIds: context.actionIds,
+      projectId: project.id,
+      now
+    }),
     contexts: [context, ...project.contexts],
     memories: [...memories, ...project.memories],
     actions: mergeActions(actions, project.actions),
@@ -543,6 +576,18 @@ export function recordActionResult(project, actionId, resultInput) {
   return {
     ...project,
     updatedAt: now,
+    nodes: linkProjectNodes(
+      project.nodes || [],
+      {
+        contextId: resultContext.id,
+        memoryIds: result.memoryIds,
+        actionIds: [actionId, ...result.actionIds],
+        resultId: result.id,
+        projectId: project.id,
+        now
+      },
+      { preferActionId: actionId }
+    ),
     contexts: [resultContext, ...project.contexts],
     memories: [...newMemories, ...project.memories],
     actions: mergeActions(
@@ -974,6 +1019,80 @@ function entityLinkIds(entity, kind) {
   }[kind] || [];
 
   return unique(fields.flatMap((field) => (Array.isArray(entity?.[field]) ? entity[field] : [])));
+}
+
+function linkProjectNodes(nodes, links, options = {}) {
+  if (!nodes.length) {
+    return nodes;
+  }
+
+  const targetNodeIds = projectNodeTargets(nodes, options.preferActionId);
+  return nodes.map((node) =>
+    targetNodeIds.has(node.id) ? mergeProjectNodeLinks(node, links) : node
+  );
+}
+
+function projectNodeTargets(nodes, preferActionId) {
+  if (preferActionId) {
+    const matchingNodes = nodes.filter((node) =>
+      nodeLinkIds(node, "action").includes(preferActionId)
+    );
+    if (matchingNodes.length) {
+      return new Set(matchingNodes.map((node) => node.id));
+    }
+  }
+
+  const activeNodes = nodes.filter((node) => node.status === "active");
+  if (activeNodes.length) {
+    return new Set(activeNodes.map((node) => node.id));
+  }
+
+  const firstOpenNode = nodes.find((node) => node.status !== "archived") || nodes[0];
+  return new Set(firstOpenNode ? [firstOpenNode.id] : []);
+}
+
+function mergeProjectNodeLinks(node, links) {
+  return {
+    ...node,
+    inputContextIds: unique([
+      ...nodeLinkIds(node, "context"),
+      ...(links.contextIds || [links.contextId])
+    ]),
+    sourceIds: unique([
+      ...nodeLinkIds(node, "source"),
+      ...(links.sourceIds || [links.sourceId])
+    ]),
+    signalIds: unique([
+      ...nodeLinkIds(node, "signal"),
+      ...(links.signalIds || [links.signalId])
+    ]),
+    memoryIds: unique([
+      ...nodeLinkIds(node, "memory"),
+      ...(links.memoryIds || [links.memoryId])
+    ]),
+    actionIds: unique([
+      ...nodeLinkIds(node, "action"),
+      ...(links.actionIds || [links.actionId])
+    ]),
+    resultIds: unique([
+      ...nodeLinkIds(node, "result"),
+      ...(links.resultIds || [links.resultId])
+    ]),
+    updatedAt: links.now || node.updatedAt
+  };
+}
+
+function nodeLinkIds(node, kind) {
+  const fields = {
+    context: ["inputContextIds"],
+    source: ["sourceIds"],
+    signal: ["signalIds"],
+    memory: ["memoryIds"],
+    action: ["actionIds"],
+    result: ["resultIds"]
+  }[kind] || [];
+
+  return unique(fields.flatMap((field) => (Array.isArray(node?.[field]) ? node[field] : [])));
 }
 
 function buildMemoryFromSignal(project, signal, now) {
