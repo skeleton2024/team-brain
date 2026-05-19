@@ -812,6 +812,7 @@ Opportunity
 当前 v0.1 到 v0.2 过渡代码已经有：
 
 - Project。
+- ProjectNode，包括默认单节点、节点状态和关联 Source / Signal / Memory / Action / Result ID。
 - Context。
 - Memory。
 - Memory status 基础字段和默认值。
@@ -833,7 +834,6 @@ Phase 3 Alpha 合同已经定义但尚未完整落地：
 
 - Source / Signal 统一 Inbox 数据层。
 - Entity / EntityRelation 长期对象画像。
-- ProjectNode 项目节点。
 - Commitment / Risk / Opportunity 的 Command Center 输入。
 - EvidenceLink 对 Source、Signal、Memory、Context 的统一证据引用。
 

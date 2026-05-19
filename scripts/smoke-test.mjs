@@ -8,12 +8,13 @@ import {
   reviewSignal,
   suggestSignalLinks,
   updateEntityStatus,
-  updateMemoryStatus
+  updateMemoryStatus,
+  updateProjectNodeStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
-import { updateMemory } from "../src/services/store.js";
+import { makeProject, updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
@@ -27,6 +28,16 @@ if (demoMemoriesMissingSources.length) {
       .map((memory) => memory.id)
       .join(", ")}`
   );
+}
+
+const freshProject = makeProject("Smoke Project");
+if (
+  !Array.isArray(freshProject.nodes) ||
+  freshProject.nodes.length !== 1 ||
+  freshProject.nodes[0].status !== "active" ||
+  freshProject.nodes[0].projectId !== freshProject.id
+) {
+  throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
 }
 
 project = absorbContext(project, {
@@ -331,6 +342,34 @@ if (
   !entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.updatedAt
 ) {
   throw new Error("Expected Entity status governance action to update the profile locally.");
+}
+
+const projectNodeHtml = renderApp({
+  activeProjectId: DEMO_PROJECT.id,
+  selectedActionId: null,
+  projects: [DEMO_PROJECT]
+});
+if (
+  !projectNodeHtml.includes("Project Nodes") ||
+  !projectNodeHtml.includes("项目推进节点") ||
+  !projectNodeHtml.includes("客户试点与权限边界确认") ||
+  !projectNodeHtml.includes('data-action="update-project-node-status"') ||
+  !projectNodeHtml.includes("Memory 2")
+) {
+  throw new Error("Expected Project Nodes list and status controls to render in smoke HTML.");
+}
+
+let nodeStatusProject = structuredClone(DEMO_PROJECT);
+nodeStatusProject = updateProjectNodeStatus(
+  nodeStatusProject,
+  "node-demo-customer-discovery",
+  "blocked"
+);
+if (
+  nodeStatusProject.nodes.find((node) => node.id === "node-demo-customer-discovery")?.status !==
+  "blocked"
+) {
+  throw new Error("Expected Project Node status governance action to update locally.");
 }
 
 const priceConcernMemory = {
@@ -825,6 +864,7 @@ const summary = {
   sources: inboxFlowProject.sources.length,
   signals: inboxFlowProject.signals.length,
   entities: inboxFlowProject.entities.length,
+  nodes: project.nodes.length,
   memories: project.memories.length,
   actions: project.actions.length,
   briefs: project.briefs.length,

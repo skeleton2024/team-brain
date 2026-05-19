@@ -121,6 +121,7 @@ team-brain/
       QA-01-inbox-smoke-flow.md
       ENTITY-01-entity-profile.md
       ENTITY-02-entity-linking.md
+      PROJECT-01-project-nodes.md
   scripts/
     smoke-test.mjs
   src/

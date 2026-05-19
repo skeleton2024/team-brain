@@ -114,6 +114,48 @@ export const DEMO_PROJECT = {
     }
   ],
   entityRelations: [],
+  nodes: [
+    {
+      id: "node-demo-customer-discovery",
+      projectId: "project-demo-northstar",
+      title: "客户试点与权限边界确认",
+      goal: "把早期客户的试点意愿转成可人工确认的试用范围和 follow-up 草稿。",
+      status: "active",
+      ownerSuggestion: "创始人",
+      dueAt: "",
+      successCriteria: ["客户确认试点范围", "权限和数据边界被写入 follow-up 草稿"],
+      inputContextIds: ["ctx-demo-1", "ctx-demo-2"],
+      sourceIds: ["src-demo-1"],
+      signalIds: ["sig-demo-1"],
+      memoryIds: ["mem-demo-customer", "mem-demo-risk"],
+      actionIds: ["act-demo-customer"],
+      waitingIds: [],
+      riskIds: [],
+      resultIds: [],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    },
+    {
+      id: "node-demo-engineering-loop",
+      projectId: "project-demo-northstar",
+      title: "手动闭环工程稳定",
+      goal: "在不接 Slack API 的前提下，把手动录入、记忆、Brief 和结果回流做稳。",
+      status: "planned",
+      ownerSuggestion: "工程负责人",
+      dueAt: "",
+      successCriteria: ["手动信息闭环可演示", "不触发任何外部自动动作"],
+      inputContextIds: ["ctx-demo-3"],
+      sourceIds: [],
+      signalIds: [],
+      memoryIds: ["mem-demo-engineering", "mem-demo-product"],
+      actionIds: ["act-demo-engineering", "act-demo-product"],
+      waitingIds: [],
+      riskIds: [],
+      resultIds: [],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    }
+  ],
   contexts: [
     {
       id: demoContextId,

@@ -7,7 +7,8 @@ import {
   reviewSignal,
   suggestSignalLinks,
   updateEntityStatus,
-  updateMemoryStatus
+  updateMemoryStatus,
+  updateProjectNodeStatus
 } from "./domain/agentEngine.js";
 import {
   createInitialState,
@@ -71,6 +72,14 @@ function bindEvents() {
     button.addEventListener("click", () => {
       updateActiveProject((project) =>
         updateEntityStatus(project, button.dataset.entityId, button.dataset.entityStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-project-node-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateProjectNodeStatus(project, button.dataset.nodeId, button.dataset.nodeStatus)
       );
     });
   });

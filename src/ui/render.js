@@ -9,6 +9,7 @@ import {
   MEMORY_STATUS,
   MEMORY_TYPES,
   PRIORITY_LABELS,
+  PROJECT_NODE_STATUS,
   RESULT_OUTCOMES,
   RISK_LABELS,
   SIGNAL_STATUS,
@@ -32,6 +33,14 @@ const ENTITY_STATUS_ACTIONS = [
   { status: "archived", label: "归档" }
 ];
 
+const PROJECT_NODE_STATUS_ACTIONS = [
+  { status: "planned", label: "计划" },
+  { status: "active", label: "推进" },
+  { status: "blocked", label: "阻塞" },
+  { status: "done", label: "完成" },
+  { status: "archived", label: "归档" }
+];
+
 export function renderApp(state) {
   const project = getActiveProject(state);
   const selectedAction = project?.actions.find((action) => action.id === state.selectedActionId);
@@ -47,6 +56,7 @@ export function renderApp(state) {
         ${renderPipeline(project)}
         ${renderInbox(project)}
         ${renderEntityProfiles(project, state.selectedEntityId)}
+        ${renderProjectNodes(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -130,6 +140,7 @@ function renderPipeline(project) {
     ["Source", project.sources?.length || 0],
     ["Signal", project.signals?.length || 0],
     ["Entity", project.entities?.length || 0],
+    ["Node", project.nodes?.length || 0],
     ["公司记忆", project.memories.length],
     ["下一步行动", project.actions.filter((action) => action.status !== "done").length],
     ["结果回流", project.results.length]
@@ -554,6 +565,96 @@ function renderEntityStatusActions(entity) {
               data-action="update-entity-status"
               data-entity-id="${escapeHtml(entity.id)}"
               data-entity-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderProjectNodes(project) {
+  const nodes = project?.nodes || [];
+
+  return `
+    <section class="panel node-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Project Nodes</p>
+          <h3>项目推进节点</h3>
+        </div>
+        <span class="count-pill">${nodes.length}</span>
+      </div>
+      ${
+        nodes.length
+          ? `<div class="node-list">
+              ${nodes.map((node) => renderProjectNodeCard(project, node)).join("")}
+            </div>`
+          : emptyState("暂无节点。小项目会自动补一个默认推进节点。")
+      }
+    </section>
+  `;
+}
+
+function renderProjectNodeCard(project, node) {
+  const metrics = [
+    ["Source", node.sourceIds?.length || 0],
+    ["Signal", node.signalIds?.length || 0],
+    ["Memory", node.memoryIds?.length || 0],
+    ["Action", node.actionIds?.length || 0],
+    ["Result", node.resultIds?.length || 0]
+  ];
+
+  return `
+    <article class="node-card" id="node-${escapeHtml(node.id)}">
+      <div class="node-card-main">
+        <div class="context-item-top">
+          <span class="status ${escapeHtml(node.status || "planned")}">${escapeHtml(projectNodeStatusLabel(node.status))}</span>
+          ${node.ownerSuggestion ? `<span>${escapeHtml(node.ownerSuggestion)}</span>` : ""}
+          ${node.dueAt ? `<span>${escapeHtml(formatDateOnly(node.dueAt))}</span>` : ""}
+        </div>
+        <h4>${escapeHtml(node.title)}</h4>
+        <p>${escapeHtml(node.goal)}</p>
+        ${renderProjectNodeSuccessCriteria(node)}
+      </div>
+      <div class="node-side">
+        <div class="entity-metrics">
+          ${metrics.map(([label, value]) => `<span>${escapeHtml(label)} ${value}</span>`).join("")}
+        </div>
+        ${renderProjectNodeStatusActions(node)}
+      </div>
+    </article>
+  `;
+}
+
+function renderProjectNodeSuccessCriteria(node) {
+  const items = Array.isArray(node.successCriteria) ? node.successCriteria : [];
+  if (!items.length) {
+    return "";
+  }
+
+  return `
+    <ul class="node-criteria">
+      ${items.slice(0, 3).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function renderProjectNodeStatusActions(node) {
+  const currentStatus = node.status || "planned";
+  return `
+    <div class="memory-status-actions" aria-label="节点状态操作">
+      ${PROJECT_NODE_STATUS_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-project-node-status"
+              data-node-id="${escapeHtml(node.id)}"
+              data-node-status="${escapeHtml(action.status)}"
               type="button"
             >
               ${escapeHtml(action.label)}
@@ -1485,6 +1586,10 @@ function entityTypeLabel(type) {
 
 function entityStatusLabel(status) {
   return ENTITY_STATUS[status] || ENTITY_STATUS.watching;
+}
+
+function projectNodeStatusLabel(status) {
+  return PROJECT_NODE_STATUS[status] || PROJECT_NODE_STATUS.planned;
 }
 
 function confidenceScoreLabel(confidence) {
