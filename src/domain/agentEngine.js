@@ -146,6 +146,26 @@ export function suggestSignalLinks(project, signalId) {
   const entityIdsBySignal = new Map(
     linking.signalUpdates.map((update) => [update.id, update.suggestedEntityIds])
   );
+  const mergedEntities = mergeEntities(
+    linking.entities,
+    project.entities || []
+  ).map((entity) => {
+    const relatedSignals = targetSignals.filter((signal) =>
+      entityIdsBySignal.get(signal.id)?.includes(entity.id)
+    );
+
+    if (!relatedSignals.length) {
+      return entity;
+    }
+
+    return mergeEntityLinks(entity, {
+      sourceIds: relatedSignals.map((signal) => signal.sourceId),
+      signalIds: relatedSignals.map((signal) => signal.id),
+      projectIds: [project.id],
+      lastInteractionAt: now,
+      now
+    });
+  });
 
   return {
     ...project,
@@ -180,18 +200,7 @@ export function suggestSignalLinks(project, signalId) {
       suggestedEntityIds: unique(signal.suggestedEntityIds || []),
       suggestedProjectIds: unique(signal.suggestedProjectIds || [])
     })),
-    entities: mergeEntities(
-      linking.entities.map((entity) => ({
-        ...entity,
-        relatedSignalIds: unique([
-          ...(entity.relatedSignalIds || []),
-          ...targetSignals
-            .filter((signal) => entityIdsBySignal.get(signal.id)?.includes(entity.id))
-            .map((signal) => signal.id)
-        ])
-      })),
-      project.entities || []
-    )
+    entities: mergedEntities
   };
 }
 
@@ -223,6 +232,14 @@ export function reviewSignal(project, signalId, reviewAction) {
     return {
       ...project,
       updatedAt: now,
+      entities: linkEntitiesForSignal(project.entities || [], signal, {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        projectId: project.id,
+        lastInteractionAt: now,
+        now
+      }),
       memories: [memory, ...project.memories],
       signals: (project.signals || []).map((item) =>
         item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
@@ -236,6 +253,15 @@ export function reviewSignal(project, signalId, reviewAction) {
     return {
       ...project,
       updatedAt: now,
+      entities: linkEntitiesForSignal(project.entities || [], signal, {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        actionId: action.id,
+        projectId: project.id,
+        lastInteractionAt: now,
+        now
+      }),
       memories: [memory, ...project.memories],
       actions: mergeActions([action], project.actions),
       signals: (project.signals || []).map((item) =>
@@ -853,6 +879,62 @@ function mergeEntities(incoming, existing) {
     (entity, index, items) =>
       items.findIndex((item) => normalize(item.name) === normalize(entity.name)) === index
   );
+}
+
+function linkEntitiesForSignal(entities, signal, links) {
+  const targetEntityIds = new Set(signal.suggestedEntityIds || []);
+  if (!targetEntityIds.size) {
+    return entities;
+  }
+
+  return entities.map((entity) =>
+    targetEntityIds.has(entity.id) ? mergeEntityLinks(entity, links) : entity
+  );
+}
+
+function mergeEntityLinks(entity, links) {
+  const sourceIds = unique([
+    ...entityLinkIds(entity, "source"),
+    ...(links.sourceIds || [links.sourceId])
+  ]);
+  const signalIds = unique([
+    ...entityLinkIds(entity, "signal"),
+    ...(links.signalIds || [links.signalId])
+  ]);
+  const memoryIds = unique([
+    ...entityLinkIds(entity, "memory"),
+    ...(links.memoryIds || [links.memoryId])
+  ]);
+  const projectIds = unique([
+    ...entityLinkIds(entity, "project"),
+    ...(links.projectIds || [links.projectId])
+  ]);
+
+  return {
+    ...entity,
+    sourceIds,
+    signalIds,
+    memoryIds,
+    projectIds,
+    relatedSourceIds: sourceIds,
+    relatedSignalIds: signalIds,
+    relatedMemoryIds: memoryIds,
+    relatedProjectIds: projectIds,
+    lastInteractionAt: links.lastInteractionAt || entity.lastInteractionAt || "",
+    nextSuggestedActionId: links.actionId || entity.nextSuggestedActionId || "",
+    updatedAt: links.now || entity.updatedAt
+  };
+}
+
+function entityLinkIds(entity, kind) {
+  const fields = {
+    source: ["sourceIds", "relatedSourceIds"],
+    signal: ["signalIds", "relatedSignalIds"],
+    memory: ["memoryIds", "relatedMemoryIds"],
+    project: ["projectIds", "relatedProjectIds"]
+  }[kind] || [];
+
+  return unique(fields.flatMap((field) => (Array.isArray(entity?.[field]) ? entity[field] : [])));
 }
 
 function buildMemoryFromSignal(project, signal, now) {

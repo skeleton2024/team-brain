@@ -538,6 +538,24 @@ Phase 3 Alpha Wave 2 的 Entity Profile issue。
 - `scripts/smoke-test.mjs`
 - `DATA_MODEL.md`
 
+### `docs/issues/ENTITY-02-entity-linking.md`
+
+Phase 3 Alpha Wave 2 的 Entity Linking issue。
+
+主要作用：
+
+- 要求 Signal 建议关联后回写 Entity 的 Source / Signal / Project 链接。
+- 要求 Signal 转 Memory 后把新 Memory 挂回相关 Entity。
+- 要求 Signal 转 Action 后把下一步建议挂回相关 Entity。
+- 明确本 issue 不做复杂实体合并 UI、关系图或外部系统同步。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
