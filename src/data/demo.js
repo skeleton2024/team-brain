@@ -131,7 +131,7 @@ export const DEMO_PROJECT = {
       memoryIds: ["mem-demo-customer", "mem-demo-risk"],
       actionIds: ["act-demo-customer"],
       waitingIds: ["commit-demo-security-brief", "commit-demo-customer-feedback"],
-      riskIds: [],
+      riskIds: ["risk-demo-security-boundary"],
       resultIds: [],
       createdAt: twoDaysAgo,
       updatedAt: oneDayAgo
@@ -151,7 +151,7 @@ export const DEMO_PROJECT = {
       memoryIds: ["mem-demo-engineering", "mem-demo-product"],
       actionIds: ["act-demo-engineering", "act-demo-product"],
       waitingIds: ["commit-demo-engineering-dependency"],
-      riskIds: [],
+      riskIds: ["risk-demo-scope-creep"],
       resultIds: [],
       createdAt: oneDayAgo,
       updatedAt: now
@@ -240,6 +240,101 @@ export const DEMO_PROJECT = {
           confidence: 0.66
         }
       ],
+      createdAt: twoDaysAgo,
+      updatedAt: now
+    }
+  ],
+  risks: [
+    {
+      id: "risk-demo-security-boundary",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      entityIds: ["ent-demo-customer-team"],
+      title: "试点前权限边界不清会阻塞客户推进",
+      description: "客户已经表达试用兴趣，但权限设置、删除机制和数据范围仍未确认。",
+      severity: "high",
+      likelihood: "medium",
+      status: "open",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          memoryId: "mem-demo-customer",
+          quote: "要求先确认权限设置、删除机制和数据范围。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.9
+        }
+      ],
+      suggestedActionIds: ["act-demo-customer"],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "risk-demo-scope-creep",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-engineering-loop",
+      entityIds: ["ent-demo-founder"],
+      title: "过早接 Slack 导入会冲掉手动闭环交付",
+      description: "团队容量有限，本周应避免外部集成，把手动闭环做稳。",
+      severity: "medium",
+      likelihood: "high",
+      status: "monitoring",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-3",
+          memoryId: "mem-demo-engineering",
+          quote: "本周不做 Slack 导入，先把手动粘贴上下文、生成记忆、生成行动 Brief 和结果回流路径做稳定。",
+          note: "手动粘贴闭环工程同步",
+          confidence: 0.82
+        }
+      ],
+      suggestedActionIds: ["act-demo-engineering"],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    }
+  ],
+  opportunities: [
+    {
+      id: "opp-demo-paid-pilot",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      entityIds: ["ent-demo-customer-team"],
+      title: "付费意向客户试点可成为 Alpha 证明点",
+      description: "客户愿意下周试点，只要权限和数据边界能先被清楚说明。",
+      potentialImpact: "high",
+      confidence: 0.78,
+      status: "evaluating",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          memoryId: "mem-demo-customer",
+          quote: "一个付费意向客户愿意下周试点。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.82
+        }
+      ],
+      suggestedActionIds: ["act-demo-customer"],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "opp-demo-investor-materials",
+      projectId: "project-demo-northstar",
+      nodeId: "",
+      entityIds: ["ent-demo-founder"],
+      title: "投资人问答草稿可以复用为 demo 资产",
+      description: "客户希望先看到投资人问答和 follow-up 草稿，说明这些材料能作为产品价值展示。",
+      potentialImpact: "medium",
+      confidence: 0.64,
+      status: "new",
+      evidenceLinks: [
+        {
+          sourceId: "src-demo-1",
+          quote: "一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+          note: "周一增长复盘",
+          confidence: 0.66
+        }
+      ],
+      suggestedActionIds: ["act-demo-product"],
       createdAt: twoDaysAgo,
       updatedAt: now
     }

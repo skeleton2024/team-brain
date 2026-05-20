@@ -501,6 +501,10 @@ textarea:focus {
   margin-bottom: 18px;
 }
 
+.radar-panel {
+  margin-bottom: 18px;
+}
+
 .commitment-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -529,6 +533,54 @@ textarea:focus {
 }
 
 .commitment-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.radar-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.radar-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.radar-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfa;
+}
+
+.radar-card.risk {
+  border-color: rgba(180, 83, 9, 0.22);
+  background: #fffaf3;
+}
+
+.radar-card.opportunity {
+  border-color: rgba(15, 143, 123, 0.22);
+  background: #f6fbf8;
+}
+
+.radar-card h4,
+.radar-card p {
+  margin: 0;
+}
+
+.radar-card h4 {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.radar-card p {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
@@ -1767,6 +1819,10 @@ textarea:focus {
   }
 
   .node-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-layout {
     grid-template-columns: 1fr;
   }
 }

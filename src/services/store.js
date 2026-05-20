@@ -5,7 +5,9 @@ import {
   ENTITY_TYPES,
   COMMITMENT_STATUS,
   COMMITMENT_TYPES,
+  OPPORTUNITY_STATUS,
   PROJECT_NODE_STATUS,
+  RISK_STATUS,
   SIGNAL_TYPES,
   SOURCE_TYPE_LABELS
 } from "../domain/types.js";
@@ -75,6 +77,8 @@ export function makeProject(name) {
     briefs: [],
     results: [],
     commitments: [],
+    risks: [],
+    opportunities: [],
     reconciliationResults: [],
     pendingMemoryUpdates: []
   };
@@ -169,6 +173,10 @@ function normalizeProject(project) {
     results: Array.isArray(project.results) ? project.results.map(normalizeActionResult) : [],
     commitments: Array.isArray(project.commitments)
       ? project.commitments.map((commitment) => normalizeCommitment(commitment, project))
+      : [],
+    risks: Array.isArray(project.risks) ? project.risks.map((risk) => normalizeRisk(risk, project)) : [],
+    opportunities: Array.isArray(project.opportunities)
+      ? project.opportunities.map((opportunity) => normalizeOpportunity(opportunity, project))
       : [],
     reconciliationResults: Array.isArray(project.reconciliationResults)
       ? project.reconciliationResults.map(normalizeReconciliationResult)
@@ -377,6 +385,48 @@ function normalizeCommitment(commitment, project) {
   };
 }
 
+function normalizeRisk(risk, project) {
+  const createdAt = risk.createdAt || new Date().toISOString();
+
+  return {
+    ...risk,
+    id: risk.id || makeId("risk"),
+    projectId: risk.projectId || project.id,
+    nodeId: risk.nodeId || "",
+    entityIds: normalizeIds(risk.entityIds),
+    title: risk.title || "未命名风险",
+    description: risk.description || "",
+    severity: normalizeLevel(risk.severity),
+    likelihood: normalizeLevel(risk.likelihood),
+    status: normalizeRiskStatus(risk.status),
+    evidenceLinks: normalizeEvidenceLinks(risk.evidenceLinks),
+    suggestedActionIds: normalizeIds(risk.suggestedActionIds),
+    createdAt,
+    updatedAt: risk.updatedAt || createdAt
+  };
+}
+
+function normalizeOpportunity(opportunity, project) {
+  const createdAt = opportunity.createdAt || new Date().toISOString();
+
+  return {
+    ...opportunity,
+    id: opportunity.id || makeId("opportunity"),
+    projectId: opportunity.projectId || project.id,
+    nodeId: opportunity.nodeId || "",
+    entityIds: normalizeIds(opportunity.entityIds),
+    title: opportunity.title || "未命名机会",
+    description: opportunity.description || "",
+    potentialImpact: normalizeLevel(opportunity.potentialImpact),
+    confidence: normalizeOpportunityConfidence(opportunity.confidence),
+    status: normalizeOpportunityStatus(opportunity.status),
+    evidenceLinks: normalizeEvidenceLinks(opportunity.evidenceLinks),
+    suggestedActionIds: normalizeIds(opportunity.suggestedActionIds),
+    createdAt,
+    updatedAt: opportunity.updatedAt || createdAt
+  };
+}
+
 function normalizeReconciliationResult(result) {
   const createdAt = result.createdAt || new Date().toISOString();
 
@@ -520,6 +570,26 @@ function normalizeCommitmentType(value) {
 
 function normalizeCommitmentStatus(value) {
   return COMMITMENT_STATUS[value] ? value : "open";
+}
+
+function normalizeRiskStatus(value) {
+  return RISK_STATUS[value] ? value : "open";
+}
+
+function normalizeOpportunityStatus(value) {
+  return OPPORTUNITY_STATUS[value] ? value : "new";
+}
+
+function normalizeLevel(value) {
+  return ["low", "medium", "high"].includes(value) ? value : "medium";
+}
+
+function normalizeOpportunityConfidence(value) {
+  if (typeof value === "number") {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  return 0.5;
 }
 
 function normalizeReconciliationOperation(value) {

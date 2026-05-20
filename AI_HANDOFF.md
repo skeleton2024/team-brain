@@ -235,6 +235,14 @@ Wave 4 重点：
 - 展示今日最需要处理的 inbox、action、waiting、risk 和 memory review。
 - 形成 priority queue，但继续保持人工确认和不自动外部执行边界。
 
+Wave 4 当前进展（2026-05-20）：
+
+- `DASH-01` 已完成本地 Command Center 聚合 pipeline 和首页展示。
+- `COMMIT-01` 已完成 commitment / waiting / dependency / follow-up 的 demo、migration、Command Center 和项目区展示。
+- `RISK-01` 已完成显式 risk / opportunity demo、migration、雷达展示和 smoke 断言。
+- 每个已完成 issue 分支和合回 Wave 4 后均运行 `node scripts/smoke-test.mjs` 通过。
+- 尚未完成：`PRIORITY-01-ai-priority-queue` 和 `QA-04-alpha-e2e-smoke`。
+
 ## 10. 不要做
 
 - 不要把主界面改成聊天产品。

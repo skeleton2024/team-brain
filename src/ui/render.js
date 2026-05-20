@@ -10,10 +10,13 @@ import {
   ENTITY_TYPES,
   MEMORY_STATUS,
   MEMORY_TYPES,
+  IMPACT_LABELS,
+  OPPORTUNITY_STATUS,
   PRIORITY_LABELS,
   PROJECT_NODE_STATUS,
   RESULT_OUTCOMES,
   RISK_LABELS,
+  RISK_STATUS,
   SIGNAL_STATUS,
   SIGNAL_TYPES,
   SOURCE_STATUS,
@@ -146,6 +149,7 @@ export function renderApp(state) {
         ${renderEntityProfiles(project, state.selectedEntityId)}
         ${renderProjectNodes(project, state.selectedNodeId)}
         ${renderCommitments(project)}
+        ${renderRiskOpportunityRadar(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -1125,6 +1129,79 @@ function renderCommitmentCard(project, commitment) {
       <div class="context-meta">
         ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
         ${commitment.evidenceLinks?.length ? `<span>证据 ${commitment.evidenceLinks.length}</span>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderRiskOpportunityRadar(project) {
+  const risks = (project?.risks || []).filter((risk) => !["mitigated", "archived"].includes(risk.status));
+  const opportunities = (project?.opportunities || []).filter(
+    (opportunity) => !["lost", "archived"].includes(opportunity.status)
+  );
+
+  return `
+    <section class="panel radar-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Risk / Opportunity Radar</p>
+          <h3>风险与机会雷达</h3>
+        </div>
+        <span class="count-pill">${risks.length + opportunities.length}</span>
+      </div>
+      <div class="radar-layout">
+        <div data-risk-radar>
+          <div class="context-history-heading">
+            <strong>风险</strong>
+            <span class="count-pill">${risks.length}</span>
+          </div>
+          ${renderRadarList(project, risks, "risk")}
+        </div>
+        <div data-opportunity-radar>
+          <div class="context-history-heading">
+            <strong>机会</strong>
+            <span class="count-pill">${opportunities.length}</span>
+          </div>
+          ${renderRadarList(project, opportunities, "opportunity")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRadarList(project, items, kind) {
+  if (!items.length) {
+    return emptyState(kind === "risk" ? "暂无显式风险。" : "暂无显式机会。");
+  }
+
+  return `
+    <div class="radar-list">
+      ${items.map((item) => renderRadarCard(project, item, kind)).join("")}
+    </div>
+  `;
+}
+
+function renderRadarCard(project, item, kind) {
+  const node = (project.nodes || []).find((nodeItem) => nodeItem.id === item.nodeId);
+  const actionCount = Array.isArray(item.suggestedActionIds) ? item.suggestedActionIds.length : 0;
+  const evidenceCount = Array.isArray(item.evidenceLinks) ? item.evidenceLinks.length : 0;
+  const meta =
+    kind === "risk"
+      ? `${RISK_LABELS[item.severity] || item.severity} · ${riskStatusLabel(item.status)}`
+      : `${IMPACT_LABELS[item.potentialImpact] || item.potentialImpact} · ${opportunityStatusLabel(item.status)}`;
+
+  return `
+    <article class="radar-card ${escapeHtml(kind)}" data-radar-id="${escapeHtml(item.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(kind === "risk" ? "Risk" : "Opportunity")}</span>
+        <span>${escapeHtml(meta)}</span>
+      </div>
+      <h4>${escapeHtml(item.title)}</h4>
+      <p>${escapeHtml(item.description)}</p>
+      <div class="context-meta">
+        ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
+        <span>证据 ${evidenceCount}</span>
+        <span>建议 action ${actionCount}</span>
       </div>
     </article>
   `;
@@ -2247,6 +2324,14 @@ function commitmentLine(commitment) {
   const target = commitment.toWhom ? ` -> ${commitment.toWhom}` : "";
   const due = commitment.dueAt ? ` · ${formatDateOnly(commitment.dueAt)}` : "";
   return `${commitment.who || "待确认"}${target}${due}`;
+}
+
+function riskStatusLabel(status) {
+  return RISK_STATUS[status] || RISK_STATUS.open;
+}
+
+function opportunityStatusLabel(status) {
+  return OPPORTUNITY_STATUS[status] || OPPORTUNITY_STATUS.new;
 }
 
 function confidenceScoreLabel(confidence) {

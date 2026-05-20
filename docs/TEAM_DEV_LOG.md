@@ -624,6 +624,25 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - `node scripts/smoke-test.mjs` 通过。
 
+分支：`issue/RISK-01-risk-opportunity-radar`
+
+状态：RISK-01 进行中，已补显式 `risks` / `opportunities` demo / migration、Command Center 雷达和项目区雷达展示。
+
+改动文件：
+
+- `DATA_MODEL.md`
+- `src/data/demo.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
 待决问题：
 
 - Commitment / Waiting、Risk / Opportunity 显式模型和 Priority Queue 排序将在后续 Wave 4 issue 中继续补齐。

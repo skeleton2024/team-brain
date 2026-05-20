@@ -204,6 +204,28 @@ export const RISK_LABELS = {
   low: "低风险"
 };
 
+export const RISK_STATUS = {
+  open: "待处理",
+  monitoring: "观察中",
+  mitigated: "已缓解",
+  archived: "已归档"
+};
+
+export const OPPORTUNITY_STATUS = {
+  new: "新机会",
+  evaluating: "评估中",
+  pursuing: "推进中",
+  won: "已赢得",
+  lost: "已丢失",
+  archived: "已归档"
+};
+
+export const IMPACT_LABELS = {
+  high: "高影响",
+  medium: "中影响",
+  low: "低影响"
+};
+
 export const ACTION_STATUS = {
   pending: "待处理",
   briefed: "已生成 Brief",

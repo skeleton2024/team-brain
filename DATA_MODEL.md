@@ -813,6 +813,7 @@ Risk
 
 - Risk 必须能追溯证据。
 - Risk 可以生成 action 建议，但高风险 action 仍然只是草稿和人工确认项。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.risks`，并继续兼容从 memory 派生的风险信号。
 
 ### 13.9 Opportunity
 
@@ -837,6 +838,7 @@ Opportunity
 
 - Opportunity 不是销售承诺，只是机会判断。
 - 多个 Source / Signal 指向同一需求时，应优先合并为一个可追溯机会。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.opportunities`，不自动承诺销售、融资或产品结论。
 
 ## 14. 当前与目标模型的差异
 
