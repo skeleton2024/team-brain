@@ -75,6 +75,7 @@ export const ENTITY_TYPES = {
   product: "产品",
   market: "市场",
   vendor: "供应商",
+  competitor: "竞争对手",
   other: "其他对象"
 };
 
@@ -82,6 +83,14 @@ export const ENTITY_STATUS = {
   active: "活跃",
   inactive: "不活跃",
   watching: "待确认",
+  archived: "已归档"
+};
+
+export const PROJECT_NODE_STATUS = {
+  planned: "计划中",
+  active: "推进中",
+  blocked: "阻塞",
+  done: "已完成",
   archived: "已归档"
 };
 

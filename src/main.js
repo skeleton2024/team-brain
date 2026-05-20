@@ -6,7 +6,9 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
-  updateMemoryStatus
+  updateEntityStatus,
+  updateMemoryStatus,
+  updateProjectNodeStatus
 } from "./domain/agentEngine.js";
 import {
   createInitialState,
@@ -66,13 +68,31 @@ function bindEvents() {
     });
   });
 
+  app.querySelectorAll('[data-action="update-entity-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateEntityStatus(project, button.dataset.entityId, button.dataset.entityStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-project-node-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateProjectNodeStatus(project, button.dataset.nodeId, button.dataset.nodeStatus)
+      );
+    });
+  });
+
   app.querySelectorAll("[data-project-id]").forEach((button) => {
     button.addEventListener("click", () => {
       setState({
         ...state,
         activeProjectId: button.dataset.projectId,
         editingMemoryId: null,
+        selectedEntityId: null,
         selectedMemoryId: null,
+        selectedNodeId: null,
         selectedActionId:
           state.projects.find((project) => project.id === button.dataset.projectId)?.actions[0]?.id ??
           null
@@ -90,6 +110,38 @@ function bindEvents() {
         ...state,
         selectedActionId: button.dataset.actionId
       });
+    });
+  });
+
+  app.querySelectorAll("[data-entity-open-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedEntityId: button.dataset.entityOpenId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-entity-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedEntityId: null
+    });
+  });
+
+  app.querySelectorAll('[data-action="open-node-detail"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedNodeId: button.dataset.nodeId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-node-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedNodeId: null
     });
   });
 
@@ -170,7 +222,9 @@ function handleCreateProject(event) {
     ...state,
     activeProjectId: project.id,
     editingMemoryId: null,
+    selectedEntityId: null,
     selectedMemoryId: null,
+    selectedNodeId: null,
     selectedActionId: null,
     projects: [project, ...state.projects]
   });
@@ -199,7 +253,9 @@ function handleAbsorbContext(event) {
     state = {
       ...state,
       editingMemoryId: null,
+      selectedEntityId: null,
       selectedMemoryId: next.contexts[0]?.memoryIds[0] ?? state.selectedMemoryId,
+      selectedNodeId: null,
       selectedActionId: newActionId
     };
     return next;
@@ -229,7 +285,9 @@ function handleManualSource(event) {
     state = {
       ...state,
       editingMemoryId: null,
-      selectedMemoryId: null
+      selectedEntityId: null,
+      selectedMemoryId: null,
+      selectedNodeId: null
     };
     return next;
   });

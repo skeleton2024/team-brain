@@ -2,7 +2,7 @@
 
 用途：给新的 Codex / AI 对话框快速接手项目，减少重复解释和上下文丢失。
 
-最后更新：2026-05-18
+最后更新：2026-05-19
 
 ## 1. 当前产品判断
 
@@ -57,6 +57,12 @@ Wave 1 本地集成分支：
 
 ```text
 integration/phase-3-wave-01
+```
+
+Wave 2 本地集成分支：
+
+```text
+integration/phase-3-wave-02
 ```
 
 历史 memory foundation 分支仍可作为上下文参考，但不再作为后续开发主 base：
@@ -127,9 +133,9 @@ issue/QA-01-inbox-smoke-flow
 
 每个 issue 完成后、每次合回 `integration/phase-3-wave-01` 后均运行 `node scripts/smoke-test.mjs` 通过。
 
-## 7. 下一步：Wave 2
+## 7. Phase 3 Alpha Wave 2 状态
 
-下一轮建议从 Entity Profile 与 Project Node 开始：
+Wave 2 已完成 Entity Profile 与 Project Node 的第一版可用闭环：
 
 ```text
 ENTITY-01-entity-profile
@@ -139,14 +145,54 @@ PROJECT-02-node-detail-panel
 QA-02-entity-project-flow
 ```
 
-Wave 2 重点：
+关键结果：
 
-- 把 Wave 1 生成的 Entity 建议升级为可查看、可治理的 Entity Profile。
-- 展示 Inbox / Signal / Memory / Project 与 Entity 的关联。
-- 落地 Project Node 的最小结构和状态。
-- 继续保持人工确认边界，不接外部自动执行。
+- Entity 建议已升级为可查看的 `Entity Profile` 面板，支持状态治理。
+- Entity Profile 展示 Source / Signal / Memory / Project / Action 关联，并兼容 Wave 1 的 `related*` 字段与目标 `sourceIds` 等字段。
+- Signal 建议关联、Signal 转 Memory、Signal 转 Action 会持续回写 Entity 的证据链和下一步建议。
+- `Project.nodes` 已落地；新项目和旧项目都会有默认单节点。
+- Project Nodes 面板支持节点状态切换，Node Detail Panel 展示目标、成功标准、输入上下文、证据链、相关 action 和 result。
+- QA smoke 覆盖手动 Source -> Signal -> Entity -> Memory / Action -> Project Node -> Result 的贯通路径。
+- 每个 issue 完成后、每次合回 `integration/phase-3-wave-02` 后均运行 `node scripts/smoke-test.mjs` 通过。
 
-## 8. 不要做
+Wave 2 明确不做：
+
+- 不接 Gmail / Slack API。
+- 不自动执行外部动作。
+- 不自动拆分复杂多节点。
+- 不做复杂关系图、CRM 同步或聊天界面。
+
+本轮 issue 分支：
+
+```text
+issue/ENTITY-01-entity-profile
+issue/ENTITY-02-entity-linking
+issue/PROJECT-01-project-nodes
+issue/PROJECT-02-node-detail-panel
+issue/QA-02-entity-project-flow
+```
+
+## 8. 下一步：Wave 3
+
+下一轮建议从 Memory Governance 与 Action 回流开始：
+
+```text
+MEM-05-memory-governance-live
+ACTION-01-brief-generation
+ACTION-02-result-feedback
+REC-03-result-to-memory-update
+QA-03-action-loop-smoke
+```
+
+Wave 3 重点：
+
+- 让 memory 状态真正影响展示、行动建议和优先级。
+- 让 Action Brief 更场景化，包含 entity、node、memory、风险和成功标准。
+- 完整化 Result Feedback review flow。
+- 根据 result 生成 memory update、follow-up action 和项目 / node 状态变化建议。
+- 继续保持人工确认边界，不自动执行外部动作。
+
+## 9. 不要做
 
 - 不要把主界面改成聊天产品。
 - 不要优先接 Gmail / Slack / Notion / Linear / GitHub 自动执行。
@@ -156,7 +202,7 @@ Wave 2 重点：
 - 不要修改核心数据结构但不更新 `DATA_MODEL.md`。
 - 不要新增文件但不更新 `docs/FILE_FUNCTION_NOTES.md`。
 
-## 9. 完成后必须记录
+## 10. 完成后必须记录
 
 完成一个 issue 或一个 Wave 后，至少记录：
 

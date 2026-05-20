@@ -684,6 +684,7 @@ competitor
 - Entity Profile 用于长期业务对象画像，不是简单标签。
 - 轻量 detail 可以先挂在 Entity 上，重要信息再提升为 Memory。
 - Entity 与 Project / Memory / Action 的关联必须可追溯。
+- Wave 2 起代码优先消费 `sourceIds`、`signalIds`、`memoryIds`、`projectIds`；为兼容 Wave 1 本地数据，store 会同步保留 `relatedSourceIds`、`relatedSignalIds`、`relatedMemoryIds`、`relatedProjectIds`。
 
 ### 13.5 EntityRelation
 
@@ -811,6 +812,7 @@ Opportunity
 当前 v0.1 到 v0.2 过渡代码已经有：
 
 - Project。
+- ProjectNode，包括默认单节点、节点状态和关联 Source / Signal / Memory / Action / Result ID。
 - Context。
 - Memory。
 - Memory status 基础字段和默认值。
@@ -832,7 +834,6 @@ Phase 3 Alpha 合同已经定义但尚未完整落地：
 
 - Source / Signal 统一 Inbox 数据层。
 - Entity / EntityRelation 长期对象画像。
-- ProjectNode 项目节点。
 - Commitment / Risk / Opportunity 的 Command Center 输入。
 - EvidenceLink 对 Source、Signal、Memory、Context 的统一证据引用。
 

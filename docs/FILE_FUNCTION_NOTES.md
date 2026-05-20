@@ -514,6 +514,105 @@ Phase 3 Alpha Wave 1 的 Inbox smoke test issue。
 - `scripts/smoke-test.mjs`
 - `docs/FILE_FUNCTION_NOTES.md`
 
+### `docs/issues/ENTITY-01-entity-profile.md`
+
+Phase 3 Alpha Wave 2 的 Entity Profile issue。
+
+主要作用：
+
+- 要求把 Wave 1 的 Entity 建议升级为可查看、可治理的画像。
+- 要求 Entity Profile 展示基础信息、状态、来源、Signal、Memory、Project 和下一步建议。
+- 要求兼容目标字段 `sourceIds` / `signalIds` / `memoryIds` / `projectIds` 与 Wave 1 的 `related*` 字段。
+- 明确本 issue 不做复杂关系图、外部 CRM / Gmail / Slack 同步或完整编辑表单。
+
+通常会改：
+
+- `src/data/demo.js`
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+
+### `docs/issues/ENTITY-02-entity-linking.md`
+
+Phase 3 Alpha Wave 2 的 Entity Linking issue。
+
+主要作用：
+
+- 要求 Signal 建议关联后回写 Entity 的 Source / Signal / Project 链接。
+- 要求 Signal 转 Memory 后把新 Memory 挂回相关 Entity。
+- 要求 Signal 转 Action 后把下一步建议挂回相关 Entity。
+- 明确本 issue 不做复杂实体合并 UI、关系图或外部系统同步。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/PROJECT-01-project-nodes.md`
+
+Phase 3 Alpha Wave 2 的 Project Nodes issue。
+
+主要作用：
+
+- 要求落地 `Project.nodes` 和默认单节点。
+- 要求 Project Nodes 面板展示节点目标、状态、成功标准和关联对象数量。
+- 要求用户可以切换节点状态，但不自动执行节点动作。
+- 明确 Node Detail Panel 留给 `PROJECT-02`。
+
+通常会改：
+
+- `src/data/demo.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+
+### `docs/issues/PROJECT-02-node-detail-panel.md`
+
+Phase 3 Alpha Wave 2 的 Node Detail Panel issue。
+
+主要作用：
+
+- 要求用户可以打开单个 Project Node 详情。
+- 要求详情展示节点目标、输入上下文、成功标准、Source / Signal / Memory / Action / Result 关联。
+- 要求相关 Action 沿用现有 action 选择逻辑，继续只生成 Brief 和人工确认项。
+- 明确本 issue 不做节点编辑表单、自动拆分节点或自动执行动作。
+
+通常会改：
+
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/QA-02-entity-project-flow.md`
+
+Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
+
+主要作用：
+
+- 要求 smoke test 覆盖手动 Source -> Signal -> Entity -> Memory / Action -> Project Node -> Result 的核心路径。
+- 要求 ProjectNode 自动维护 Source、Signal、Memory、Action 和 Result 链接。
+- 要求 Entity Profile 与 Node Detail Panel 能在同一条 flow 中展示关联证据。
+- 明确本 issue 不做外部 API、自动执行或浏览器 e2e 框架。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`

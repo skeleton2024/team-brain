@@ -227,7 +227,29 @@ QA-01-inbox-smoke-flow.md
 - 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
 - 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
 
-## 11. 推荐开工提示词
+## 11. Phase 3 Alpha Wave 2 issue
+
+Wave 2 的目标是落地 Entity Profile 与 Project Node，让长期业务对象和项目推进节点成为可查看、可治理的一等对象。当前建议按以下顺序串行执行：
+
+```text
+ENTITY-01-entity-profile.md
+ENTITY-02-entity-linking.md
+PROJECT-01-project-nodes.md
+PROJECT-02-node-detail-panel.md
+QA-02-entity-project-flow.md
+```
+
+执行原则：
+
+- `ENTITY-01` 先把 Entity 建议升级为可查看的 Profile，并兼容 Wave 1 的 `related*` 字段。
+- `ENTITY-02` 再展示 Inbox / Signal / Memory / Project 与 Entity 的关联。
+- `PROJECT-01` 定义 Project Node 的最小结构、状态和列表展示。
+- `PROJECT-02` 在 Node 合同稳定后补 Node Detail Panel。
+- `QA-02` 最后覆盖 Entity 与 Project Node 的核心路径。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 12. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。

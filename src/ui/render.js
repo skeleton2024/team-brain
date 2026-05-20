@@ -9,6 +9,7 @@ import {
   MEMORY_STATUS,
   MEMORY_TYPES,
   PRIORITY_LABELS,
+  PROJECT_NODE_STATUS,
   RESULT_OUTCOMES,
   RISK_LABELS,
   SIGNAL_STATUS,
@@ -22,6 +23,21 @@ const MEMORY_STATUS_ACTIONS = [
   { status: "confirmed", label: "确认" },
   { status: "outdated", label: "过期" },
   { status: "disputed", label: "争议" },
+  { status: "archived", label: "归档" }
+];
+
+const ENTITY_STATUS_ACTIONS = [
+  { status: "active", label: "活跃" },
+  { status: "watching", label: "观察" },
+  { status: "inactive", label: "不活跃" },
+  { status: "archived", label: "归档" }
+];
+
+const PROJECT_NODE_STATUS_ACTIONS = [
+  { status: "planned", label: "计划" },
+  { status: "active", label: "推进" },
+  { status: "blocked", label: "阻塞" },
+  { status: "done", label: "完成" },
   { status: "archived", label: "归档" }
 ];
 
@@ -39,6 +55,8 @@ export function renderApp(state) {
         ${renderTopbar(project)}
         ${renderPipeline(project)}
         ${renderInbox(project)}
+        ${renderEntityProfiles(project, state.selectedEntityId)}
+        ${renderProjectNodes(project, state.selectedNodeId)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -121,6 +139,8 @@ function renderPipeline(project) {
   const steps = [
     ["Source", project.sources?.length || 0],
     ["Signal", project.signals?.length || 0],
+    ["Entity", project.entities?.length || 0],
+    ["Node", project.nodes?.length || 0],
     ["公司记忆", project.memories.length],
     ["下一步行动", project.actions.filter((action) => action.status !== "done").length],
     ["结果回流", project.results.length]
@@ -367,6 +387,407 @@ function renderSignalSuggestions(entities, projects) {
             </div>`
           : ""
       }
+    </div>
+  `;
+}
+
+function renderEntityProfiles(project, selectedEntityId) {
+  const entities = project?.entities || [];
+  const selectedEntity = selectedEntityId
+    ? entities.find((entity) => entity.id === selectedEntityId)
+    : null;
+
+  return `
+    <section class="panel entity-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Entity Profile</p>
+          <h3>业务对象画像</h3>
+        </div>
+        <span class="count-pill">${entities.length}</span>
+      </div>
+      ${
+        entities.length
+          ? `<div class="entity-layout">
+              <div class="entity-list">
+                ${entities
+                  .map((entity) =>
+                    renderEntityCard(project, entity, entity.id === selectedEntity?.id)
+                  )
+                  .join("")}
+              </div>
+              ${selectedEntity ? renderEntityDetailPanel(project, selectedEntity) : emptyState("选择一个 Entity 查看画像详情。")}
+            </div>`
+          : emptyState("暂无 Entity。先从 Inbox 中提取 Signal 并建议关联。")
+      }
+    </section>
+  `;
+}
+
+function renderEntityCard(project, entity, isSelected) {
+  const sourceCount = entityLinkIds(entity, "source").length;
+  const signalCount = entityLinkIds(entity, "signal").length;
+  const memoryCount = entityLinkIds(entity, "memory").length;
+  const lastInteractionAt = entityLastInteractionAt(project, entity);
+
+  return `
+    <button class="entity-card ${isSelected ? "selected" : ""}" data-entity-open-id="${escapeHtml(entity.id)}" type="button">
+      <div class="entity-card-top">
+        <span class="context-type">${escapeHtml(entityTypeLabel(entity.type))}</span>
+        <span class="status ${escapeHtml(entity.status || "watching")}">${escapeHtml(entityStatusLabel(entity.status))}</span>
+      </div>
+      <strong>${escapeHtml(entity.name)}</strong>
+      <small>${escapeHtml(entity.organization || entity.role || entity.relationshipStage || "关系待补")}</small>
+      <div class="entity-metrics">
+        <span>Source ${sourceCount}</span>
+        <span>Signal ${signalCount}</span>
+        <span>Memory ${memoryCount}</span>
+      </div>
+      <small>最近互动 ${escapeHtml(formatDateOnly(lastInteractionAt))}</small>
+    </button>
+  `;
+}
+
+function renderEntityDetailPanel(project, entity) {
+  if (!entity) {
+    return "";
+  }
+
+  const sources = entitySources(project, entity);
+  const signals = entitySignals(project, entity);
+  const memories = entityMemories(project, entity);
+  const relatedProjects = entityProjects(project, entity);
+  const nextAction = entityNextAction(project, entity, memories);
+
+  return `
+    <article class="entity-detail-panel" aria-label="Entity 画像详情">
+      <div class="memory-detail-heading">
+        <div>
+          <p class="eyebrow">Profile Detail</p>
+          <h4>${escapeHtml(entity.name)}</h4>
+        </div>
+        <button class="ghost-button compact-button" data-action="close-entity-detail" type="button">关闭</button>
+      </div>
+
+      <div class="memory-detail-meta">
+        <span>${escapeHtml(entityTypeLabel(entity.type))}</span>
+        <span class="status ${escapeHtml(entity.status || "watching")}">${escapeHtml(entityStatusLabel(entity.status))}</span>
+        ${entity.relationshipStage ? `<span>${escapeHtml(entity.relationshipStage)}</span>` : ""}
+      </div>
+
+      <section class="memory-detail-section">
+        <h5>基础画像</h5>
+        <p>${escapeHtml(entity.description || "还没有画像描述。")}</p>
+        <div class="entity-profile-grid">
+          <span><strong>角色</strong>${escapeHtml(entity.role || "待补")}</span>
+          <span><strong>组织</strong>${escapeHtml(entity.organization || "待补")}</span>
+          <span><strong>负责人建议</strong>${escapeHtml(entity.ownerSuggestion || "待确认")}</span>
+          <span><strong>最近互动</strong>${escapeHtml(formatDateOnly(entityLastInteractionAt(project, entity)))}</span>
+        </div>
+        ${renderEntityTags(entity)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>关联证据</h5>
+        <div class="entity-relation-grid">
+          ${renderEntityRelatedList("Source", sources, (source) => source.title, (source) => `#source-${source.id}`)}
+          ${renderEntityRelatedList("Signal", signals, (signal) => signal.title, (signal) => `#signal-${signal.id}`)}
+          ${renderEntityRelatedList("Memory", memories, (memory) => memory.title, null)}
+          ${renderEntityRelatedList("Project", relatedProjects, (item) => item.name, null)}
+        </div>
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>下一步建议</h5>
+        ${
+          nextAction
+            ? `<button class="memory-related-action" data-action-id="${escapeHtml(nextAction.id)}" type="button">
+                <span>${escapeHtml(ACTION_TYPES[nextAction.type] || nextAction.type)}</span>
+                <strong>${escapeHtml(nextAction.title)}</strong>
+                <small>${escapeHtml(ACTION_STATUS[nextAction.status] || nextAction.status)}</small>
+              </button>`
+            : `<p class="muted">等待更多 Signal 或 Memory 后再生成下一步建议。</p>`
+        }
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>治理状态</h5>
+        ${renderEntityStatusActions(entity)}
+      </section>
+    </article>
+  `;
+}
+
+function renderEntityTags(entity) {
+  const tags = Array.isArray(entity.tags) ? entity.tags : [];
+  if (!tags.length) {
+    return "";
+  }
+
+  return `
+    <div class="context-tags">
+      ${tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function renderEntityRelatedList(label, items, getTitle, getHref) {
+  return `
+    <div class="entity-related-list">
+      <strong>${escapeHtml(label)} ${items.length}</strong>
+      ${
+        items.length
+          ? items
+              .slice(0, 4)
+              .map((item) => {
+                const title = escapeHtml(getTitle(item));
+                const href = getHref?.(item);
+                return href
+                  ? `<a class="secondary-link compact-button" href="${escapeHtml(href)}">${title}</a>`
+                  : `<span>${title}</span>`;
+              })
+              .join("")
+          : `<span class="muted">暂无关联</span>`
+      }
+    </div>
+  `;
+}
+
+function renderEntityStatusActions(entity) {
+  const currentStatus = entity.status || "watching";
+  return `
+    <div class="memory-status-actions" aria-label="Entity 状态操作">
+      ${ENTITY_STATUS_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-entity-status"
+              data-entity-id="${escapeHtml(entity.id)}"
+              data-entity-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderProjectNodes(project, selectedNodeId) {
+  const nodes = project?.nodes || [];
+  const selectedNode = selectedNodeId ? nodes.find((node) => node.id === selectedNodeId) : null;
+
+  return `
+    <section class="panel node-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Project Nodes</p>
+          <h3>项目推进节点</h3>
+        </div>
+        <span class="count-pill">${nodes.length}</span>
+      </div>
+      ${
+        nodes.length
+          ? `<div class="node-layout">
+              <div class="node-list">
+                ${nodes.map((node) => renderProjectNodeCard(project, node, node.id === selectedNode?.id)).join("")}
+              </div>
+              ${selectedNode ? renderProjectNodeDetailPanel(project, selectedNode) : emptyState("选择一个节点查看详情。")}
+            </div>`
+          : emptyState("暂无节点。小项目会自动补一个默认推进节点。")
+      }
+    </section>
+  `;
+}
+
+function renderProjectNodeCard(project, node, isSelected = false) {
+  const metrics = [
+    ["Source", node.sourceIds?.length || 0],
+    ["Signal", node.signalIds?.length || 0],
+    ["Memory", node.memoryIds?.length || 0],
+    ["Action", node.actionIds?.length || 0],
+    ["Result", node.resultIds?.length || 0]
+  ];
+
+  return `
+    <article class="node-card ${isSelected ? "selected" : ""}" id="node-${escapeHtml(node.id)}">
+      <div class="node-card-main">
+        <div class="context-item-top">
+          <span class="status ${escapeHtml(node.status || "planned")}">${escapeHtml(projectNodeStatusLabel(node.status))}</span>
+          ${node.ownerSuggestion ? `<span>${escapeHtml(node.ownerSuggestion)}</span>` : ""}
+          ${node.dueAt ? `<span>${escapeHtml(formatDateOnly(node.dueAt))}</span>` : ""}
+        </div>
+        <h4>${escapeHtml(node.title)}</h4>
+        <p>${escapeHtml(node.goal)}</p>
+        ${renderProjectNodeSuccessCriteria(node)}
+      </div>
+      <div class="node-side">
+        <div class="entity-metrics">
+          ${metrics.map(([label, value]) => `<span>${escapeHtml(label)} ${value}</span>`).join("")}
+        </div>
+        <button class="secondary-button compact-button" data-action="open-node-detail" data-node-id="${escapeHtml(node.id)}" type="button">详情</button>
+        ${renderProjectNodeStatusActions(node)}
+      </div>
+    </article>
+  `;
+}
+
+function renderProjectNodeDetailPanel(project, node) {
+  const contexts = nodeLinkedItems(project.contexts || [], node.inputContextIds);
+  const sources = nodeLinkedItems(project.sources || [], node.sourceIds);
+  const signals = nodeLinkedItems(project.signals || [], node.signalIds);
+  const memories = nodeLinkedItems(project.memories || [], node.memoryIds);
+  const actions = nodeLinkedItems(project.actions || [], node.actionIds);
+  const results = nodeLinkedItems(project.results || [], node.resultIds);
+
+  return `
+    <article class="node-detail-panel" aria-label="节点详情">
+      <div class="memory-detail-heading">
+        <div>
+          <p class="eyebrow">Node Detail</p>
+          <h4>${escapeHtml(node.title)}</h4>
+        </div>
+        <button class="ghost-button compact-button" data-action="close-node-detail" type="button">关闭</button>
+      </div>
+
+      <div class="memory-detail-meta">
+        <span class="status ${escapeHtml(node.status || "planned")}">${escapeHtml(projectNodeStatusLabel(node.status))}</span>
+        ${node.ownerSuggestion ? `<span>${escapeHtml(node.ownerSuggestion)}</span>` : ""}
+        ${node.dueAt ? `<span>${escapeHtml(formatDateOnly(node.dueAt))}</span>` : ""}
+      </div>
+
+      <section class="memory-detail-section">
+        <h5>节点目标</h5>
+        <p>${escapeHtml(node.goal || "目标待补")}</p>
+        ${renderProjectNodeSuccessCriteria(node)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>输入上下文</h5>
+        ${renderNodeRelatedList("Context", contexts, (context) => context.title, (context) => `#context-${context.id}`)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>证据链</h5>
+        <div class="entity-relation-grid">
+          ${renderNodeRelatedList("Source", sources, (source) => source.title, (source) => `#source-${source.id}`)}
+          ${renderNodeRelatedList("Signal", signals, (signal) => signal.title, (signal) => `#signal-${signal.id}`)}
+          ${renderNodeRelatedList("Memory", memories, (memory) => memory.title, null)}
+        </div>
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>关联行动</h5>
+        ${renderNodeActions(actions)}
+      </section>
+
+      <section class="memory-detail-section">
+        <h5>结果回流</h5>
+        ${renderNodeResults(results)}
+      </section>
+    </article>
+  `;
+}
+
+function renderProjectNodeSuccessCriteria(node) {
+  const items = Array.isArray(node.successCriteria) ? node.successCriteria : [];
+  if (!items.length) {
+    return "";
+  }
+
+  return `
+    <ul class="node-criteria">
+      ${items.slice(0, 3).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function renderProjectNodeStatusActions(node) {
+  const currentStatus = node.status || "planned";
+  return `
+    <div class="memory-status-actions" aria-label="节点状态操作">
+      ${PROJECT_NODE_STATUS_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-project-node-status"
+              data-node-id="${escapeHtml(node.id)}"
+              data-node-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderNodeRelatedList(label, items, getTitle, getHref) {
+  if (!items.length) {
+    return `<p class="muted">暂无关联 ${escapeHtml(label)}</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${items
+        .slice(0, 5)
+        .map((item) => {
+          const title = escapeHtml(getTitle(item));
+          const href = getHref?.(item);
+          return href
+            ? `<a class="secondary-link compact-button" href="${escapeHtml(href)}">${title}</a>`
+            : `<span class="node-related-pill">${title}</span>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderNodeActions(actions) {
+  if (!actions.length) {
+    return `<p class="muted">暂无关联 action</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${actions
+        .map(
+          (action) => `
+            <button class="memory-related-action" data-action-id="${escapeHtml(action.id)}" type="button">
+              <span>${escapeHtml(ACTION_TYPES[action.type] || action.type)}</span>
+              <strong>${escapeHtml(action.title)}</strong>
+              <small>${escapeHtml(ACTION_STATUS[action.status] || action.status)}</small>
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderNodeResults(results) {
+  if (!results.length) {
+    return `<p class="muted">暂无 result</p>`;
+  }
+
+  return `
+    <div class="memory-detail-list">
+      ${results
+        .map(
+          (result) => `
+            <article class="memory-detail-result">
+              <strong>${escapeHtml(result.summary || result.outcome || "执行结果")}</strong>
+              <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+            </article>
+          `
+        )
+        .join("")}
     </div>
   `;
 }
@@ -1089,6 +1510,77 @@ function countReconciliationOperations(results) {
   );
 }
 
+function entityLinkIds(entity, kind) {
+  const fields = {
+    source: ["sourceIds", "relatedSourceIds"],
+    signal: ["signalIds", "relatedSignalIds"],
+    memory: ["memoryIds", "relatedMemoryIds"],
+    project: ["projectIds", "relatedProjectIds"]
+  }[kind] || [];
+
+  return [
+    ...new Set(
+      fields
+        .flatMap((field) => (Array.isArray(entity?.[field]) ? entity[field] : []))
+        .filter(Boolean)
+    )
+  ];
+}
+
+function entitySources(project, entity) {
+  const ids = new Set(entityLinkIds(entity, "source"));
+  return (project.sources || []).filter((source) => ids.has(source.id));
+}
+
+function entitySignals(project, entity) {
+  const ids = new Set(entityLinkIds(entity, "signal"));
+  return (project.signals || []).filter((signal) => ids.has(signal.id));
+}
+
+function entityMemories(project, entity) {
+  const ids = new Set(entityLinkIds(entity, "memory"));
+  return (project.memories || []).filter((memory) => ids.has(memory.id));
+}
+
+function entityProjects(project, entity) {
+  const ids = new Set(entityLinkIds(entity, "project"));
+  return ids.has(project.id) ? [project] : [];
+}
+
+function entityLastInteractionAt(project, entity) {
+  const dates = [
+    entity?.lastInteractionAt,
+    ...entitySources(project, entity).map((source) => source.occurredAt || source.receivedAt),
+    ...entitySignals(project, entity).map((signal) => signal.createdAt),
+    ...entityMemories(project, entity).map((memory) => memory.updatedAt || memory.createdAt)
+  ]
+    .filter(Boolean)
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((left, right) => right.getTime() - left.getTime());
+
+  return dates[0]?.toISOString() || "";
+}
+
+function entityNextAction(project, entity, memories) {
+  const direct = (project.actions || []).find((action) => action.id === entity.nextSuggestedActionId);
+  if (direct) {
+    return direct;
+  }
+
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.actions || []).find(
+    (action) =>
+      action.status !== "done" &&
+      actionMemoryIds(action).some((memoryId) => memoryIds.has(memoryId))
+  );
+}
+
+function nodeLinkedItems(items, ids = []) {
+  const idSet = new Set(Array.isArray(ids) ? ids : []);
+  return items.filter((item) => idSet.has(item.id));
+}
+
 function actionsForMemory(project, memoryId) {
   return project.actions.filter((action) => actionMemoryIds(action).includes(memoryId));
 }
@@ -1225,6 +1717,10 @@ function entityTypeLabel(type) {
 
 function entityStatusLabel(status) {
   return ENTITY_STATUS[status] || ENTITY_STATUS.watching;
+}
+
+function projectNodeStatusLabel(status) {
+  return PROJECT_NODE_STATUS[status] || PROJECT_NODE_STATUS.planned;
 }
 
 function confidenceScoreLabel(confidence) {

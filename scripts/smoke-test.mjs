@@ -7,12 +7,14 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
-  updateMemoryStatus
+  updateEntityStatus,
+  updateMemoryStatus,
+  updateProjectNodeStatus
 } from "../src/domain/agentEngine.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
-import { updateMemory } from "../src/services/store.js";
+import { makeProject, updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
@@ -26,6 +28,16 @@ if (demoMemoriesMissingSources.length) {
       .map((memory) => memory.id)
       .join(", ")}`
   );
+}
+
+const freshProject = makeProject("Smoke Project");
+if (
+  !Array.isArray(freshProject.nodes) ||
+  freshProject.nodes.length !== 1 ||
+  freshProject.nodes[0].status !== "active" ||
+  freshProject.nodes[0].projectId !== freshProject.id
+) {
+  throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
 }
 
 project = absorbContext(project, {
@@ -128,10 +140,51 @@ if (
     (entity) =>
       entity.status !== "watching" ||
       !entity.relatedSourceIds.includes(sourceProbe.id) ||
-      !entity.relatedProjectIds.includes(linkProbeProject.id)
+      !entity.sourceIds.includes(sourceProbe.id) ||
+      !entity.relatedSignalIds.includes(linkedSignal.id) ||
+      !entity.signalIds.includes(linkedSignal.id) ||
+      !entity.relatedProjectIds.includes(linkProbeProject.id) ||
+      !entity.projectIds.includes(linkProbeProject.id)
   )
 ) {
   throw new Error(`Signal link suggestion failed: ${JSON.stringify(linkProbeProject)}`);
+}
+
+let existingEntityLinkProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [sourceProbe],
+  signals: signalProbe.signals,
+  entities: [
+    {
+      id: "ent-existing-customer-a",
+      type: "customer",
+      name: "客户 A",
+      status: "watching",
+      tags: [],
+      sourceIds: [],
+      signalIds: [],
+      memoryIds: [],
+      projectIds: [],
+      relatedSourceIds: [],
+      relatedSignalIds: [],
+      relatedMemoryIds: [],
+      relatedProjectIds: [],
+      createdAt: "2026-05-13T00:00:00.000Z",
+      updatedAt: "2026-05-13T00:00:00.000Z"
+    }
+  ],
+  entityRelations: []
+};
+existingEntityLinkProject = suggestSignalLinks(existingEntityLinkProject, signalProbe.signals[0].id);
+const existingLinkedEntity = existingEntityLinkProject.entities.find(
+  (entity) => entity.id === "ent-existing-customer-a"
+);
+if (
+  !existingLinkedEntity?.sourceIds.includes(sourceProbe.id) ||
+  !existingLinkedEntity?.signalIds.includes(signalProbe.signals[0].id) ||
+  !existingLinkedEntity?.projectIds.includes(existingEntityLinkProject.id)
+) {
+  throw new Error(`Expected existing Entity to receive Source / Signal / Project links: ${JSON.stringify(existingEntityLinkProject)}`);
 }
 
 const reviewSignalId = linkedSignal.id;
@@ -142,25 +195,33 @@ if (confirmedSignalProject.signals.find((signal) => signal.id === reviewSignalId
 
 let convertedMemoryProject = reviewSignal(linkProbeProject, reviewSignalId, "memory");
 const convertedMemory = convertedMemoryProject.memories[0];
+const convertedMemoryEntity = convertedMemoryProject.entities.find((entity) =>
+  entity.memoryIds?.includes(convertedMemory.id)
+);
 if (
   convertedMemoryProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
   convertedMemory.status !== "draft" ||
   convertedMemory.createdBy !== "ai" ||
   convertedMemory.sourceReferences[0]?.sourceId !== sourceProbe.id ||
-  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId
+  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId ||
+  !convertedMemoryEntity
 ) {
   throw new Error(`Expected Signal to convert into traceable draft memory: ${JSON.stringify(convertedMemoryProject)}`);
 }
 
 let convertedActionProject = reviewSignal(linkProbeProject, reviewSignalId, "action");
 const convertedAction = convertedActionProject.actions[0];
+const convertedActionEntity = convertedActionProject.entities.find(
+  (entity) => entity.nextSuggestedActionId === convertedAction.id
+);
 if (
   convertedActionProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
   !convertedAction ||
   convertedAction.status !== "pending" ||
   !convertedAction.requiresHumanConfirmation ||
   !Array.isArray(convertedAction.evidenceMemoryIds) ||
-  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id
+  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id ||
+  !convertedActionEntity?.memoryIds.includes(convertedActionProject.memories[0].id)
 ) {
   throw new Error(`Expected Signal to convert into evidence-backed action: ${JSON.stringify(convertedActionProject)}`);
 }
@@ -254,6 +315,150 @@ if (
   !inboxFlowHtml.includes("Company Inbox")
 ) {
   throw new Error("Expected Inbox review flow controls to render in smoke HTML.");
+}
+
+const entityProfileHtml = renderApp({
+  activeProjectId: DEMO_PROJECT.id,
+  selectedEntityId: "ent-demo-customer-team",
+  selectedActionId: null,
+  projects: [DEMO_PROJECT]
+});
+if (
+  !entityProfileHtml.includes("Entity Profile") ||
+  !entityProfileHtml.includes("业务对象画像") ||
+  !entityProfileHtml.includes("客户访谈小组") ||
+  !entityProfileHtml.includes("关联证据") ||
+  !entityProfileHtml.includes('data-entity-open-id="ent-demo-customer-team"') ||
+  !entityProfileHtml.includes('data-action="update-entity-status"') ||
+  !entityProfileHtml.includes("准备付费意向客户 follow-up 草稿")
+) {
+  throw new Error("Expected Entity Profile list and detail to render in smoke HTML.");
+}
+
+let entityStatusProject = structuredClone(DEMO_PROJECT);
+entityStatusProject = updateEntityStatus(entityStatusProject, "ent-demo-customer-team", "active");
+if (
+  entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.status !== "active" ||
+  !entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.updatedAt
+) {
+  throw new Error("Expected Entity status governance action to update the profile locally.");
+}
+
+const projectNodeHtml = renderApp({
+  activeProjectId: DEMO_PROJECT.id,
+  selectedNodeId: "node-demo-customer-discovery",
+  selectedActionId: null,
+  projects: [DEMO_PROJECT]
+});
+if (
+  !projectNodeHtml.includes("Project Nodes") ||
+  !projectNodeHtml.includes("Node Detail") ||
+  !projectNodeHtml.includes("项目推进节点") ||
+  !projectNodeHtml.includes("客户试点与权限边界确认") ||
+  !projectNodeHtml.includes("节点目标") ||
+  !projectNodeHtml.includes("输入上下文") ||
+  !projectNodeHtml.includes('data-action="update-project-node-status"') ||
+  !projectNodeHtml.includes('data-action="open-node-detail"') ||
+  !projectNodeHtml.includes('data-action-id="act-demo-customer"') ||
+  !projectNodeHtml.includes("Memory 2")
+) {
+  throw new Error("Expected Project Nodes list, detail panel, and status controls to render in smoke HTML.");
+}
+
+let nodeStatusProject = structuredClone(DEMO_PROJECT);
+nodeStatusProject = updateProjectNodeStatus(
+  nodeStatusProject,
+  "node-demo-customer-discovery",
+  "blocked"
+);
+if (
+  nodeStatusProject.nodes.find((node) => node.id === "node-demo-customer-discovery")?.status !==
+  "blocked"
+) {
+  throw new Error("Expected Project Node status governance action to update locally.");
+}
+
+let qaFlowProject = makeProject("QA Entity Project Flow");
+qaFlowProject = addManualSource(qaFlowProject, {
+  kind: "customer_feedback",
+  title: "QA 客户试点反馈",
+  body:
+    "客户 QA 愿意下周试点，但担心权限边界和预算审批。工程负责人确认本周只做手动录入和节点闭环，不接 Slack API。",
+  occurredAt: "2026-05-15",
+  participants: ["客户 QA", "工程负责人"],
+  tags: ["qa", "entity", "node"],
+  importance: "high"
+});
+const qaSource = qaFlowProject.sources[0];
+const qaDefaultNodeId = qaFlowProject.nodes[0].id;
+if (!qaFlowProject.nodes[0].sourceIds.includes(qaSource.id)) {
+  throw new Error("Expected manual Source to attach to the default Project Node.");
+}
+
+qaFlowProject = processSource(qaFlowProject, qaSource.id);
+const qaSignals = qaFlowProject.signals;
+if (
+  qaSignals.length < 2 ||
+  !qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId)?.signalIds.includes(qaSignals[0].id)
+) {
+  throw new Error("Expected extracted Signals to attach to the default Project Node.");
+}
+
+qaFlowProject = suggestSignalLinks(qaFlowProject, qaSignals[0].id);
+qaFlowProject = suggestSignalLinks(qaFlowProject, qaSignals[1].id);
+const qaEntity = qaFlowProject.entities.find((entity) => entity.name === "客户 QA");
+if (!qaEntity?.sourceIds.includes(qaSource.id) || !qaEntity.signalIds.includes(qaSignals[0].id)) {
+  throw new Error("Expected QA Entity to receive Source and Signal links.");
+}
+
+qaFlowProject = reviewSignal(qaFlowProject, qaSignals[0].id, "memory");
+const qaMemory = qaFlowProject.memories[0];
+const qaEntityAfterMemory = qaFlowProject.entities.find((entity) => entity.id === qaEntity.id);
+const qaNodeAfterMemory = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (
+  !qaEntityAfterMemory.memoryIds.includes(qaMemory.id) ||
+  !qaNodeAfterMemory.memoryIds.includes(qaMemory.id)
+) {
+  throw new Error("Expected Signal -> Memory conversion to update Entity and Project Node links.");
+}
+
+qaFlowProject = reviewSignal(qaFlowProject, qaSignals[1].id, "action");
+const qaAction = qaFlowProject.actions[0];
+const qaEntityAfterAction = qaFlowProject.entities.find((entity) => entity.id === qaEntity.id);
+const qaNodeAfterAction = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (
+  !qaAction ||
+  qaEntityAfterAction.nextSuggestedActionId !== qaAction.id ||
+  !qaNodeAfterAction.actionIds.includes(qaAction.id)
+) {
+  throw new Error("Expected Signal -> Action conversion to update Entity next action and Project Node action links.");
+}
+
+qaFlowProject = recordActionResult(qaFlowProject, qaAction.id, {
+  outcome: "positive",
+  summary: "客户 QA 同意继续试点，但要求权限边界先确认。"
+});
+const qaResult = qaFlowProject.results[0];
+const qaNodeAfterResult = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (!qaNodeAfterResult.resultIds.includes(qaResult.id)) {
+  throw new Error("Expected Action Result to attach back to the Project Node.");
+}
+
+const qaFlowHtml = renderApp({
+  activeProjectId: qaFlowProject.id,
+  selectedEntityId: qaEntity.id,
+  selectedNodeId: qaDefaultNodeId,
+  selectedActionId: qaAction.id,
+  projects: [qaFlowProject]
+});
+if (
+  !qaFlowHtml.includes("QA Entity Project Flow") ||
+  !qaFlowHtml.includes("客户 QA") ||
+  !qaFlowHtml.includes("Node Detail") ||
+  !qaFlowHtml.includes("Entity Profile") ||
+  !qaFlowHtml.includes("客户 QA 同意继续试点")
+) {
+  throw new Error("Expected QA entity/project flow to render linked Entity and Node details.");
 }
 
 const priceConcernMemory = {
@@ -748,6 +953,7 @@ const summary = {
   sources: inboxFlowProject.sources.length,
   signals: inboxFlowProject.signals.length,
   entities: inboxFlowProject.entities.length,
+  nodes: project.nodes.length,
   memories: project.memories.length,
   actions: project.actions.length,
   briefs: project.briefs.length,
