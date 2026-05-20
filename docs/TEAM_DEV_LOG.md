@@ -294,6 +294,42 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - 提交 ACTION-02，合回 Wave 3 集成分支并运行 smoke。
 
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 3：`REC-03-result-to-memory-update`
+
+分支：`issue/REC-03-result-to-memory-update`
+
+状态：开发中，已完成本地实现和 smoke
+
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Result now generates pending memory update suggestions from action evidence and result outcome.
+- Positive result can suggest confirm / update; blocked result can suggest dispute.
+- Result now carries `projectNodeUpdates` suggestions without automatically changing node status.
+- Result history and Node Detail can render node status suggestions.
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- QA-03 需要把整条 Action Loop smoke 覆盖整理为最终闭环验收。
+
+下一步：
+
+- 提交 REC-03，合回 Wave 3 集成分支并运行 smoke。
+
 ### 2026-05-18
 
 负责人：Codex

@@ -868,6 +868,7 @@ function renderNodeResults(results) {
             <article class="memory-detail-result">
               <strong>${escapeHtml(result.summary || result.outcome || "执行结果")}</strong>
               <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+              ${renderResultNodeSuggestions(result)}
             </article>
           `
         )
@@ -1251,8 +1252,30 @@ function renderRelatedMemoryUpdates(result, memoryId) {
         .map(
           (update) => `
             <li>
-              <span>${escapeHtml(update.kind || update.type || "update")}</span>
+              <span>${escapeHtml(update.operation || update.kind || update.type || "update")}</span>
               ${escapeHtml(update.summary || update.note || update.reason || "")}
+            </li>
+          `
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+function renderResultNodeSuggestions(result) {
+  const suggestions = Array.isArray(result.projectNodeUpdates) ? result.projectNodeUpdates : [];
+  if (!suggestions.length) {
+    return "";
+  }
+
+  return `
+    <ul class="memory-update-list">
+      ${suggestions
+        .map(
+          (suggestion) => `
+            <li>
+              <span>node ${escapeHtml(suggestion.suggestedStatus)}</span>
+              ${escapeHtml(suggestion.reason || "")}
             </li>
           `
         )
@@ -1557,6 +1580,7 @@ function renderActionResultHistory(project, action) {
               <p>变化：${escapeHtml(result.whatChanged || result.summary || "")}</p>
               <p>新证据：${escapeHtml(result.newEvidence || result.summary || "")}</p>
               <small>Memory updates ${Array.isArray(result.relatedMemoryUpdates) ? result.relatedMemoryUpdates.length : 0}</small>
+              ${renderResultNodeSuggestions(result)}
             </article>
           `
         )

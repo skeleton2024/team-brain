@@ -570,14 +570,26 @@ export function recordActionResult(project, actionId, resultInput) {
     now
   });
   const newMemories = reconciliation.acceptedMemories;
+  const resultDrivenMemoryUpdates = buildResultDrivenMemoryUpdates({
+    project,
+    action,
+    result,
+    resultInput,
+    now
+  });
+  const memoryUpdates = mergeMemoryUpdates([
+    ...reconciliation.memoryUpdates,
+    ...resultDrivenMemoryUpdates
+  ]);
 
   result.memoryIds = newMemories.map((memory) => memory.id);
-  result.relatedMemoryUpdates = reconciliation.memoryUpdates;
+  result.relatedMemoryUpdates = memoryUpdates;
   result.reconciliationResultIds = reconciliation.reconciliationResults.map((item) => item.id);
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
   result.followUpNeeded = result.followUpNeeded || followUpActions.length > 0;
+  result.projectNodeUpdates = buildResultNodeStatusSuggestions(project, action, result);
   resultContext.memoryIds = result.memoryIds;
   resultContext.actionIds = result.actionIds;
   resultContext.reconciliationResultIds = result.reconciliationResultIds;
@@ -610,7 +622,7 @@ export function recordActionResult(project, actionId, resultInput) {
       ...reconciliation.reconciliationResults,
       ...(project.reconciliationResults || [])
     ],
-    pendingMemoryUpdates: [...reconciliation.memoryUpdates, ...(project.pendingMemoryUpdates || [])]
+    pendingMemoryUpdates: [...memoryUpdates, ...(project.pendingMemoryUpdates || [])]
   };
 }
 
@@ -621,6 +633,104 @@ function buildResultContextBody(result) {
     `新证据：${result.newEvidence}`,
     `需要后续动作：${result.followUpNeeded ? "是" : "否"}`
   ].join("\n");
+}
+
+function buildResultDrivenMemoryUpdates({ project, action, result, resultInput, now }) {
+  const evidenceMemories = resolveActionBriefMemories(project, action);
+  return evidenceMemories
+    .map((memory) => {
+      const operation = memoryUpdateOperationForResult(memory, result);
+      if (!operation) {
+        return null;
+      }
+
+      return {
+        memoryId: memory.id,
+        operation,
+        reason: memoryUpdateReasonForResult(memory, result, resultInput),
+        suggestedContent:
+          operation === "update"
+            ? `${memory.content || memory.detail}\n\n结果回流：${result.whatChanged}`
+            : undefined,
+        createdAt: now
+      };
+    })
+    .filter(Boolean);
+}
+
+function memoryUpdateOperationForResult(memory, result) {
+  if (result.outcome === "blocked") {
+    return "dispute";
+  }
+
+  if (result.outcome === "positive") {
+    return (memory.status || "draft") === "confirmed" ? "update" : "confirm";
+  }
+
+  if (result.outcome === "neutral") {
+    return "update";
+  }
+
+  return null;
+}
+
+function memoryUpdateReasonForResult(memory, result, resultInput) {
+  if (result.outcome === "blocked") {
+    return `结果显示行动遇到阻塞，需要复核 memory“${memory.title}”：${result.newEvidence}`;
+  }
+
+  if (result.outcome === "positive") {
+    return `结果支持或推进了 memory“${memory.title}”：${result.whatChanged}`;
+  }
+
+  return `结果为中性观察，需要更新 memory“${memory.title}”的证据：${resultInput.newEvidence || result.summary}`;
+}
+
+function mergeMemoryUpdates(updates) {
+  const seenMemoryIds = new Set();
+  return updates.filter((update) => {
+    const key = update?.memoryId || update?.sourceMemoryId || update?.targetMemoryId;
+    if (!key) {
+      return true;
+    }
+
+    if (seenMemoryIds.has(key)) {
+      return false;
+    }
+
+    seenMemoryIds.add(key);
+    return true;
+  });
+}
+
+function buildResultNodeStatusSuggestions(project, action, result) {
+  const relatedNodes = (project.nodes || []).filter((node) =>
+    nodeLinkIds(node, "action").includes(action.id)
+  );
+
+  return relatedNodes.map((node) => {
+    if (result.outcome === "blocked") {
+      return {
+        nodeId: node.id,
+        suggestedStatus: "blocked",
+        reason: `行动结果出现阻塞：${result.summary}`
+      };
+    }
+
+    if (result.outcome === "positive" && !result.followUpNeeded) {
+      return {
+        nodeId: node.id,
+        suggestedStatus: "done",
+        reason: `行动结果为正向且暂无后续动作：${result.summary}`
+      };
+    }
+
+    return {
+      nodeId: node.id,
+      suggestedStatus: "active",
+      reason: `行动已有结果回流，仍需继续推进：${result.summary}`
+    };
+  });
 }
 
 function proposeActions(project, memories) {
