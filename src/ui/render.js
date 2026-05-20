@@ -1489,6 +1489,8 @@ function renderBrief(project, action, brief) {
       }
     </article>
 
+    ${renderActionResultHistory(project, action)}
+
     <form class="result-form" data-form="record-result" data-action-id="${action.id}">
       <div class="panel-heading compact">
         <div>
@@ -1497,8 +1499,16 @@ function renderBrief(project, action, brief) {
         </div>
       </div>
       <label>
-        执行结果
-        <textarea name="summary" rows="5" placeholder="记录客户回复、工程结果、投资人反馈或新的阻塞" required></textarea>
+        结果摘要
+        <textarea name="summary" rows="4" placeholder="记录客户回复、工程结果、投资人反馈或新的阻塞" required></textarea>
+      </label>
+      <label>
+        发生了什么变化
+        <textarea name="whatChanged" rows="3" placeholder="例如：客户同意试点，但要求先确认权限边界"></textarea>
+      </label>
+      <label>
+        新证据
+        <textarea name="newEvidence" rows="3" placeholder="例如：CFO 明确说预算要等法务审批后释放"></textarea>
       </label>
       <div class="field-row">
         <label>
@@ -1509,12 +1519,49 @@ function renderBrief(project, action, brief) {
             ).join("")}
           </select>
         </label>
+        <label class="checkbox-field">
+          <input name="followUpNeeded" type="checkbox" value="true" />
+          需要后续动作
+        </label>
         <button class="primary-button" type="submit">
           <span>回流并更新记忆</span>
           <span>✓</span>
         </button>
       </div>
     </form>
+  `;
+}
+
+function renderActionResultHistory(project, action) {
+  const results = (project.results || []).filter((result) => result.actionId === action.id);
+  if (!results.length) {
+    return "";
+  }
+
+  return `
+    <div class="result-history" data-result-history>
+      <div class="context-history-heading">
+        <strong>结果记录</strong>
+        <span class="count-pill">${results.length}</span>
+      </div>
+      ${results
+        .map(
+          (result) => `
+            <article class="result-history-item">
+              <div class="result-history-top">
+                <span>${escapeHtml(resultOutcomeLabel(result.outcome))}</span>
+                <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+                ${result.followUpNeeded ? "<span>需要后续</span>" : ""}
+              </div>
+              <strong>${escapeHtml(result.summary || "执行结果")}</strong>
+              <p>变化：${escapeHtml(result.whatChanged || result.summary || "")}</p>
+              <p>新证据：${escapeHtml(result.newEvidence || result.summary || "")}</p>
+              <small>Memory updates ${Array.isArray(result.relatedMemoryUpdates) ? result.relatedMemoryUpdates.length : 0}</small>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
   `;
 }
 
@@ -1807,6 +1854,10 @@ function confidenceLabel(confidence) {
   };
 
   return labels[confidence] || "待确认";
+}
+
+function resultOutcomeLabel(outcome) {
+  return RESULT_OUTCOMES.find((item) => item.id === outcome)?.label || outcome || "结果";
 }
 
 function memoryStatusMeta(status) {

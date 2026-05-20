@@ -256,6 +256,44 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - 提交 ACTION-01，合回 Wave 3 集成分支并运行 smoke。
 
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 3：`ACTION-02-result-feedback`
+
+分支：`issue/ACTION-02-result-feedback`
+
+状态：开发中，已完成本地实现和 smoke
+
+改动文件：
+
+- `src/main.js`
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Result Feedback 表单新增 `whatChanged`、`newEvidence` 和 `followUpNeeded`。
+- `recordActionResult()` 会把结构化结果写入 `ActionResult` 和结果来源 `ContextItem.body`。
+- Brief 面板展示 action result history。
+- 修复 `mergeActions()` 过滤 done action 的问题，保证 result history 和 node / memory 追溯不丢失已完成 action。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- REC-03 需要把 result 产生的 memory update / follow-up / node 状态建议进一步产品化。
+
+下一步：
+
+- 提交 ACTION-02，合回 Wave 3 集成分支并运行 smoke。
+
 ### 2026-05-18
 
 负责人：Codex

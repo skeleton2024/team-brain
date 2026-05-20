@@ -492,6 +492,8 @@ RelatedMemoryUpdate
 - 结果回流应触发 `processResult`。
 - 如果结果改变旧判断，应产生 memory update 建议。
 - 当前本地实现会把结果摘要同步为一个 `ContextItem`，供结果生成的 memory 通过 `sourceReferences` 回溯原文。
+- Phase 3 Alpha Wave 3 起，Result Feedback 表单分别记录 `summary`、`whatChanged`、`newEvidence` 和 `followUpNeeded`；同步生成的 `ContextItem.body` 应保留这些结构化字段，方便后续 memory update 追溯。
+- 已完成 action 必须保留在 `actions` 中，以便 result history、memory detail 和 Project Node detail 继续追溯。
 - 不要只把结果作为一段文本保存后结束。
 
 ## 11. AgentRun
