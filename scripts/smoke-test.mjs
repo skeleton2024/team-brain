@@ -34,7 +34,9 @@ if (
   !Array.isArray(commandCenterProbe.memoryReview) ||
   commandCenterProbe.memoryReview.length < 1 ||
   !Array.isArray(commandCenterProbe.riskRadar) ||
-  commandCenterProbe.riskRadar.length < 1
+  !commandCenterProbe.riskRadar.some((risk) => risk.id === "risk-demo-security-boundary") ||
+  !Array.isArray(commandCenterProbe.opportunityRadar) ||
+  commandCenterProbe.opportunityRadar.length < 2
 ) {
   throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
 }
@@ -73,7 +75,9 @@ if (
   freshProject.nodes.length !== 1 ||
   freshProject.nodes[0].status !== "active" ||
   freshProject.nodes[0].projectId !== freshProject.id ||
-  !Array.isArray(freshProject.commitments)
+  !Array.isArray(freshProject.commitments) ||
+  !Array.isArray(freshProject.risks) ||
+  !Array.isArray(freshProject.opportunities)
 ) {
   throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
 }
@@ -394,6 +398,11 @@ if (
   !projectNodeHtml.includes('data-commitment-panel') ||
   !projectNodeHtml.includes('data-commitment-id="commit-demo-security-brief"') ||
   !projectNodeHtml.includes("给客户发送权限边界 follow-up 草稿") ||
+  !projectNodeHtml.includes("Risk / Opportunity Radar") ||
+  !projectNodeHtml.includes('data-risk-radar') ||
+  !projectNodeHtml.includes('data-opportunity-radar') ||
+  !projectNodeHtml.includes("试点前权限边界不清会阻塞客户推进") ||
+  !projectNodeHtml.includes("付费意向客户试点可成为 Alpha 证明点") ||
   !projectNodeHtml.includes("Node Detail") ||
   !projectNodeHtml.includes("项目推进节点") ||
   !projectNodeHtml.includes("客户试点与权限边界确认") ||

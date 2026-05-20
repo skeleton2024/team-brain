@@ -833,7 +833,7 @@ Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
 修改时注意：
 
 - 每次数据模型新增字段，都要同步 demo 数据。
-- demo 应覆盖新增能力，例如 memory status、sourceReferences、context metadata、commitment / waiting。
+- demo 应覆盖新增能力，例如 memory status、sourceReferences、context metadata、commitment / waiting、risk / opportunity。
 - demo 不应包含真实敏感信息。
 
 ### `src/domain/types.js`
@@ -847,6 +847,7 @@ Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
 - 定义 `ACTION_TYPES`。
 - 定义 priority、risk、action status、result outcome 的展示标签。
 - 定义 commitment type / status 的展示标签。
+- 定义 risk / opportunity status 和 impact 展示标签。
 
 修改时注意：
 
@@ -961,6 +962,7 @@ Command Center 聚合 pipeline。
 - 创建新 project。
 - 生成稳定 ID。
 - 兼容迁移 `commitments`，保证旧 localStorage 缺少字段时不会白屏。
+- 兼容迁移 `risks` 和 `opportunities`，保证 Command Center 输入稳定。
 
 修改时注意：
 
