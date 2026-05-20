@@ -930,6 +930,22 @@ Signal 到 Entity / Project 建议关联 pipeline。
 - 不做复杂实体合并或关系图可视化。
 - 不接 CRM、Gmail、Slack 等外部系统。
 
+### `src/domain/pipelines/buildCommandCenter.js`
+
+Command Center 聚合 pipeline。
+
+主要作用：
+
+- 暴露 `buildCommandCenter({ project, now })`。
+- 汇总 Source / Signal、Memory review、Open Action、Project Node、Risk 和 Opportunity。
+- 输出只读 `CommandCenterSnapshot`，供首页展示今日焦点。
+- 第一版使用本地规则，不写入 state，不执行外部动作。
+
+修改时注意：
+
+- 新增 commitment、risk、opportunity 或 priority 规则时，保持输出可追溯。
+- 不在这里触发 DOM、localStorage 或外部 SaaS。
+
 ### `src/services/store.js`
 
 本地持久化服务。
@@ -959,6 +975,7 @@ HTML 渲染层。
 
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
+- 渲染 Command Center 工作首页。
 - 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。
@@ -967,6 +984,7 @@ HTML 渲染层。
 
 - `renderSidebar()`
 - `renderTopbar()`
+- `renderCommandCenter()`
 - `renderPipeline()`
 - `renderContextIntake()`
 - `renderMemories()`

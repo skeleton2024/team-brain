@@ -11,6 +11,7 @@ import {
   updateMemoryStatus,
   updateProjectNodeStatus
 } from "../src/domain/agentEngine.js";
+import { buildCommandCenter } from "../src/domain/pipelines/buildCommandCenter.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
@@ -18,6 +19,38 @@ import { makeProject, updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
+
+const commandCenterProbe = buildCommandCenter({ project, now: "2026-05-20T00:00:00.000Z" });
+if (
+  commandCenterProbe.projectId !== project.id ||
+  !["needs_attention", "at_risk"].includes(commandCenterProbe.health.status) ||
+  !Array.isArray(commandCenterProbe.todayInbox) ||
+  commandCenterProbe.todayInbox.length < 1 ||
+  !Array.isArray(commandCenterProbe.actionFocus) ||
+  commandCenterProbe.actionFocus[0]?.priority !== "high" ||
+  !Array.isArray(commandCenterProbe.memoryReview) ||
+  commandCenterProbe.memoryReview.length < 1 ||
+  !Array.isArray(commandCenterProbe.riskRadar) ||
+  commandCenterProbe.riskRadar.length < 1
+) {
+  throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
+}
+
+const commandCenterHtml = renderApp({
+  activeProjectId: project.id,
+  selectedActionId: null,
+  projects: [project]
+});
+if (
+  !commandCenterHtml.includes('data-command-center') ||
+  !commandCenterHtml.includes("Command Center") ||
+  !commandCenterHtml.includes("今天最该处理什么") ||
+  !commandCenterHtml.includes("今日 Inbox") ||
+  !commandCenterHtml.includes("行动焦点") ||
+  !commandCenterHtml.includes("记忆复核")
+) {
+  throw new Error("Expected Command Center dashboard to render in smoke HTML.");
+}
 
 const demoMemoriesMissingSources = project.memories.filter(
   (memory) => !hasUsableSourceReference(memory)
