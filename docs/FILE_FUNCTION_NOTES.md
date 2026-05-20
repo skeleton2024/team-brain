@@ -812,7 +812,7 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - 调用 `extractMemories()` pipeline 把上下文转成候选 memory。
 - 为 memory 生成 action。
 - 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
-- 处理结构化结果回流，保留 done action，生成 result learning memory 和 follow-up actions。
+- 处理结构化结果回流，保留 done action，生成 result learning memory、memory update 建议、node 状态建议和 follow-up actions。
 
 当前内部职责：
 

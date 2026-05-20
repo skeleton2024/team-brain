@@ -663,9 +663,12 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - newEvidence。
 - followUpNeeded。
 - relatedMemoryUpdates。
+- projectNodeUpdates。
 - action history。
 - 结构化 Result Feedback 表单和 result history 展示。
 - 已完成 action 的保留和追溯，避免回流后丢失 result 入口。
+- result-to-memory update 建议：positive 可建议 confirm / update，blocked 可建议 dispute，neutral 可建议 update。
+- result-to-node status 建议：blocked 建议 node blocked，正向且无后续建议 done，否则继续 active；这些建议不自动应用。
 
 主要文件：
 
