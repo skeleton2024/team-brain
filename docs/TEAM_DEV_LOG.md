@@ -4,7 +4,7 @@
 
 用途：记录团队协作状态、阶段分支、开发决策、验收记录和重要风险。
 
-最后更新：2026-05-19
+最后更新：2026-05-20
 
 ## 1. 当前协作结论
 
@@ -26,10 +26,10 @@ TeamMind 后续开发采用“一个主对话跑一个 Wave”的默认方式：
 integration/phase-3-alpha
 ```
 
-当前本地 Wave 2 集成分支：
+当前本地 Wave 3 集成分支：
 
 ```text
-integration/phase-3-wave-02
+integration/phase-3-wave-03
 ```
 
 历史 memory foundation 分支已经集成：
@@ -61,6 +61,7 @@ Wave 分支：
 integration/phase-3-wave-00
 integration/phase-3-wave-01
 integration/phase-3-wave-02
+integration/phase-3-wave-03
 ```
 
 Issue 分支：
@@ -114,8 +115,8 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 | --- | --- | --- | --- |
 | Wave 0 | 施工系统与核心数据合同 | 已合并 | DEV-00 / ARCH-00 / QA-00 / DOC-00 / DOC-01 已完成并合入 main |
 | Wave 1 | Inbox 到 Source / Signal | 待 review | INBOX-01 / PIPE-01 / LINK-01 / UI-01 / QA-01 已完成并通过 smoke，PR #8 仍为 draft/open |
-| Wave 2 | Entity Profile 与 Project Node | 待 review | ENTITY-01 / ENTITY-02 / PROJECT-01 / PROJECT-02 / QA-02 已完成并通过 smoke，待合入阶段 integration / draft PR |
-| Wave 3 | Memory Governance 与 Action 回流 | 待开始 | 让状态、brief、result 进入真实闭环 |
+| Wave 2 | Entity Profile 与 Project Node | 待 review | ENTITY-01 / ENTITY-02 / PROJECT-01 / PROJECT-02 / QA-02 已完成并通过 smoke，PR #8 仍为 draft/open |
+| Wave 3 | Memory Governance 与 Action 回流 | 待 review | MEM-05 / ACTION-01 / ACTION-02 / REC-03 / QA-03 已完成并通过 smoke，待合入阶段 integration / 更新 PR #8 |
 | Wave 4 | Command Center Alpha | 待开始 | 公司级首页和优先级队列 |
 
 状态建议只用：
@@ -176,6 +177,54 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 ```
 
 ## 9. 开发日志
+
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 3：Action Loop / Memory Governance
+
+分支：`integration/phase-3-wave-03`
+
+状态：Wave 3 已完成，待合入 `integration/phase-3-alpha` 并更新 PR #8
+
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/issues/README.md`
+- `docs/issues/MEM-05-memory-governance-live.md`
+- `docs/issues/ACTION-01-brief-generation.md`
+- `docs/issues/ACTION-02-result-feedback.md`
+- `docs/issues/REC-03-result-to-memory-update.md`
+- `docs/issues/QA-03-action-loop-smoke.md`
+
+验证结果：
+
+- `MEM-05` 提交：`163a648`，完成 memory governance live。
+- `ACTION-01` 提交：`b2612be`，完成场景化 brief generation。
+- `ACTION-02` 提交：`541ab05`，完成结构化 result feedback。
+- `REC-03` 提交：`0a34a56`，完成 result-to-memory update / node suggestion。
+- `QA-03` 提交：`eba28aa`，完成 action loop smoke 覆盖。
+- 每个 issue 分支完成后运行 `node scripts/smoke-test.mjs` 通过。
+- 每次合回 `integration/phase-3-wave-03` 后再次运行 `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Wave 4 仍需要落地 Command Center、Commitment / Waiting、Risk / Opportunity 和 Priority Queue。
+- 当前 memory update / node update 仍是建议，尚未提供完整人工 apply UI。
+
+下一步：
+
+- 合入 `integration/phase-3-alpha`，推送远端分支，更新 draft PR #8。
 
 ### 2026-05-20
 
