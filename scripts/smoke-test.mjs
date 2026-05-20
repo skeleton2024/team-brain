@@ -36,7 +36,11 @@ if (
   !Array.isArray(commandCenterProbe.riskRadar) ||
   !commandCenterProbe.riskRadar.some((risk) => risk.id === "risk-demo-security-boundary") ||
   !Array.isArray(commandCenterProbe.opportunityRadar) ||
-  commandCenterProbe.opportunityRadar.length < 2
+  commandCenterProbe.opportunityRadar.length < 2 ||
+  !Array.isArray(commandCenterProbe.priorityQueue) ||
+  commandCenterProbe.priorityQueue.length < 5 ||
+  commandCenterProbe.priorityQueue[0]?.type !== "commitment" ||
+  !commandCenterProbe.priorityQueue.every((item) => item.reason && item.targetId)
 ) {
   throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
 }
@@ -48,7 +52,9 @@ const commandCenterHtml = renderApp({
 });
 if (
   !commandCenterHtml.includes('data-command-center') ||
+  !commandCenterHtml.includes('data-priority-queue') ||
   !commandCenterHtml.includes("Command Center") ||
+  !commandCenterHtml.includes("AI Priority Queue") ||
   !commandCenterHtml.includes("今天最该处理什么") ||
   !commandCenterHtml.includes("今日 Inbox") ||
   !commandCenterHtml.includes("行动焦点") ||

@@ -941,6 +941,7 @@ Command Center 聚合 pipeline。
 - 暴露 `buildCommandCenter({ project, now })`。
 - 汇总 Source / Signal、Memory review、Open Action、Project Node、Risk 和 Opportunity。
 - 输出只读 `CommandCenterSnapshot`，供首页展示今日焦点。
+- 生成本地规则版 Priority Queue，每个队列项包含 reason 和证据链接。
 - 第一版使用本地规则，不写入 state，不执行外部动作。
 
 修改时注意：
@@ -989,6 +990,7 @@ HTML 渲染层。
 - `renderSidebar()`
 - `renderTopbar()`
 - `renderCommandCenter()`
+- `renderPriorityQueue()`
 - `renderPipeline()`
 - `renderContextIntake()`
 - `renderMemories()`

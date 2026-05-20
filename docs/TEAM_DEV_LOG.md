@@ -624,6 +624,23 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - `node scripts/smoke-test.mjs` 通过。
 
+分支：`issue/PRIORITY-01-ai-priority-queue`
+
+状态：PRIORITY-01 进行中，已新增本地规则版 Priority Queue，聚合 commitment、risk、action、memory review 和 opportunity。
+
+改动文件：
+
+- `DATA_MODEL.md`
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
 分支：`issue/RISK-01-risk-opportunity-radar`
 
 状态：RISK-01 进行中，已补显式 `risks` / `opportunities` demo / migration、Command Center 雷达和项目区雷达展示。

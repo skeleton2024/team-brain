@@ -28,6 +28,13 @@ export function buildCommandCenter({ project, now = new Date().toISOString() } =
   const commitmentFocus = buildCommitmentFocus(commitments, now);
   const riskRadar = buildRiskRadar(project, memories, actions);
   const opportunityRadar = buildOpportunityRadar(project, memories, signals);
+  const priorityQueue = buildPriorityQueue({
+    actionFocus,
+    commitmentFocus,
+    memoryReview,
+    riskRadar,
+    opportunityRadar
+  });
   const health = buildProjectHealth({
     todayInbox,
     memoryReview,
@@ -57,7 +64,7 @@ export function buildCommandCenter({ project, now = new Date().toISOString() } =
     commitmentFocus,
     riskRadar,
     opportunityRadar,
-    priorityQueue: []
+    priorityQueue
   };
 }
 
@@ -88,6 +95,100 @@ function emptySnapshot(now) {
     opportunityRadar: [],
     priorityQueue: []
   };
+}
+
+function buildPriorityQueue({
+  actionFocus,
+  commitmentFocus,
+  memoryReview,
+  riskRadar,
+  opportunityRadar
+}) {
+  const commitmentItems = commitmentFocus
+    .filter((item) => ["overdue", "blocked", "waiting", "open"].includes(item.status))
+    .map((item) => ({
+      id: `priority-commitment-${item.id}`,
+      type: "commitment",
+      title: item.title,
+      reason:
+        item.status === "overdue"
+          ? "承诺已逾期，优先确认是否需要跟进或改期。"
+          : "承诺、等待或依赖正在影响当前项目节奏。",
+      priority: item.status === "overdue" || item.status === "blocked" ? "high" : "medium",
+      targetId: item.id,
+      targetType: "commitment",
+      evidenceLinks: item.evidenceLinks,
+      score: item.status === "overdue" ? 100 : item.status === "blocked" ? 88 : 64
+    }));
+
+  const riskItems = riskRadar
+    .filter((risk) => !["mitigated", "archived"].includes(risk.status))
+    .map((risk) => ({
+      id: `priority-risk-${risk.id}`,
+      type: "risk",
+      title: risk.title,
+      reason:
+        risk.severity === "high"
+          ? "高风险仍处于开放状态，需要先处理证据和下一步。"
+          : "风险正在被监控，适合进入今日检查列表。",
+      priority: risk.severity === "high" ? "high" : "medium",
+      targetId: risk.id,
+      targetType: "risk",
+      evidenceLinks: risk.evidenceLinks,
+      score: risk.severity === "high" ? 94 : 62
+    }));
+
+  const actionItems = actionFocus.map((action) => ({
+    id: `priority-action-${action.id}`,
+    type: "action",
+    title: action.title,
+    reason: action.reason || "高优先级 action 需要人工处理。",
+    priority: action.priority,
+    targetId: action.id,
+    targetType: "action",
+    evidenceLinks: action.evidenceLinks,
+    score: action.score + (action.priority === "high" ? 42 : 20)
+  }));
+
+  const memoryItems = memoryReview.map((memory) => ({
+    id: `priority-memory-${memory.id}`,
+    type: "memory_review",
+    title: memory.title,
+    reason:
+      memory.status === "disputed"
+        ? "这条 memory 有争议，先复核可避免后续 action 用错证据。"
+        : "这条 memory 仍需治理，确认后才能更可靠地参与推理。",
+    priority: memory.status === "disputed" ? "high" : "medium",
+    targetId: memory.id,
+    targetType: "memory",
+    evidenceLinks: memory.evidenceLinks,
+    score: memory.status === "disputed" ? 86 : memory.status === "draft" ? 58 : 38
+  }));
+
+  const opportunityItems = opportunityRadar.map((opportunity) => ({
+    id: `priority-opportunity-${opportunity.id}`,
+    type: "opportunity",
+    title: opportunity.title,
+    reason:
+      opportunity.impact === "high"
+        ? "高影响机会正在出现，适合安排验证或推进。"
+        : "机会信号可作为今日低风险推进项。",
+    priority: opportunity.impact === "high" ? "high" : "medium",
+    targetId: opportunity.id,
+    targetType: "opportunity",
+    evidenceLinks: opportunity.evidenceLinks,
+    score: opportunity.impact === "high" ? 72 : 44
+  }));
+
+  return [
+    ...commitmentItems,
+    ...riskItems,
+    ...actionItems,
+    ...memoryItems,
+    ...opportunityItems
+  ]
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 8);
 }
 
 function buildInboxItems(sources, signals) {
