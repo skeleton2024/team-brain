@@ -627,3 +627,23 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 待决问题：
 
 - Commitment / Waiting、Risk / Opportunity 显式模型和 Priority Queue 排序将在后续 Wave 4 issue 中继续补齐。
+
+分支：`issue/COMMIT-01-commitment-waiting`
+
+状态：COMMIT-01 进行中，已补 `Project.commitments` demo / migration、Command Center 承诺区和项目区展示。
+
+改动文件：
+
+- `DATA_MODEL.md`
+- `src/data/demo.js`
+- `src/domain/types.js`
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。

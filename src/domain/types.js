@@ -94,6 +94,22 @@ export const PROJECT_NODE_STATUS = {
   archived: "已归档"
 };
 
+export const COMMITMENT_TYPES = {
+  commitment: "承诺",
+  waiting: "等待项",
+  dependency: "依赖项",
+  follow_up: "Follow-up"
+};
+
+export const COMMITMENT_STATUS = {
+  open: "待处理",
+  waiting: "等待中",
+  blocked: "阻塞",
+  done: "已完成",
+  overdue: "已逾期",
+  archived: "已归档"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",

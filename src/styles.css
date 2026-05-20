@@ -394,7 +394,7 @@ textarea:focus {
 
 .command-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 
@@ -495,6 +495,43 @@ textarea:focus {
 
 .node-panel {
   margin-bottom: 18px;
+}
+
+.commitment-panel {
+  margin-bottom: 18px;
+}
+
+.commitment-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.commitment-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfcfa;
+}
+
+.commitment-card h4,
+.commitment-card p {
+  margin: 0;
+}
+
+.commitment-card h4 {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.commitment-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .entity-layout {

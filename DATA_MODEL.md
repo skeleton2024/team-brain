@@ -788,6 +788,7 @@ Commitment
 - Commitment 是 Command Center 的关键输入。
 - 逾期判断可以先本地规则实现。
 - 不自动代表用户发送催办或承诺内容。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示 `commitment` / `waiting` / `dependency` / `follow_up`，逾期状态可由 `dueAt` 派生但不自动写回外部系统。
 
 ### 13.8 Risk
 

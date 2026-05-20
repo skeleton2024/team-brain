@@ -28,6 +28,9 @@ if (
   commandCenterProbe.todayInbox.length < 1 ||
   !Array.isArray(commandCenterProbe.actionFocus) ||
   commandCenterProbe.actionFocus[0]?.priority !== "high" ||
+  !Array.isArray(commandCenterProbe.commitmentFocus) ||
+  commandCenterProbe.commitmentFocus.length < 1 ||
+  commandCenterProbe.commitmentFocus[0]?.status !== "overdue" ||
   !Array.isArray(commandCenterProbe.memoryReview) ||
   commandCenterProbe.memoryReview.length < 1 ||
   !Array.isArray(commandCenterProbe.riskRadar) ||
@@ -47,6 +50,7 @@ if (
   !commandCenterHtml.includes("今天最该处理什么") ||
   !commandCenterHtml.includes("今日 Inbox") ||
   !commandCenterHtml.includes("行动焦点") ||
+  !commandCenterHtml.includes("承诺 / Waiting") ||
   !commandCenterHtml.includes("记忆复核")
 ) {
   throw new Error("Expected Command Center dashboard to render in smoke HTML.");
@@ -68,7 +72,8 @@ if (
   !Array.isArray(freshProject.nodes) ||
   freshProject.nodes.length !== 1 ||
   freshProject.nodes[0].status !== "active" ||
-  freshProject.nodes[0].projectId !== freshProject.id
+  freshProject.nodes[0].projectId !== freshProject.id ||
+  !Array.isArray(freshProject.commitments)
 ) {
   throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
 }
@@ -385,6 +390,10 @@ const projectNodeHtml = renderApp({
 });
 if (
   !projectNodeHtml.includes("Project Nodes") ||
+  !projectNodeHtml.includes("Commitment / Waiting") ||
+  !projectNodeHtml.includes('data-commitment-panel') ||
+  !projectNodeHtml.includes('data-commitment-id="commit-demo-security-brief"') ||
+  !projectNodeHtml.includes("给客户发送权限边界 follow-up 草稿") ||
   !projectNodeHtml.includes("Node Detail") ||
   !projectNodeHtml.includes("项目推进节点") ||
   !projectNodeHtml.includes("客户试点与权限边界确认") ||
