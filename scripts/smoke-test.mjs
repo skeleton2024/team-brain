@@ -45,6 +45,17 @@ if (
   throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
 }
 
+const commandCenterQueueTypes = new Set(commandCenterProbe.priorityQueue.map((item) => item.type));
+if (
+  !commandCenterQueueTypes.has("commitment") ||
+  !commandCenterQueueTypes.has("risk") ||
+  !commandCenterQueueTypes.has("action") ||
+  !commandCenterQueueTypes.has("memory_review") ||
+  !commandCenterQueueTypes.has("opportunity")
+) {
+  throw new Error(`Expected Priority Queue to cover Wave 4 inputs: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
+}
+
 const commandCenterHtml = renderApp({
   activeProjectId: project.id,
   selectedActionId: null,
@@ -59,7 +70,10 @@ if (
   !commandCenterHtml.includes("今日 Inbox") ||
   !commandCenterHtml.includes("行动焦点") ||
   !commandCenterHtml.includes("承诺 / Waiting") ||
-  !commandCenterHtml.includes("记忆复核")
+  !commandCenterHtml.includes("记忆复核") ||
+  !commandCenterHtml.includes("风险 / 机会") ||
+  !commandCenterHtml.includes("试点前权限边界不清会阻塞客户推进") ||
+  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点")
 ) {
   throw new Error("Expected Command Center dashboard to render in smoke HTML.");
 }
@@ -1142,6 +1156,20 @@ if (allMemoriesMissingSources.length) {
   );
 }
 
+const postResultCommandCenter = buildCommandCenter({
+  project,
+  now: "2026-05-20T00:00:00.000Z"
+});
+if (
+  postResultCommandCenter.priorityQueue.length < 5 ||
+  !postResultCommandCenter.actionFocus.length ||
+  !postResultCommandCenter.memoryReview.length ||
+  !postResultCommandCenter.riskRadar.length ||
+  !postResultCommandCenter.opportunityRadar.length
+) {
+  throw new Error(`Expected post-result project to still produce a full Command Center: ${JSON.stringify(postResultCommandCenter)}`);
+}
+
 const legacyHtml = renderApp({
   activeProjectId: "legacy-project",
   selectedActionId: null,
@@ -1187,7 +1215,11 @@ const summary = {
   results: project.results.length,
   openActions: project.actions.filter((item) => item.status !== "done").length,
   sourceReferencedMemories: project.memories.filter((memory) => hasUsableSourceReference(memory)).length,
-  resultSourceContextId: resultContext.id
+  resultSourceContextId: resultContext.id,
+  priorityQueue: postResultCommandCenter.priorityQueue.length,
+  commitments: postResultCommandCenter.commitmentFocus.length,
+  risks: postResultCommandCenter.riskRadar.length,
+  opportunities: postResultCommandCenter.opportunityRadar.length
 };
 
 if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {

@@ -624,6 +624,22 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - `node scripts/smoke-test.mjs` 通过。
 
+分支：`issue/QA-04-alpha-e2e-smoke`
+
+状态：QA-04 进行中，已扩展 Alpha E2E smoke，并更新 Wave 4 handoff、当前状态和阶段计划。
+
+改动文件：
+
+- `scripts/smoke-test.mjs`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
 分支：`issue/PRIORITY-01-ai-priority-queue`
 
 状态：PRIORITY-01 进行中，已新增本地规则版 Priority Queue，聚合 commitment、risk、action、memory review 和 opportunity。
