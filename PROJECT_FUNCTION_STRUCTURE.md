@@ -618,6 +618,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - Top 3 actions。
 - whyNow。
 - evidenceMemoryIds。
+- memory governance 权重：confirmed 优先，draft / disputed 需要人工复核，outdated / archived 默认不作为新行动证据。
 - owner/deadline suggestion。
 - blockedBy。
 - expectedArtifact。
@@ -638,6 +639,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - customer_followup Brief。
 - investor_reply Brief。
 - coding_brief Brief。
+- memory governance summary：说明 brief 使用了哪些可参与推理的 memory、排除了哪些过期或归档证据。
 - 可编辑保存。
 - 风险和人工确认。
 

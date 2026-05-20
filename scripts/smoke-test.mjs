@@ -672,10 +672,16 @@ if (
       !item.expectedArtifact ||
       !Array.isArray(item.sourceMemoryIds) ||
       item.sourceMemoryIds.length < 1 ||
-      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds)
+      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds) ||
+      !Array.isArray(item.humanConfirmationChecklist) ||
+      !item.humanConfirmationChecklist.some((entry) => entry.includes("待确认"))
   )
 ) {
   throw new Error(`Generated actions should include Phase 3 evidence fields: ${JSON.stringify(generatedActions)}`);
+}
+
+if (generatedActions.some((item) => item.priority === "high")) {
+  throw new Error("Draft-only memories should lower generated action priority until memory governance confirms evidence.");
 }
 
 project = updateMemoryStatus(project, newestMemory.id, "confirmed");
@@ -696,9 +702,11 @@ const memoryActionsHtml = renderApp({
 
 if (
   !memoryActionsHtml.includes('data-action="update-memory-status"') ||
-  !memoryActionsHtml.includes('data-memory-status="archived"')
+  !memoryActionsHtml.includes('data-memory-status="archived"') ||
+  !memoryActionsHtml.includes('data-memory-governance-summary') ||
+  !memoryActionsHtml.includes('data-action-memory-governance')
 ) {
-  throw new Error("Expected memory cards to render quick status actions.");
+  throw new Error("Expected memory cards to render quick status actions and governance summary.");
 }
 
 const memoryDetailHtml = renderApp({
@@ -842,9 +850,18 @@ if (
   !Array.isArray(generatedBrief.evidenceMemoryIds) ||
   generatedBrief.evidenceMemoryIds.length < 1 ||
   !Array.isArray(generatedBrief.sourceContextIds) ||
-  generatedBrief.sourceContextIds.length < 1
+  generatedBrief.sourceContextIds.length < 1 ||
+  !Array.isArray(generatedBrief.sections.memoryGovernance) ||
+  !generatedBrief.sections.memoryGovernance.some((entry) => entry.includes("可参与推理"))
 ) {
   throw new Error(`Generated brief should include evidence and source context links: ${JSON.stringify(generatedBrief)}`);
+}
+
+const briefEvidenceStatuses = generatedBrief.evidenceMemoryIds.map(
+  (memoryId) => project.memories.find((memory) => memory.id === memoryId)?.status || "draft"
+);
+if (briefEvidenceStatuses.some((status) => ["outdated", "archived"].includes(status))) {
+  throw new Error("Brief evidence should exclude outdated and archived memories by default.");
 }
 
 project = recordActionResult(project, action.id, {

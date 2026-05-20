@@ -613,6 +613,96 @@ Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
 - `scripts/smoke-test.mjs`
 - `src/domain/agentEngine.js`
 
+### `docs/issues/MEM-05-memory-governance-live.md`
+
+Phase 3 Alpha Wave 3 的 Memory Governance Live issue。
+
+主要作用：
+
+- 要求 memory 状态真实影响展示、行动建议、brief 证据和优先级。
+- 要求 confirmed memory 更积极参与 action loop。
+- 要求 outdated / archived memory 默认不作为新行动强证据。
+- 明确本 issue 不自动删除或覆盖 memory，不接外部 API。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/ACTION-01-brief-generation.md`
+
+Phase 3 Alpha Wave 3 的 Action Brief Generation issue。
+
+主要作用：
+
+- 要求 Brief 从通用说明升级为场景化执行包。
+- 要求 Brief 消费 action、entity、node、memory、风险和成功标准。
+- 要求高风险 brief 保留人工确认和不要承诺项。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/ACTION-02-result-feedback.md`
+
+Phase 3 Alpha Wave 3 的 Result Feedback issue。
+
+主要作用：
+
+- 要求完善 result feedback 输入和记录。
+- 要求 result 保存 what changed、new evidence、follow-up needed 和相关 memory updates。
+- 要求 result 能挂回 action、memory 和 Project Node。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/REC-03-result-to-memory-update.md`
+
+Phase 3 Alpha Wave 3 的 Result to Memory Update issue。
+
+主要作用：
+
+- 要求根据 result 生成 memory update 建议。
+- 要求需要后续动作时生成 pending follow-up action。
+- 要求 Project Node 展示 result 带来的下一步建议或状态变化。
+- 明确关键 memory update 仍需人工确认，不自动覆盖旧判断。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/QA-03-action-loop-smoke.md`
+
+Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
+
+主要作用：
+
+- 要求 smoke 覆盖 Memory Governance -> Action Brief -> Result Feedback -> Memory Update / Follow-up Action / Project Node 的完整路径。
+- 要求验证 Wave 3 UI 渲染和核心对象链接。
+- 不新增产品功能或外部 API。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`

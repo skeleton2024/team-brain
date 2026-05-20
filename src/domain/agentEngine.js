@@ -374,7 +374,7 @@ export function generateBrief(project, actionId) {
     };
   }
 
-  const memories = resolveMemories(project, action.sourceMemoryIds);
+  const memories = resolveActionBriefMemories(project, action);
   const brief = buildBrief(project, action, memories);
 
   return {
@@ -714,6 +714,8 @@ function buildActionForMemoryType(memoryType, memories) {
     return null;
   }
   const statusNote = actionEvidenceStatusNote(sourceMemories);
+  const governedPriority = actionPriorityForMemoryGovernance(template.priority, sourceMemories);
+  const governedRiskLevel = actionRiskForMemoryGovernance(template.riskLevel, sourceMemories);
 
   return {
     id: makeId("act"),
@@ -721,12 +723,13 @@ function buildActionForMemoryType(memoryType, memories) {
     title: adaptActionTitle(template.title, lead),
     rationale: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
     whyNow: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
-    priority: template.priority,
-    riskLevel: template.riskLevel,
+    priority: governedPriority,
+    riskLevel: governedRiskLevel,
     expectedOutput: template.expectedOutput,
     expectedArtifact: template.expectedOutput,
     sourceMemoryIds: sourceMemories.map((memory) => memory.id),
     evidenceMemoryIds: sourceMemories.map((memory) => memory.id),
+    humanConfirmationChecklist: actionMemoryGovernanceChecklist(sourceMemories),
     status: "pending",
     requiresHumanConfirmation: true,
     createdAt: new Date().toISOString()
@@ -736,6 +739,7 @@ function buildActionForMemoryType(memoryType, memories) {
 function buildBrief(project, action, memories) {
   const memoryText = memories.map((memory) => `- ${memory.title}: ${memory.detail}`).join("\n");
   const typeName = ACTION_TYPES[action.type] || action.type;
+  const governanceNotes = briefMemoryGovernanceNotes(project, action, memories);
 
   return {
     id: makeId("brief"),
@@ -752,6 +756,7 @@ function buildBrief(project, action, memories) {
       background:
         memoryText ||
         `${project.name} 当前处于 ${project.stage}，需要把上下文转成可执行动作。`,
+      memoryGovernance: governanceNotes,
       strategy: buildStrategy(action),
       draft: buildDraft(project, action, memories, typeName),
       risks: buildRiskNotes(action),
@@ -827,6 +832,110 @@ function buildStrategy(action) {
   };
 
   return strategies[action.type] || strategies.learning_loop;
+}
+
+function resolveActionBriefMemories(project, action) {
+  const memoryIds = unique([
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ]);
+
+  return resolveMemories(project, memoryIds)
+    .filter(isUsableActionMemory)
+    .sort(compareMemoryEvidenceStrength);
+}
+
+function actionPriorityForMemoryGovernance(basePriority, memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("confirmed") && !statuses.has("disputed")) {
+    return basePriority;
+  }
+
+  if (basePriority === "high") {
+    return "medium";
+  }
+
+  return basePriority;
+}
+
+function actionRiskForMemoryGovernance(baseRisk, memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("disputed")) {
+    return "high";
+  }
+
+  if (statuses.has("draft") && baseRisk === "low") {
+    return "medium";
+  }
+
+  return baseRisk;
+}
+
+function actionMemoryGovernanceChecklist(memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  const checklist = [
+    "确认引用 memory 的来源片段仍然准确",
+    "确认对外内容只作为草稿，不自动执行"
+  ];
+
+  if (statuses.has("draft")) {
+    checklist.push("先确认待确认 memory，再把它作为强行动依据");
+  }
+
+  if (statuses.has("disputed")) {
+    checklist.push("先处理有争议 memory，避免把冲突判断写成确定事实");
+  }
+
+  if (!statuses.has("confirmed")) {
+    checklist.push("当前缺少已确认 memory，执行前需要负责人复核");
+  }
+
+  return checklist;
+}
+
+function briefMemoryGovernanceNotes(project, action, activeMemories) {
+  const referencedMemoryIds = unique([
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ]);
+  const referencedMemories = resolveMemories(project, referencedMemoryIds);
+  const activeIds = new Set(activeMemories.map((memory) => memory.id));
+  const excludedMemories = referencedMemories.filter((memory) => !activeIds.has(memory.id));
+  const notes = [];
+
+  if (activeMemories.length) {
+    notes.push(
+      `本 brief 使用 ${activeMemories.length} 条可参与推理的 memory：${memoryStatusSummary(activeMemories)}。`
+    );
+  } else {
+    notes.push("当前 action 没有可参与推理的 memory，执行前必须人工补证据。");
+  }
+
+  if (excludedMemories.length) {
+    notes.push(
+      `已排除 ${excludedMemories.length} 条过期或归档 memory：${excludedMemories
+        .map((memory) => memory.title)
+        .join("、")}。`
+    );
+  }
+
+  if (activeMemories.some((memory) => (memory.status || "draft") !== "confirmed")) {
+    notes.push("含待确认或有争议 memory，发送或执行前需要人工复核。");
+  }
+
+  return notes;
+}
+
+function memoryStatusSummary(memories) {
+  const counts = memories.reduce((summary, memory) => {
+    const status = memory.status || "draft";
+    summary[status] = (summary[status] || 0) + 1;
+    return summary;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([status, count]) => `${status} ${count}`)
+    .join("、");
 }
 
 function buildDraft(project, action, memories, typeName) {

@@ -379,6 +379,8 @@ archived
 - 每个行动必须有 `whyNow`。
 - 每个行动必须有至少一个 `evidenceMemoryIds`，除非是人工创建。
 - 高风险 action 必须有 `humanConfirmationChecklist`。
+- Phase 3 Alpha Wave 3 起，action planning 必须受 memory governance 影响：`confirmed` memory 优先作为强证据，`draft` 和 `disputed` memory 需要人工复核，`outdated` 和 `archived` memory 默认不参与新 action 证据。
+- 当 action 只依赖待确认或有争议 memory 时，应降低优先级或提高风险提示，并在 `humanConfirmationChecklist` 中提示先处理 memory governance。
 
 ## 9. Brief
 
@@ -444,6 +446,7 @@ reviewChecklist
 - Brief 必须能被人工编辑。
 - Brief 必须能追溯证据记忆。
 - 高风险内容必须有不要承诺或人工确认项。
+- Phase 3 Alpha Wave 3 起，Brief 只默认引用可参与推理的 memory，并在 `sections.memoryGovernance` 中说明使用了哪些状态的 memory、排除了哪些过期或归档证据，以及是否需要人工复核。
 
 ## 10. ActionResult
 
