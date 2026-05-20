@@ -177,6 +177,48 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 ## 9. 开发日志
 
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 3 开工与 `MEM-05-memory-governance-live`
+
+分支：`issue/MEM-05-memory-governance-live`
+
+状态：开发中，已完成 MEM-05 本地实现和 smoke
+
+改动文件：
+
+- `docs/issues/MEM-05-memory-governance-live.md`
+- `docs/issues/ACTION-01-brief-generation.md`
+- `docs/issues/ACTION-02-result-feedback.md`
+- `docs/issues/REC-03-result-to-memory-update.md`
+- `docs/issues/QA-03-action-loop-smoke.md`
+- `docs/issues/README.md`
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- 新增 Wave 3 issue specs。
+- memory governance 已进入 action planning：confirmed 优先，draft / disputed 触发人工复核，outdated / archived 默认不作为新 brief 证据。
+- UI 新增 memory governance summary 和 action evidence governance 标记。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- MEM-05 合回 `integration/phase-3-wave-03` 后需要再次运行 smoke。
+- 后续 ACTION-01 需要进一步场景化 Brief sections。
+
+下一步：
+
+- 提交 MEM-05，合回 Wave 3 集成分支，然后继续 `ACTION-01-brief-generation`。
+
 ### 2026-05-18
 
 负责人：Codex

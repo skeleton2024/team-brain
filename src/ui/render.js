@@ -953,6 +953,8 @@ function renderMemories(project, editingMemoryId, selectedMemoryId) {
       <span class="count-pill">${project.memories.length}</span>
     </div>
 
+    ${renderMemoryGovernanceSummary(project)}
+
     <div class="memory-groups">
       ${grouped
         .map(
@@ -1339,7 +1341,7 @@ function renderActions(project, selectedActionId) {
     ${
       openActions.length
         ? `<div class="action-list">
-            ${openActions.map((action) => renderActionCard(action, selectedActionId)).join("")}
+            ${openActions.map((action) => renderActionCard(project, action, selectedActionId)).join("")}
           </div>`
         : emptyState("暂无待处理行动")
     }
@@ -1348,14 +1350,14 @@ function renderActions(project, selectedActionId) {
       doneActions.length
         ? `<details class="done-actions">
             <summary>已回流行动 ${doneActions.length}</summary>
-            ${doneActions.map((action) => renderActionCard(action, selectedActionId)).join("")}
+            ${doneActions.map((action) => renderActionCard(project, action, selectedActionId)).join("")}
           </details>`
         : ""
     }
   `;
 }
 
-function renderActionCard(action, selectedActionId) {
+function renderActionCard(project, action, selectedActionId) {
   return `
     <button class="action-card ${action.id === selectedActionId ? "selected" : ""}" data-action-id="${action.id}" type="button">
       <div class="action-card-top">
@@ -1368,6 +1370,7 @@ function renderActionCard(action, selectedActionId) {
         <span>优先级 ${escapeHtml(PRIORITY_LABELS[action.priority])}</span>
         <span>${escapeHtml(RISK_LABELS[action.riskLevel])}</span>
       </div>
+      ${renderActionMemoryGovernance(project, action)}
     </button>
   `;
 }
@@ -1435,6 +1438,7 @@ function renderBriefSections(brief) {
   const sections = [
     ["目标", brief.sections.goal],
     ["已知背景", brief.sections.background],
+    ["证据治理", brief.sections.memoryGovernance],
     ["建议策略", brief.sections.strategy],
     ["草稿内容", brief.sections.draft],
     ["风险提醒", brief.sections.risks],
@@ -1445,6 +1449,7 @@ function renderBriefSections(brief) {
   return `
     <div class="brief-sections">
       ${sections
+        .filter(([, content]) => content !== undefined && content !== null && content !== "")
         .map(
           ([title, content]) => `
             <section class="brief-section">
@@ -1468,6 +1473,77 @@ function renderSectionContent(content) {
   }
 
   return `<pre>${escapeHtml(content)}</pre>`;
+}
+
+function renderMemoryGovernanceSummary(project) {
+  const counts = countMemoryStatuses(project.memories || []);
+  const activeEvidence = counts.confirmed + counts.draft + counts.disputed;
+  const retiredEvidence = counts.outdated + counts.archived;
+
+  return `
+    <div class="memory-governance-summary" data-memory-governance-summary>
+      <div>
+        <p class="eyebrow">Governance</p>
+        <strong>记忆治理影响</strong>
+        <span>参与行动证据 ${activeEvidence} · 默认排除 ${retiredEvidence}</span>
+      </div>
+      <div class="governance-metrics">
+        ${renderGovernanceMetric("已确认", counts.confirmed, "confirmed")}
+        ${renderGovernanceMetric("待确认", counts.draft, "draft")}
+        ${renderGovernanceMetric("有争议", counts.disputed, "disputed")}
+        ${renderGovernanceMetric("已过期", counts.outdated, "outdated")}
+        ${renderGovernanceMetric("已归档", counts.archived, "archived")}
+      </div>
+    </div>
+  `;
+}
+
+function renderActionMemoryGovernance(project, action) {
+  const memoryIds = new Set(actionMemoryIds(action));
+  const memories = (project.memories || []).filter((memory) => memoryIds.has(memory.id));
+  if (!memories.length) {
+    return `<div class="action-governance muted">证据待补</div>`;
+  }
+
+  const counts = countMemoryStatuses(memories);
+  const needsReview = counts.draft + counts.disputed;
+  const excluded = counts.outdated + counts.archived;
+
+  return `
+    <div class="action-governance" data-action-memory-governance>
+      <span>已确认 ${counts.confirmed}</span>
+      <span>待复核 ${needsReview}</span>
+      ${excluded ? `<span>已排除 ${excluded}</span>` : ""}
+    </div>
+  `;
+}
+
+function renderGovernanceMetric(label, count, status) {
+  return `
+    <span class="governance-metric ${escapeHtml(status)}">
+      <strong>${escapeHtml(String(count))}</strong>
+      ${escapeHtml(label)}
+    </span>
+  `;
+}
+
+function countMemoryStatuses(memories) {
+  return memories.reduce(
+    (counts, memory) => {
+      const status = memory.status || "draft";
+      if (counts[status] !== undefined) {
+        counts[status] += 1;
+      }
+      return counts;
+    },
+    {
+      draft: 0,
+      confirmed: 0,
+      outdated: 0,
+      disputed: 0,
+      archived: 0
+    }
+  );
 }
 
 function emptyState(text) {
