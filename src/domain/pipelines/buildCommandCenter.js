@@ -25,14 +25,15 @@ export function buildCommandCenter({ project, now = new Date().toISOString() } =
   const todayInbox = buildInboxItems(sources, signals);
   const memoryReview = buildMemoryReview(memories);
   const actionFocus = buildActionFocus(actions);
+  const commitmentFocus = buildCommitmentFocus(commitments, now);
   const riskRadar = buildRiskRadar(project, memories, actions);
   const opportunityRadar = buildOpportunityRadar(project, memories, signals);
   const health = buildProjectHealth({
     todayInbox,
     memoryReview,
     actionFocus,
+    commitmentFocus,
     riskRadar,
-    commitments,
     nodes
   });
 
@@ -48,11 +49,12 @@ export function buildCommandCenter({ project, now = new Date().toISOString() } =
       blockedNodes: nodes.filter((node) => node.status === "blocked").length,
       risks: riskRadar.length,
       opportunities: opportunityRadar.length,
-      commitments: commitments.filter((item) => item.status !== "done" && item.status !== "archived").length
+      commitments: commitmentFocus.length
     },
     todayInbox,
     memoryReview,
     actionFocus,
+    commitmentFocus,
     riskRadar,
     opportunityRadar,
     priorityQueue: []
@@ -81,6 +83,7 @@ function emptySnapshot(now) {
     todayInbox: [],
     memoryReview: [],
     actionFocus: [],
+    commitmentFocus: [],
     riskRadar: [],
     opportunityRadar: [],
     priorityQueue: []
@@ -165,6 +168,33 @@ function buildActionFocus(actions) {
         (RISK_WEIGHT[action.riskLevel] || 2) * 3 +
         (action.status === "pending" ? 2 : 0)
     }))
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5);
+}
+
+function buildCommitmentFocus(commitments, now) {
+  return commitments
+    .filter((commitment) => !["done", "archived"].includes(commitment.status))
+    .map((commitment) => {
+      const status = deriveCommitmentStatus(commitment, now);
+      return {
+        id: commitment.id,
+        type: commitment.type || "commitment",
+        title: commitment.title,
+        who: commitment.who || "待确认",
+        toWhom: commitment.toWhom || "",
+        dueAt: commitment.dueAt || "",
+        status,
+        nodeId: commitment.nodeId || "",
+        evidenceLinks: normalizeEvidenceLinks(commitment.evidenceLinks),
+        score:
+          (status === "overdue" ? 40 : 0) +
+          (status === "blocked" ? 30 : 0) +
+          (commitment.type === "dependency" ? 8 : 0) +
+          (commitment.type === "waiting" ? 5 : 0) +
+          (commitment.dueAt ? 4 : 0)
+      };
+    })
     .sort((left, right) => right.score - left.score)
     .slice(0, 5);
 }
@@ -267,11 +297,11 @@ function buildOpportunityRadar(project, memories, signals) {
   return [...explicitOpportunities, ...memoryOpportunities, ...signalOpportunities].slice(0, 5);
 }
 
-function buildProjectHealth({ todayInbox, memoryReview, actionFocus, riskRadar, commitments, nodes }) {
+function buildProjectHealth({ todayInbox, memoryReview, actionFocus, commitmentFocus, riskRadar, nodes }) {
   const reasons = [];
   const blockedNodes = nodes.filter((node) => node.status === "blocked");
   const highRisks = riskRadar.filter((risk) => risk.severity === "high");
-  const overdueCommitments = commitments.filter((item) => item.status === "overdue");
+  const overdueCommitments = commitmentFocus.filter((item) => item.status === "overdue");
   const highActions = actionFocus.filter((action) => action.priority === "high");
   const disputedMemories = memoryReview.filter((memory) => memory.status === "disputed");
 
@@ -343,6 +373,18 @@ function memoryReviewWeight(status) {
 
 function compareDates(left, right) {
   return new Date(left || 0).getTime() - new Date(right || 0).getTime();
+}
+
+function deriveCommitmentStatus(commitment, now) {
+  if (["done", "archived", "blocked", "overdue"].includes(commitment.status)) {
+    return commitment.status;
+  }
+
+  if (commitment.dueAt && new Date(commitment.dueAt).getTime() < new Date(now).getTime()) {
+    return "overdue";
+  }
+
+  return commitment.status || "open";
 }
 
 function trimEvidence(value) {

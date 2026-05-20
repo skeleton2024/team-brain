@@ -3,6 +3,8 @@ import {
   MEMORY_STATUS,
   MEMORY_TYPES,
   ENTITY_TYPES,
+  COMMITMENT_STATUS,
+  COMMITMENT_TYPES,
   PROJECT_NODE_STATUS,
   SIGNAL_TYPES,
   SOURCE_TYPE_LABELS
@@ -72,6 +74,7 @@ export function makeProject(name) {
     actions: [],
     briefs: [],
     results: [],
+    commitments: [],
     reconciliationResults: [],
     pendingMemoryUpdates: []
   };
@@ -164,6 +167,9 @@ function normalizeProject(project) {
     actions: Array.isArray(project.actions) ? project.actions : [],
     briefs: Array.isArray(project.briefs) ? project.briefs : [],
     results: Array.isArray(project.results) ? project.results.map(normalizeActionResult) : [],
+    commitments: Array.isArray(project.commitments)
+      ? project.commitments.map((commitment) => normalizeCommitment(commitment, project))
+      : [],
     reconciliationResults: Array.isArray(project.reconciliationResults)
       ? project.reconciliationResults.map(normalizeReconciliationResult)
       : [],
@@ -351,6 +357,26 @@ function normalizeActionResult(result) {
   };
 }
 
+function normalizeCommitment(commitment, project) {
+  const createdAt = commitment.createdAt || new Date().toISOString();
+
+  return {
+    ...commitment,
+    id: commitment.id || makeId("commitment"),
+    projectId: commitment.projectId || project.id,
+    nodeId: commitment.nodeId || "",
+    type: normalizeCommitmentType(commitment.type),
+    title: commitment.title || "未命名承诺",
+    who: commitment.who || "待确认",
+    toWhom: commitment.toWhom || "",
+    dueAt: commitment.dueAt || "",
+    status: normalizeCommitmentStatus(commitment.status),
+    evidenceLinks: normalizeEvidenceLinks(commitment.evidenceLinks),
+    createdAt,
+    updatedAt: commitment.updatedAt || createdAt
+  };
+}
+
 function normalizeReconciliationResult(result) {
   const createdAt = result.createdAt || new Date().toISOString();
 
@@ -421,6 +447,27 @@ function normalizeSourceReferences(value) {
     }));
 }
 
+function normalizeEvidenceLinks(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((link) => ({
+      sourceId: String(link?.sourceId || "").trim(),
+      contextId: String(link?.contextId || "").trim(),
+      signalId: String(link?.signalId || "").trim(),
+      memoryId: String(link?.memoryId || "").trim(),
+      quote: String(link?.quote || "").trim(),
+      note: link?.note ? String(link.note).trim() : undefined,
+      confidence:
+        typeof link?.confidence === "number"
+          ? Math.max(0, Math.min(1, link.confidence))
+          : undefined
+    }))
+    .filter((link) => link.sourceId || link.contextId || link.signalId || link.memoryId || link.quote);
+}
+
 function normalizeMemoryStatus(value) {
   return ["draft", "confirmed", "outdated", "disputed", "archived"].includes(value)
     ? value
@@ -465,6 +512,14 @@ function normalizeEntityStatus(value) {
 
 function normalizeProjectNodeStatus(value) {
   return PROJECT_NODE_STATUS[value] ? value : "planned";
+}
+
+function normalizeCommitmentType(value) {
+  return COMMITMENT_TYPES[value] ? value : "commitment";
+}
+
+function normalizeCommitmentStatus(value) {
+  return COMMITMENT_STATUS[value] ? value : "open";
 }
 
 function normalizeReconciliationOperation(value) {

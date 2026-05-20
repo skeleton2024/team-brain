@@ -1,6 +1,8 @@
 import {
   ACTION_STATUS,
   ACTION_TYPES,
+  COMMITMENT_STATUS,
+  COMMITMENT_TYPES,
   CONTEXT_IMPORTANCE,
   CONTEXT_IMPORTANCE_LABELS,
   CONTEXT_TYPES,
@@ -143,6 +145,7 @@ export function renderApp(state) {
         ${renderInbox(project)}
         ${renderEntityProfiles(project, state.selectedEntityId)}
         ${renderProjectNodes(project, state.selectedNodeId)}
+        ${renderCommitments(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -201,6 +204,14 @@ function renderCommandCenter(project) {
             <span>${snapshot.actionFocus.length}</span>
           </div>
           ${renderCommandList(snapshot.actionFocus, "暂无待处理行动。", renderCommandActionItem)}
+        </section>
+
+        <section class="command-section" data-command-center-commitments>
+          <div class="command-section-heading">
+            <h4>承诺 / Waiting</h4>
+            <span>${snapshot.commitmentFocus.length}</span>
+          </div>
+          ${renderCommandList(snapshot.commitmentFocus, "暂无承诺或等待项。", renderCommandCommitmentItem)}
         </section>
 
         <section class="command-section" data-command-center-memory-review>
@@ -267,6 +278,20 @@ function renderCommandActionItem(item) {
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.reason || "等待补充 why now。")}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
+  `;
+}
+
+function renderCommandCommitmentItem(item) {
+  return `
+    <article class="command-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(commitmentTypeLabel(item.type))}</span>
+        <span>${escapeHtml(commitmentStatusLabel(item.status))}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(commitmentLine(item))}</p>
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -1055,6 +1080,53 @@ function renderNodeResults(results) {
         )
         .join("")}
     </div>
+  `;
+}
+
+function renderCommitments(project) {
+  const commitments = project?.commitments || [];
+  const activeCommitments = commitments.filter(
+    (commitment) => !["done", "archived"].includes(commitment.status)
+  );
+
+  return `
+    <section class="panel commitment-panel" data-commitment-panel>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Commitment / Waiting</p>
+          <h3>承诺、等待与依赖</h3>
+        </div>
+        <span class="count-pill">${activeCommitments.length}</span>
+      </div>
+      ${
+        activeCommitments.length
+          ? `<div class="commitment-list">
+              ${activeCommitments.map((commitment) => renderCommitmentCard(project, commitment)).join("")}
+            </div>`
+          : emptyState("暂无承诺、等待项或依赖项。")
+      }
+    </section>
+  `;
+}
+
+function renderCommitmentCard(project, commitment) {
+  const node = (project.nodes || []).find((item) => item.id === commitment.nodeId);
+  const status = displayCommitmentStatus(commitment);
+
+  return `
+    <article class="commitment-card" data-commitment-id="${escapeHtml(commitment.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(commitmentTypeLabel(commitment.type))}</span>
+        <span class="status ${escapeHtml(status)}">${escapeHtml(commitmentStatusLabel(status))}</span>
+        ${commitment.dueAt ? `<span>截止 ${escapeHtml(formatDateOnly(commitment.dueAt))}</span>` : ""}
+      </div>
+      <h4>${escapeHtml(commitment.title)}</h4>
+      <p>${escapeHtml(commitmentLine(commitment))}</p>
+      <div class="context-meta">
+        ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
+        ${commitment.evidenceLinks?.length ? `<span>证据 ${commitment.evidenceLinks.length}</span>` : ""}
+      </div>
+    </article>
   `;
 }
 
@@ -2149,6 +2221,32 @@ function entityStatusLabel(status) {
 
 function projectNodeStatusLabel(status) {
   return PROJECT_NODE_STATUS[status] || PROJECT_NODE_STATUS.planned;
+}
+
+function commitmentTypeLabel(type) {
+  return COMMITMENT_TYPES[type] || COMMITMENT_TYPES.commitment;
+}
+
+function commitmentStatusLabel(status) {
+  return COMMITMENT_STATUS[status] || COMMITMENT_STATUS.open;
+}
+
+function displayCommitmentStatus(commitment) {
+  if (["done", "archived", "blocked", "overdue"].includes(commitment.status)) {
+    return commitment.status;
+  }
+
+  if (commitment.dueAt && new Date(commitment.dueAt).getTime() < Date.now()) {
+    return "overdue";
+  }
+
+  return commitment.status || "open";
+}
+
+function commitmentLine(commitment) {
+  const target = commitment.toWhom ? ` -> ${commitment.toWhom}` : "";
+  const due = commitment.dueAt ? ` · ${formatDateOnly(commitment.dueAt)}` : "";
+  return `${commitment.who || "待确认"}${target}${due}`;
 }
 
 function confidenceScoreLabel(confidence) {

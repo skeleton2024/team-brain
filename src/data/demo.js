@@ -1,6 +1,7 @@
 const now = new Date().toISOString();
 const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+const oneDayAhead = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 const demoContextId = "ctx-demo-1";
 
 export const DEMO_PROJECT = {
@@ -129,7 +130,7 @@ export const DEMO_PROJECT = {
       signalIds: ["sig-demo-1"],
       memoryIds: ["mem-demo-customer", "mem-demo-risk"],
       actionIds: ["act-demo-customer"],
-      waitingIds: [],
+      waitingIds: ["commit-demo-security-brief", "commit-demo-customer-feedback"],
       riskIds: [],
       resultIds: [],
       createdAt: twoDaysAgo,
@@ -149,10 +150,97 @@ export const DEMO_PROJECT = {
       signalIds: [],
       memoryIds: ["mem-demo-engineering", "mem-demo-product"],
       actionIds: ["act-demo-engineering", "act-demo-product"],
-      waitingIds: [],
+      waitingIds: ["commit-demo-engineering-dependency"],
       riskIds: [],
       resultIds: [],
       createdAt: oneDayAgo,
+      updatedAt: now
+    }
+  ],
+  commitments: [
+    {
+      id: "commit-demo-security-brief",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      type: "commitment",
+      title: "给客户发送权限边界 follow-up 草稿",
+      who: "创始人",
+      toWhom: "客户访谈小组",
+      dueAt: oneDayAgo,
+      status: "open",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          quote: "一个付费意向客户愿意下周试点，但要求先确认权限设置、删除机制和数据范围。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.88
+        }
+      ],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    },
+    {
+      id: "commit-demo-customer-feedback",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      type: "waiting",
+      title: "等待客户确认试点范围",
+      who: "客户访谈小组",
+      toWhom: "Northstar Copilot",
+      dueAt: oneDayAhead,
+      status: "waiting",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          quote: "他们希望 follow-up 草稿里不要承诺自动导入所有历史数据。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.76
+        }
+      ],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "commit-demo-engineering-dependency",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-engineering-loop",
+      type: "dependency",
+      title: "工程需要确认本周只保留手动录入范围",
+      who: "工程负责人",
+      toWhom: "产品负责人",
+      dueAt: now,
+      status: "blocked",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-3",
+          quote: "工程同步确认本周不做 Slack 导入，先把手动粘贴上下文、生成记忆、生成行动 Brief 和结果回流路径做稳定。",
+          note: "手动粘贴闭环工程同步",
+          confidence: 0.82
+        }
+      ],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "commit-demo-investor-follow-up",
+      projectId: "project-demo-northstar",
+      nodeId: "",
+      type: "follow_up",
+      title: "复盘投资人问答材料缺口",
+      who: "创始人",
+      toWhom: "",
+      dueAt: oneDayAhead,
+      status: "open",
+      evidenceLinks: [
+        {
+          sourceId: "src-demo-1",
+          signalId: "sig-demo-1",
+          quote: "一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+          note: "周一增长复盘",
+          confidence: 0.66
+        }
+      ],
+      createdAt: twoDaysAgo,
       updatedAt: now
     }
   ],
