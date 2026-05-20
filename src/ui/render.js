@@ -41,6 +41,90 @@ const PROJECT_NODE_STATUS_ACTIONS = [
   { status: "archived", label: "归档" }
 ];
 
+const BRIEF_SECTION_LABELS = {
+  goal: "目标",
+  background: "已知背景",
+  entityContext: "相关 Entity",
+  projectNodeContext: "相关节点",
+  memoryGovernance: "证据治理",
+  customerConcern: "客户顾虑",
+  replyStrategy: "回复策略",
+  draftMessage: "草稿内容",
+  doNotPromise: "不要承诺",
+  nextQuestions: "下一步问题",
+  investorQuestion: "投资人问题",
+  shortAnswer: "简短回答",
+  evidenceWeHave: "已有证据",
+  evidenceMissing: "证据缺口",
+  suggestedWording: "建议话术",
+  doNotSay: "不要这样说",
+  followUpMaterials: "后续材料",
+  founderConfirmationChecklist: "创始人确认清单",
+  scope: "实现范围",
+  nonGoals: "不做范围",
+  acceptanceCriteria: "验收标准",
+  testPlan: "测试计划",
+  risks: "风险提醒",
+  reviewChecklist: "Review 清单",
+  strategy: "建议策略",
+  draft: "草稿内容",
+  successCriteria: "成功标准",
+  checklist: "人工确认清单",
+  humanConfirmationChecklist: "人工确认清单"
+};
+
+const BRIEF_SECTION_ORDER = {
+  customer_followup: [
+    "background",
+    "entityContext",
+    "projectNodeContext",
+    "memoryGovernance",
+    "customerConcern",
+    "replyStrategy",
+    "draftMessage",
+    "doNotPromise",
+    "nextQuestions",
+    "successCriteria",
+    "humanConfirmationChecklist"
+  ],
+  investor_reply: [
+    "investorQuestion",
+    "shortAnswer",
+    "entityContext",
+    "memoryGovernance",
+    "evidenceWeHave",
+    "evidenceMissing",
+    "suggestedWording",
+    "doNotSay",
+    "followUpMaterials",
+    "founderConfirmationChecklist"
+  ],
+  coding_brief: [
+    "goal",
+    "background",
+    "projectNodeContext",
+    "memoryGovernance",
+    "scope",
+    "nonGoals",
+    "acceptanceCriteria",
+    "testPlan",
+    "risks",
+    "reviewChecklist"
+  ],
+  default: [
+    "goal",
+    "background",
+    "entityContext",
+    "projectNodeContext",
+    "memoryGovernance",
+    "strategy",
+    "draft",
+    "risks",
+    "successCriteria",
+    "checklist"
+  ]
+};
+
 export function renderApp(state) {
   const project = getActiveProject(state);
   const selectedAction = project?.actions.find((action) => action.id === state.selectedActionId);
@@ -1435,16 +1519,7 @@ function renderBrief(project, action, brief) {
 }
 
 function renderBriefSections(brief) {
-  const sections = [
-    ["目标", brief.sections.goal],
-    ["已知背景", brief.sections.background],
-    ["证据治理", brief.sections.memoryGovernance],
-    ["建议策略", brief.sections.strategy],
-    ["草稿内容", brief.sections.draft],
-    ["风险提醒", brief.sections.risks],
-    ["成功标准", brief.sections.successCriteria],
-    ["人工确认清单", brief.sections.checklist]
-  ];
+  const sections = orderedBriefSections(brief);
 
   return `
     <div class="brief-sections">
@@ -1461,6 +1536,23 @@ function renderBriefSections(brief) {
         .join("")}
     </div>
   `;
+}
+
+function orderedBriefSections(brief) {
+  const sections = brief.sections || {};
+  const preferredOrder = BRIEF_SECTION_ORDER[brief.type] || BRIEF_SECTION_ORDER.default;
+  const seen = new Set();
+  const ordered = preferredOrder
+    .filter((key) => sections[key] !== undefined)
+    .map((key) => {
+      seen.add(key);
+      return [BRIEF_SECTION_LABELS[key] || key, sections[key]];
+    });
+  const extras = Object.keys(sections)
+    .filter((key) => !seen.has(key))
+    .map((key) => [BRIEF_SECTION_LABELS[key] || key, sections[key]]);
+
+  return [...ordered, ...extras];
 }
 
 function renderSectionContent(content) {

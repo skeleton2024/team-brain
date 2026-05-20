@@ -740,6 +740,18 @@ function buildBrief(project, action, memories) {
   const memoryText = memories.map((memory) => `- ${memory.title}: ${memory.detail}`).join("\n");
   const typeName = ACTION_TYPES[action.type] || action.type;
   const governanceNotes = briefMemoryGovernanceNotes(project, action, memories);
+  const relatedEntities = entitiesForBrief(project, action, memories);
+  const relatedNodes = nodesForBrief(project, action, memories);
+  const sections = buildBriefSectionsForAction({
+    project,
+    action,
+    memories,
+    memoryText,
+    typeName,
+    governanceNotes,
+    relatedEntities,
+    relatedNodes
+  });
 
   return {
     id: makeId("brief"),
@@ -751,28 +763,124 @@ function buildBrief(project, action, memories) {
     evidenceMemoryIds: memories.map((memory) => memory.id),
     sourceContextIds: sourceContextIdsForMemories(memories),
     createdBy: "ai",
-    sections: {
-      goal: `完成“${action.title}”，产出 ${action.expectedOutput}。`,
-      background:
-        memoryText ||
-        `${project.name} 当前处于 ${project.stage}，需要把上下文转成可执行动作。`,
+    sections
+  };
+}
+
+function buildBriefSectionsForAction(input) {
+  const {
+    project,
+    action,
+    memories,
+    memoryText,
+    typeName,
+    governanceNotes,
+    relatedEntities,
+    relatedNodes
+  } = input;
+  const background =
+    memoryText ||
+    `${project.name} 当前处于 ${project.stage || "推进中"}，需要把上下文转成可执行动作。`;
+  const entityContext = relatedEntities.length
+    ? relatedEntities.map((entity) => `${entity.name}${entity.role ? `（${entity.role}）` : ""}`)
+    : ["暂无明确关联 Entity"];
+  const nodeContext = relatedNodes.length
+    ? relatedNodes.map((node) => `${node.title}: ${node.goal || "目标待补"}`)
+    : ["暂无明确关联 Project Node"];
+  const successCriteria = [
+    "输出能被团队成员直接审阅和修改",
+    "没有自动发送、自动承诺或自动修改外部系统",
+    "关键假设、证据缺口和风险边界被写清楚",
+    "执行后可以把结果回填到 TeamMind"
+  ];
+  const checklist = [
+    "创始人确认事实是否准确",
+    "负责人确认下一步是否可执行",
+    "高风险承诺已删除或改成待确认表述",
+    "对外发送前完成最后人工审阅"
+  ];
+
+  if (action.type === "customer_followup") {
+    return {
+      background,
+      entityContext,
+      projectNodeContext: nodeContext,
       memoryGovernance: governanceNotes,
-      strategy: buildStrategy(action),
-      draft: buildDraft(project, action, memories, typeName),
-      risks: buildRiskNotes(action),
-      successCriteria: [
-        "输出能被团队成员直接审阅和修改",
-        "没有自动发送、自动承诺或自动修改外部系统",
-        "关键假设、证据缺口和风险边界被写清楚",
-        "执行后可以把结果回填到 TeamMind"
+      customerConcern: memories.map((memory) => `${memory.title}: ${memory.detail}`),
+      replyStrategy: buildStrategy(action),
+      draftMessage: buildDraft(project, action, memories, typeName),
+      doNotPromise: buildRiskNotes(action),
+      nextQuestions: [
+        "客户是否接受小范围试点边界？",
+        "哪些数据可以进入试点，哪些必须排除？",
+        "试点成功后下一步由谁确认？"
       ],
-      checklist: [
-        "创始人确认事实是否准确",
-        "负责人确认下一步是否可执行",
-        "高风险承诺已删除或改成待确认表述",
-        "对外发送前完成最后人工审阅"
-      ]
-    }
+      successCriteria,
+      humanConfirmationChecklist: checklist
+    };
+  }
+
+  if (action.type === "investor_reply") {
+    return {
+      investorQuestion: memories.map((memory) => `${memory.title}: ${memory.detail}`),
+      shortAnswer: `围绕“${action.title}”给出基于现有证据的谨慎回答。`,
+      entityContext,
+      memoryGovernance: governanceNotes,
+      evidenceWeHave: memories.map((memory) => memory.detail),
+      evidenceMissing: [
+        "需要补充最新可验证指标或客户证据",
+        "需要区分事实、假设和仍在验证的判断",
+        "需要创始人确认哪些内容可以对外表达"
+      ],
+      suggestedWording: buildDraft(project, action, memories, typeName),
+      doNotSay: [
+        "不要承诺尚未验证的 ARR、留存或客户数量",
+        "不要把待确认 memory 写成确定事实",
+        "不要承诺融资、法务或客户合作结果"
+      ],
+      followUpMaterials: [
+        "客户访谈摘要",
+        "使用频率或留存证据",
+        "关键风险处理计划"
+      ],
+      founderConfirmationChecklist: checklist
+    };
+  }
+
+  if (action.type === "coding_brief") {
+    return {
+      goal: `完成“${action.title}”，产出 ${action.expectedOutput || action.expectedArtifact}。`,
+      background,
+      projectNodeContext: nodeContext,
+      memoryGovernance: governanceNotes,
+      scope: [
+        "实现界面内闭环状态更新",
+        "保持数据可追溯并通过本地 smoke test",
+        "同步必要文档和 demo 数据"
+      ],
+      nonGoals: [
+        "不接真实外部工具",
+        "不自动发送消息",
+        "不自动修改、提交或 merge 外部代码仓库"
+      ],
+      acceptanceCriteria: successCriteria,
+      testPlan: ["运行 node scripts/smoke-test.mjs", "必要时用 renderApp() 验证新增 UI 文案"],
+      risks: buildRiskNotes(action),
+      reviewChecklist: checklist
+    };
+  }
+
+  return {
+    goal: `完成“${action.title}”，产出 ${action.expectedOutput || action.expectedArtifact}。`,
+    background,
+    entityContext,
+    projectNodeContext: nodeContext,
+    memoryGovernance: governanceNotes,
+    strategy: buildStrategy(action),
+    draft: buildDraft(project, action, memories, typeName),
+    risks: buildRiskNotes(action),
+    successCriteria,
+    checklist
   };
 }
 
@@ -785,6 +893,29 @@ function sourceContextIdsForMemories(memories) {
         .filter(Boolean)
     )
   ];
+}
+
+function entitiesForBrief(project, action, memories) {
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.entities || []).filter((entity) => {
+    const entityMemoryIds = entityLinkIds(entity, "memory");
+    return (
+      entity.nextSuggestedActionId === action.id ||
+      entityMemoryIds.some((memoryId) => memoryIds.has(memoryId))
+    );
+  });
+}
+
+function nodesForBrief(project, action, memories) {
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.nodes || []).filter((node) => {
+    const actionIds = nodeLinkIds(node, "action");
+    const nodeMemoryIds = nodeLinkIds(node, "memory");
+    return (
+      actionIds.includes(action.id) ||
+      nodeMemoryIds.some((memoryId) => memoryIds.has(memoryId))
+    );
+  });
 }
 
 function buildStrategy(action) {

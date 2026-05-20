@@ -639,6 +639,8 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - customer_followup Brief。
 - investor_reply Brief。
 - coding_brief Brief。
+- 根据 action type 生成不同 sections，例如客户跟进、投资人回复和工程 brief 使用不同结构。
+- Brief 消费相关 Entity、ProjectNode、Memory 和 success criteria，而不是只复述 action 标题。
 - memory governance summary：说明 brief 使用了哪些可参与推理的 memory、排除了哪些过期或归档证据。
 - 可编辑保存。
 - 风险和人工确认。

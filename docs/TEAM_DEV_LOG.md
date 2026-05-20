@@ -219,6 +219,43 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - 提交 MEM-05，合回 Wave 3 集成分支，然后继续 `ACTION-01-brief-generation`。
 
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 3：`ACTION-01-brief-generation`
+
+分支：`issue/ACTION-01-brief-generation`
+
+状态：开发中，已完成本地实现和 smoke
+
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Brief generation 改为按 action type 输出不同 sections。
+- `customer_followup` brief 包含客户顾虑、相关 Entity、相关节点、回复策略、草稿、不要承诺和下一步问题。
+- `investor_reply` brief 包含简短回答、已有证据、证据缺口、建议话术和创始人确认项。
+- `coding_brief` brief 包含目标、范围、不做范围、验收标准、测试计划和 review 清单。
+- `renderApp()` 可动态渲染不同 brief section。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- ACTION-02 需要把 result feedback 表单和记录结构进一步展开。
+
+下一步：
+
+- 提交 ACTION-01，合回 Wave 3 集成分支并运行 smoke。
+
 ### 2026-05-18
 
 负责人：Codex
