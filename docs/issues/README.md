@@ -271,7 +271,29 @@ QA-03-action-loop-smoke.md
 - 本 Wave 全程串行；每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都已运行 `node scripts/smoke-test.mjs` 通过。
 - 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
 
-## 13. 推荐开工提示词
+## 13. Phase 3 Alpha Wave 4 issue
+
+Wave 4 的目标是落地公司级 Command Center Alpha，让用户打开产品后能知道今天最应该处理什么。当前建议按以下顺序串行执行：
+
+```text
+DASH-01-command-center.md
+COMMIT-01-commitment-waiting.md
+RISK-01-risk-opportunity-radar.md
+PRIORITY-01-ai-priority-queue.md
+QA-04-alpha-e2e-smoke.md
+```
+
+执行原则：
+
+- `DASH-01` 先建立 Command Center 视图和聚合 pipeline。
+- `COMMIT-01` 落地承诺、等待项和依赖项，作为首页关键输入。
+- `RISK-01` 再补风险 / 机会雷达。
+- `PRIORITY-01` 基于上述输入生成可解释优先级队列。
+- `QA-04` 最后扩展 smoke，覆盖 Alpha 端到端闭环。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 14. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。

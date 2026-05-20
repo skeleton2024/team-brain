@@ -703,6 +703,56 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - `src/domain/agentEngine.js`
 - `src/ui/render.js`
 
+### `docs/issues/DASH-01-command-center.md`
+
+Phase 3 Alpha Wave 4 的 Command Center 首页 issue。
+
+主要作用：
+
+- 要求新增公司级 Command Center 视图。
+- 要求聚合 Inbox、Memory、Project、Node、Action、Risk 和 Opportunity。
+- 明确 Command Center 是工作首页，不是营销 landing page 或聊天入口。
+
+### `docs/issues/COMMIT-01-commitment-waiting.md`
+
+Phase 3 Alpha Wave 4 的 Commitment / Waiting / Dependency issue。
+
+主要作用：
+
+- 要求落地承诺、等待项、依赖项和 follow-up 的第一版展示。
+- 要求 Command Center 能识别逾期承诺和阻塞等待。
+- 明确不自动发送催办、不代表用户承诺。
+
+### `docs/issues/RISK-01-risk-opportunity-radar.md`
+
+Phase 3 Alpha Wave 4 的 Risk / Opportunity Radar issue。
+
+主要作用：
+
+- 要求展示风险和机会雷达。
+- 要求每条风险 / 机会能追溯证据。
+- 明确不做复杂图谱、外部任务同步或自动业务结论。
+
+### `docs/issues/PRIORITY-01-ai-priority-queue.md`
+
+Phase 3 Alpha Wave 4 的 AI Priority Queue issue。
+
+主要作用：
+
+- 要求用本地规则生成可解释的优先级队列。
+- 要求聚合 action、commitment、risk 和 memory review。
+- 明确不自动执行队列项或外部动作。
+
+### `docs/issues/QA-04-alpha-e2e-smoke.md`
+
+Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
+
+主要作用：
+
+- 要求 smoke test 覆盖 Command Center、Priority Queue、Commitment、Risk 和 Opportunity。
+- 要求验证 render output 包含 Wave 4 关键 UI。
+- 不引入浏览器 e2e 框架或真实外部服务。
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
