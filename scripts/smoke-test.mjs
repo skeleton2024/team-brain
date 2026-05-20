@@ -918,6 +918,47 @@ if (
   throw new Error(`Action result should include Phase 3 result fields: ${JSON.stringify(latestResult)}`);
 }
 
+let structuredResultProject = recordActionResult(structuredClone(DEMO_PROJECT), "act-demo-customer", {
+  outcome: "blocked",
+  summary: "客户试点被预算审批卡住。",
+  whatChanged: "客户确认 CFO 需要先看权限边界和预算审批材料。",
+  newEvidence: "客户明确说没有 CFO 批准就不能进入试点。",
+  followUpNeeded: true
+});
+const structuredResult = structuredResultProject.results[0];
+if (
+  structuredResult.whatChanged !== "客户确认 CFO 需要先看权限边界和预算审批材料。" ||
+  structuredResult.newEvidence !== "客户明确说没有 CFO 批准就不能进入试点。" ||
+  structuredResult.followUpNeeded !== true
+) {
+  throw new Error(`Expected structured result feedback fields to persist: ${JSON.stringify(structuredResult)}`);
+}
+
+const structuredResultSourceContext = structuredResultProject.contexts.find((context) =>
+  context.title.includes("行动结果")
+);
+if (
+  !structuredResultSourceContext?.body.includes("变化：客户确认 CFO") ||
+  !structuredResultSourceContext?.body.includes("新证据：客户明确说")
+) {
+  throw new Error("Expected structured result feedback to be preserved in source context body.");
+}
+
+const structuredResultHtml = renderApp({
+  activeProjectId: structuredResultProject.id,
+  selectedActionId: "act-demo-customer",
+  projects: [structuredResultProject]
+});
+if (
+  !structuredResultHtml.includes('name="whatChanged"') ||
+  !structuredResultHtml.includes('name="newEvidence"') ||
+  !structuredResultHtml.includes('name="followUpNeeded"') ||
+  !structuredResultHtml.includes("结果记录") ||
+  !structuredResultHtml.includes("新证据：客户明确说")
+) {
+  throw new Error("Expected structured result feedback form and history to render.");
+}
+
 const resultContext = project.contexts.find(
   (context) => context.title === `行动结果：${action.title}` && context.body.includes("客户同意下周试点")
 );

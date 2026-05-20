@@ -664,6 +664,8 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - followUpNeeded。
 - relatedMemoryUpdates。
 - action history。
+- 结构化 Result Feedback 表单和 result history 展示。
+- 已完成 action 的保留和追溯，避免回流后丢失 result 入口。
 
 主要文件：
 

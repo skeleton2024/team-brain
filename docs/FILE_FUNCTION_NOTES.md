@@ -742,6 +742,7 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - 调用 domain 层的 `absorbContext()`、`generateBrief()`、`recordActionResult()`。
 - 调用 store 层的 `loadState()`、`saveState()`、`resetState()`、`makeProject()`。
 - 管理 `activeProjectId` 和 `selectedActionId`。
+- 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
 
 修改时注意：
 
@@ -811,7 +812,7 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - 调用 `extractMemories()` pipeline 把上下文转成候选 memory。
 - 为 memory 生成 action。
 - 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
-- 处理结果回流并生成 result learning memory 和 follow-up actions。
+- 处理结构化结果回流，保留 done action，生成 result learning memory 和 follow-up actions。
 
 当前内部职责：
 
@@ -907,6 +908,7 @@ HTML 渲染层。
 
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
+- 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。
 

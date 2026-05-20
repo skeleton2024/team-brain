@@ -324,13 +324,22 @@ function handleRecordResult(event) {
   const actionId = event.currentTarget.dataset.actionId;
   const summary = String(form.get("summary") || "").trim();
   const outcome = String(form.get("outcome") || "neutral");
+  const whatChanged = String(form.get("whatChanged") || "").trim();
+  const newEvidence = String(form.get("newEvidence") || "").trim();
+  const followUpNeeded = form.get("followUpNeeded") === "true";
 
   if (!summary) {
     return;
   }
 
   updateActiveProject((project) => {
-    const next = recordActionResult(project, actionId, { summary, outcome });
+    const next = recordActionResult(project, actionId, {
+      summary,
+      outcome,
+      whatChanged,
+      newEvidence,
+      followUpNeeded
+    });
     const nextAction =
       next.actions.find((action) => action.status !== "done" && action.id !== actionId) ||
       next.actions.find((action) => action.status !== "done");

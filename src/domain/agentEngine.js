@@ -490,14 +490,23 @@ export function recordActionResult(project, actionId, resultInput) {
   if (!action) {
     return project;
   }
+  const summary = resultInput.summary || resultInput.whatChanged || resultInput.newEvidence || "行动结果已回流。";
+  const whatChanged = resultInput.whatChanged || summary;
+  const newEvidence = resultInput.newEvidence || summary;
+  const resultContextBody = buildResultContextBody({
+    summary,
+    whatChanged,
+    newEvidence,
+    followUpNeeded: Boolean(resultInput.followUpNeeded)
+  });
 
   const result = {
     id: makeId("result"),
     actionId,
     outcome: resultInput.outcome,
-    summary: resultInput.summary,
-    whatChanged: resultInput.whatChanged || resultInput.summary,
-    newEvidence: resultInput.newEvidence || resultInput.summary,
+    summary,
+    whatChanged,
+    newEvidence,
     followUpNeeded: Boolean(resultInput.followUpNeeded),
     createdAt: now,
     memoryIds: [],
@@ -509,7 +518,7 @@ export function recordActionResult(project, actionId, resultInput) {
     id: makeId("ctx"),
     kind: "other",
     title: `行动结果：${action.title}`,
-    body: resultInput.summary,
+    body: resultContextBody,
     occurredAt: now,
     participants: [],
     tags: ["结果回流"],
@@ -531,15 +540,15 @@ export function recordActionResult(project, actionId, resultInput) {
   const resultMemory = {
     id: makeId("mem"),
     type: "result_learning",
-    title: summarizeTitle(resultInput.summary, "执行结果已回流"),
-    detail: resultInput.summary,
+    title: summarizeTitle(summary, "执行结果已回流"),
+    detail: summary,
     source: resultContext.title,
     confidence: resultConfidence,
     status: "draft",
     sourceReferences: [
       makeSourceReference({
         contextId: resultContext.id,
-        quote: resultInput.summary,
+        quote: summary,
         note: resultContext.title,
         confidence: resultConfidence
       })
@@ -603,6 +612,15 @@ export function recordActionResult(project, actionId, resultInput) {
     ],
     pendingMemoryUpdates: [...reconciliation.memoryUpdates, ...(project.pendingMemoryUpdates || [])]
   };
+}
+
+function buildResultContextBody(result) {
+  return [
+    `结果摘要：${result.summary}`,
+    `变化：${result.whatChanged}`,
+    `新证据：${result.newEvidence}`,
+    `需要后续动作：${result.followUpNeeded ? "是" : "否"}`
+  ].join("\n");
 }
 
 function proposeActions(project, memories) {
@@ -1152,15 +1170,16 @@ function groupBy(items, key) {
 }
 
 function mergeActions(incoming, existing) {
-  return [...incoming, ...existing].filter(
-    (action, index, items) =>
-      items.findIndex(
-        (item) =>
-          normalize(item.title) === normalize(action.title) &&
-          item.status !== "done" &&
-          action.status !== "done"
-      ) === index
-  );
+  return [...incoming, ...existing].reduce((merged, action) => {
+    const duplicateOpenAction = merged.some(
+      (item) =>
+        normalize(item.title) === normalize(action.title) &&
+        item.status !== "done" &&
+        action.status !== "done"
+    );
+
+    return duplicateOpenAction ? merged : [...merged, action];
+  }, []);
 }
 
 function resolveMemories(project, memoryIds) {
