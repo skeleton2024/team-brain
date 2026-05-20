@@ -461,6 +461,75 @@ if (
   throw new Error("Expected QA entity/project flow to render linked Entity and Node details.");
 }
 
+let actionLoopProject = makeProject("QA Action Loop");
+actionLoopProject = addManualSource(actionLoopProject, {
+  kind: "customer_feedback",
+  title: "QA Action Loop 客户反馈",
+  body:
+    "客户 Loop 同意下周试点，但担心预算审批和权限边界。工程负责人需要准备权限说明，客户希望先看到删除机制和成功标准。",
+  occurredAt: "2026-05-16",
+  participants: ["客户 Loop", "工程负责人"],
+  tags: ["qa", "action-loop"],
+  importance: "high"
+});
+const actionLoopSource = actionLoopProject.sources[0];
+actionLoopProject = processSource(actionLoopProject, actionLoopSource.id);
+const actionLoopSignals = actionLoopProject.signals;
+actionLoopSignals.forEach((signal) => {
+  actionLoopProject = suggestSignalLinks(actionLoopProject, signal.id);
+});
+actionLoopProject = reviewSignal(actionLoopProject, actionLoopSignals[0].id, "memory");
+actionLoopProject = reviewSignal(actionLoopProject, actionLoopSignals[1].id, "action");
+const actionLoopAction = actionLoopProject.actions[0];
+const actionLoopEvidenceMemoryId = actionLoopAction.evidenceMemoryIds[0];
+actionLoopProject = updateMemoryStatus(actionLoopProject, actionLoopEvidenceMemoryId, "confirmed");
+actionLoopProject = generateBrief(actionLoopProject, actionLoopAction.id);
+const actionLoopBrief = actionLoopProject.briefs.find((brief) => brief.actionId === actionLoopAction.id);
+if (
+  !actionLoopBrief ||
+  !Array.isArray(actionLoopBrief.sections.memoryGovernance) ||
+  !Object.keys(actionLoopBrief.sections).some((key) =>
+    ["customerConcern", "scope", "investorQuestion", "strategy"].includes(key)
+  )
+) {
+  throw new Error(`Expected action loop brief to include governance and scenario sections: ${JSON.stringify(actionLoopBrief)}`);
+}
+
+actionLoopProject = recordActionResult(actionLoopProject, actionLoopAction.id, {
+  outcome: "positive",
+  summary: "客户 Loop 同意继续试点，但要求先收到权限说明和删除机制。",
+  whatChanged: "客户从观望转为愿意推进下周试点。",
+  newEvidence: "客户明确把权限说明和删除机制作为继续推进条件。",
+  followUpNeeded: true
+});
+const actionLoopResult = actionLoopProject.results[0];
+const actionLoopNode = actionLoopProject.nodes[0];
+if (
+  !actionLoopResult.relatedMemoryUpdates.some((update) => ["confirm", "update"].includes(update.operation)) ||
+  !actionLoopResult.actionIds.length ||
+  !actionLoopResult.projectNodeUpdates.some((update) => update.suggestedStatus === "active") ||
+  !actionLoopNode.resultIds.includes(actionLoopResult.id)
+) {
+  throw new Error(`Expected action loop result to create memory updates, follow-up action, and node suggestions: ${JSON.stringify(actionLoopResult)}`);
+}
+
+const actionLoopHtml = renderApp({
+  activeProjectId: actionLoopProject.id,
+  selectedActionId: actionLoopAction.id,
+  selectedNodeId: actionLoopNode.id,
+  projects: [actionLoopProject]
+});
+if (
+  !actionLoopHtml.includes("QA Action Loop") ||
+  !actionLoopHtml.includes("记忆治理影响") ||
+  !actionLoopHtml.includes("结果记录") ||
+  !actionLoopHtml.includes("Memory updates") ||
+  !actionLoopHtml.includes("node active") ||
+  !actionLoopHtml.includes("Node Detail")
+) {
+  throw new Error("Expected full action loop smoke UI to render governance, brief, result, memory update, and node suggestion.");
+}
+
 const priceConcernMemory = {
   id: "mem-price-concern",
   type: "customer_concern",

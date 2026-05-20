@@ -721,6 +721,7 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - 检查新生成 action 的 `whyNow`、`evidenceMemoryIds`、`expectedArtifact`。
 - 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
 - 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
+- Phase 3 Alpha Wave 3 起，覆盖 Memory Governance -> Scenario Brief -> Structured Result Feedback -> Memory Update / Follow-up Action / Project Node suggestion 的完整 action loop。
 
 修改时注意：
 
