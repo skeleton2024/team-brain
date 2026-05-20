@@ -41,6 +41,90 @@ const PROJECT_NODE_STATUS_ACTIONS = [
   { status: "archived", label: "归档" }
 ];
 
+const BRIEF_SECTION_LABELS = {
+  goal: "目标",
+  background: "已知背景",
+  entityContext: "相关 Entity",
+  projectNodeContext: "相关节点",
+  memoryGovernance: "证据治理",
+  customerConcern: "客户顾虑",
+  replyStrategy: "回复策略",
+  draftMessage: "草稿内容",
+  doNotPromise: "不要承诺",
+  nextQuestions: "下一步问题",
+  investorQuestion: "投资人问题",
+  shortAnswer: "简短回答",
+  evidenceWeHave: "已有证据",
+  evidenceMissing: "证据缺口",
+  suggestedWording: "建议话术",
+  doNotSay: "不要这样说",
+  followUpMaterials: "后续材料",
+  founderConfirmationChecklist: "创始人确认清单",
+  scope: "实现范围",
+  nonGoals: "不做范围",
+  acceptanceCriteria: "验收标准",
+  testPlan: "测试计划",
+  risks: "风险提醒",
+  reviewChecklist: "Review 清单",
+  strategy: "建议策略",
+  draft: "草稿内容",
+  successCriteria: "成功标准",
+  checklist: "人工确认清单",
+  humanConfirmationChecklist: "人工确认清单"
+};
+
+const BRIEF_SECTION_ORDER = {
+  customer_followup: [
+    "background",
+    "entityContext",
+    "projectNodeContext",
+    "memoryGovernance",
+    "customerConcern",
+    "replyStrategy",
+    "draftMessage",
+    "doNotPromise",
+    "nextQuestions",
+    "successCriteria",
+    "humanConfirmationChecklist"
+  ],
+  investor_reply: [
+    "investorQuestion",
+    "shortAnswer",
+    "entityContext",
+    "memoryGovernance",
+    "evidenceWeHave",
+    "evidenceMissing",
+    "suggestedWording",
+    "doNotSay",
+    "followUpMaterials",
+    "founderConfirmationChecklist"
+  ],
+  coding_brief: [
+    "goal",
+    "background",
+    "projectNodeContext",
+    "memoryGovernance",
+    "scope",
+    "nonGoals",
+    "acceptanceCriteria",
+    "testPlan",
+    "risks",
+    "reviewChecklist"
+  ],
+  default: [
+    "goal",
+    "background",
+    "entityContext",
+    "projectNodeContext",
+    "memoryGovernance",
+    "strategy",
+    "draft",
+    "risks",
+    "successCriteria",
+    "checklist"
+  ]
+};
+
 export function renderApp(state) {
   const project = getActiveProject(state);
   const selectedAction = project?.actions.find((action) => action.id === state.selectedActionId);
@@ -784,6 +868,7 @@ function renderNodeResults(results) {
             <article class="memory-detail-result">
               <strong>${escapeHtml(result.summary || result.outcome || "执行结果")}</strong>
               <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+              ${renderResultNodeSuggestions(result)}
             </article>
           `
         )
@@ -952,6 +1037,8 @@ function renderMemories(project, editingMemoryId, selectedMemoryId) {
       </div>
       <span class="count-pill">${project.memories.length}</span>
     </div>
+
+    ${renderMemoryGovernanceSummary(project)}
 
     <div class="memory-groups">
       ${grouped
@@ -1165,8 +1252,30 @@ function renderRelatedMemoryUpdates(result, memoryId) {
         .map(
           (update) => `
             <li>
-              <span>${escapeHtml(update.kind || update.type || "update")}</span>
+              <span>${escapeHtml(update.operation || update.kind || update.type || "update")}</span>
               ${escapeHtml(update.summary || update.note || update.reason || "")}
+            </li>
+          `
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+function renderResultNodeSuggestions(result) {
+  const suggestions = Array.isArray(result.projectNodeUpdates) ? result.projectNodeUpdates : [];
+  if (!suggestions.length) {
+    return "";
+  }
+
+  return `
+    <ul class="memory-update-list">
+      ${suggestions
+        .map(
+          (suggestion) => `
+            <li>
+              <span>node ${escapeHtml(suggestion.suggestedStatus)}</span>
+              ${escapeHtml(suggestion.reason || "")}
             </li>
           `
         )
@@ -1339,7 +1448,7 @@ function renderActions(project, selectedActionId) {
     ${
       openActions.length
         ? `<div class="action-list">
-            ${openActions.map((action) => renderActionCard(action, selectedActionId)).join("")}
+            ${openActions.map((action) => renderActionCard(project, action, selectedActionId)).join("")}
           </div>`
         : emptyState("暂无待处理行动")
     }
@@ -1348,14 +1457,14 @@ function renderActions(project, selectedActionId) {
       doneActions.length
         ? `<details class="done-actions">
             <summary>已回流行动 ${doneActions.length}</summary>
-            ${doneActions.map((action) => renderActionCard(action, selectedActionId)).join("")}
+            ${doneActions.map((action) => renderActionCard(project, action, selectedActionId)).join("")}
           </details>`
         : ""
     }
   `;
 }
 
-function renderActionCard(action, selectedActionId) {
+function renderActionCard(project, action, selectedActionId) {
   return `
     <button class="action-card ${action.id === selectedActionId ? "selected" : ""}" data-action-id="${action.id}" type="button">
       <div class="action-card-top">
@@ -1368,6 +1477,7 @@ function renderActionCard(action, selectedActionId) {
         <span>优先级 ${escapeHtml(PRIORITY_LABELS[action.priority])}</span>
         <span>${escapeHtml(RISK_LABELS[action.riskLevel])}</span>
       </div>
+      ${renderActionMemoryGovernance(project, action)}
     </button>
   `;
 }
@@ -1402,6 +1512,8 @@ function renderBrief(project, action, brief) {
       }
     </article>
 
+    ${renderActionResultHistory(project, action)}
+
     <form class="result-form" data-form="record-result" data-action-id="${action.id}">
       <div class="panel-heading compact">
         <div>
@@ -1410,8 +1522,16 @@ function renderBrief(project, action, brief) {
         </div>
       </div>
       <label>
-        执行结果
-        <textarea name="summary" rows="5" placeholder="记录客户回复、工程结果、投资人反馈或新的阻塞" required></textarea>
+        结果摘要
+        <textarea name="summary" rows="4" placeholder="记录客户回复、工程结果、投资人反馈或新的阻塞" required></textarea>
+      </label>
+      <label>
+        发生了什么变化
+        <textarea name="whatChanged" rows="3" placeholder="例如：客户同意试点，但要求先确认权限边界"></textarea>
+      </label>
+      <label>
+        新证据
+        <textarea name="newEvidence" rows="3" placeholder="例如：CFO 明确说预算要等法务审批后释放"></textarea>
       </label>
       <div class="field-row">
         <label>
@@ -1422,6 +1542,10 @@ function renderBrief(project, action, brief) {
             ).join("")}
           </select>
         </label>
+        <label class="checkbox-field">
+          <input name="followUpNeeded" type="checkbox" value="true" />
+          需要后续动作
+        </label>
         <button class="primary-button" type="submit">
           <span>回流并更新记忆</span>
           <span>✓</span>
@@ -1431,20 +1555,47 @@ function renderBrief(project, action, brief) {
   `;
 }
 
+function renderActionResultHistory(project, action) {
+  const results = (project.results || []).filter((result) => result.actionId === action.id);
+  if (!results.length) {
+    return "";
+  }
+
+  return `
+    <div class="result-history" data-result-history>
+      <div class="context-history-heading">
+        <strong>结果记录</strong>
+        <span class="count-pill">${results.length}</span>
+      </div>
+      ${results
+        .map(
+          (result) => `
+            <article class="result-history-item">
+              <div class="result-history-top">
+                <span>${escapeHtml(resultOutcomeLabel(result.outcome))}</span>
+                <span>${escapeHtml(formatDateOnly(result.createdAt))}</span>
+                ${result.followUpNeeded ? "<span>需要后续</span>" : ""}
+              </div>
+              <strong>${escapeHtml(result.summary || "执行结果")}</strong>
+              <p>变化：${escapeHtml(result.whatChanged || result.summary || "")}</p>
+              <p>新证据：${escapeHtml(result.newEvidence || result.summary || "")}</p>
+              <small>Memory updates ${Array.isArray(result.relatedMemoryUpdates) ? result.relatedMemoryUpdates.length : 0}</small>
+              ${renderResultNodeSuggestions(result)}
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function renderBriefSections(brief) {
-  const sections = [
-    ["目标", brief.sections.goal],
-    ["已知背景", brief.sections.background],
-    ["建议策略", brief.sections.strategy],
-    ["草稿内容", brief.sections.draft],
-    ["风险提醒", brief.sections.risks],
-    ["成功标准", brief.sections.successCriteria],
-    ["人工确认清单", brief.sections.checklist]
-  ];
+  const sections = orderedBriefSections(brief);
 
   return `
     <div class="brief-sections">
       ${sections
+        .filter(([, content]) => content !== undefined && content !== null && content !== "")
         .map(
           ([title, content]) => `
             <section class="brief-section">
@@ -1458,6 +1609,23 @@ function renderBriefSections(brief) {
   `;
 }
 
+function orderedBriefSections(brief) {
+  const sections = brief.sections || {};
+  const preferredOrder = BRIEF_SECTION_ORDER[brief.type] || BRIEF_SECTION_ORDER.default;
+  const seen = new Set();
+  const ordered = preferredOrder
+    .filter((key) => sections[key] !== undefined)
+    .map((key) => {
+      seen.add(key);
+      return [BRIEF_SECTION_LABELS[key] || key, sections[key]];
+    });
+  const extras = Object.keys(sections)
+    .filter((key) => !seen.has(key))
+    .map((key) => [BRIEF_SECTION_LABELS[key] || key, sections[key]]);
+
+  return [...ordered, ...extras];
+}
+
 function renderSectionContent(content) {
   if (Array.isArray(content)) {
     return `
@@ -1468,6 +1636,77 @@ function renderSectionContent(content) {
   }
 
   return `<pre>${escapeHtml(content)}</pre>`;
+}
+
+function renderMemoryGovernanceSummary(project) {
+  const counts = countMemoryStatuses(project.memories || []);
+  const activeEvidence = counts.confirmed + counts.draft + counts.disputed;
+  const retiredEvidence = counts.outdated + counts.archived;
+
+  return `
+    <div class="memory-governance-summary" data-memory-governance-summary>
+      <div>
+        <p class="eyebrow">Governance</p>
+        <strong>记忆治理影响</strong>
+        <span>参与行动证据 ${activeEvidence} · 默认排除 ${retiredEvidence}</span>
+      </div>
+      <div class="governance-metrics">
+        ${renderGovernanceMetric("已确认", counts.confirmed, "confirmed")}
+        ${renderGovernanceMetric("待确认", counts.draft, "draft")}
+        ${renderGovernanceMetric("有争议", counts.disputed, "disputed")}
+        ${renderGovernanceMetric("已过期", counts.outdated, "outdated")}
+        ${renderGovernanceMetric("已归档", counts.archived, "archived")}
+      </div>
+    </div>
+  `;
+}
+
+function renderActionMemoryGovernance(project, action) {
+  const memoryIds = new Set(actionMemoryIds(action));
+  const memories = (project.memories || []).filter((memory) => memoryIds.has(memory.id));
+  if (!memories.length) {
+    return `<div class="action-governance muted">证据待补</div>`;
+  }
+
+  const counts = countMemoryStatuses(memories);
+  const needsReview = counts.draft + counts.disputed;
+  const excluded = counts.outdated + counts.archived;
+
+  return `
+    <div class="action-governance" data-action-memory-governance>
+      <span>已确认 ${counts.confirmed}</span>
+      <span>待复核 ${needsReview}</span>
+      ${excluded ? `<span>已排除 ${excluded}</span>` : ""}
+    </div>
+  `;
+}
+
+function renderGovernanceMetric(label, count, status) {
+  return `
+    <span class="governance-metric ${escapeHtml(status)}">
+      <strong>${escapeHtml(String(count))}</strong>
+      ${escapeHtml(label)}
+    </span>
+  `;
+}
+
+function countMemoryStatuses(memories) {
+  return memories.reduce(
+    (counts, memory) => {
+      const status = memory.status || "draft";
+      if (counts[status] !== undefined) {
+        counts[status] += 1;
+      }
+      return counts;
+    },
+    {
+      draft: 0,
+      confirmed: 0,
+      outdated: 0,
+      disputed: 0,
+      archived: 0
+    }
+  );
 }
 
 function emptyState(text) {
@@ -1639,6 +1878,10 @@ function confidenceLabel(confidence) {
   };
 
   return labels[confidence] || "待确认";
+}
+
+function resultOutcomeLabel(outcome) {
+  return RESULT_OUTCOMES.find((item) => item.id === outcome)?.label || outcome || "结果";
 }
 
 function memoryStatusMeta(status) {

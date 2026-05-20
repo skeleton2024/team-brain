@@ -461,6 +461,75 @@ if (
   throw new Error("Expected QA entity/project flow to render linked Entity and Node details.");
 }
 
+let actionLoopProject = makeProject("QA Action Loop");
+actionLoopProject = addManualSource(actionLoopProject, {
+  kind: "customer_feedback",
+  title: "QA Action Loop 客户反馈",
+  body:
+    "客户 Loop 同意下周试点，但担心预算审批和权限边界。工程负责人需要准备权限说明，客户希望先看到删除机制和成功标准。",
+  occurredAt: "2026-05-16",
+  participants: ["客户 Loop", "工程负责人"],
+  tags: ["qa", "action-loop"],
+  importance: "high"
+});
+const actionLoopSource = actionLoopProject.sources[0];
+actionLoopProject = processSource(actionLoopProject, actionLoopSource.id);
+const actionLoopSignals = actionLoopProject.signals;
+actionLoopSignals.forEach((signal) => {
+  actionLoopProject = suggestSignalLinks(actionLoopProject, signal.id);
+});
+actionLoopProject = reviewSignal(actionLoopProject, actionLoopSignals[0].id, "memory");
+actionLoopProject = reviewSignal(actionLoopProject, actionLoopSignals[1].id, "action");
+const actionLoopAction = actionLoopProject.actions[0];
+const actionLoopEvidenceMemoryId = actionLoopAction.evidenceMemoryIds[0];
+actionLoopProject = updateMemoryStatus(actionLoopProject, actionLoopEvidenceMemoryId, "confirmed");
+actionLoopProject = generateBrief(actionLoopProject, actionLoopAction.id);
+const actionLoopBrief = actionLoopProject.briefs.find((brief) => brief.actionId === actionLoopAction.id);
+if (
+  !actionLoopBrief ||
+  !Array.isArray(actionLoopBrief.sections.memoryGovernance) ||
+  !Object.keys(actionLoopBrief.sections).some((key) =>
+    ["customerConcern", "scope", "investorQuestion", "strategy"].includes(key)
+  )
+) {
+  throw new Error(`Expected action loop brief to include governance and scenario sections: ${JSON.stringify(actionLoopBrief)}`);
+}
+
+actionLoopProject = recordActionResult(actionLoopProject, actionLoopAction.id, {
+  outcome: "positive",
+  summary: "客户 Loop 同意继续试点，但要求先收到权限说明和删除机制。",
+  whatChanged: "客户从观望转为愿意推进下周试点。",
+  newEvidence: "客户明确把权限说明和删除机制作为继续推进条件。",
+  followUpNeeded: true
+});
+const actionLoopResult = actionLoopProject.results[0];
+const actionLoopNode = actionLoopProject.nodes[0];
+if (
+  !actionLoopResult.relatedMemoryUpdates.some((update) => ["confirm", "update"].includes(update.operation)) ||
+  !actionLoopResult.actionIds.length ||
+  !actionLoopResult.projectNodeUpdates.some((update) => update.suggestedStatus === "active") ||
+  !actionLoopNode.resultIds.includes(actionLoopResult.id)
+) {
+  throw new Error(`Expected action loop result to create memory updates, follow-up action, and node suggestions: ${JSON.stringify(actionLoopResult)}`);
+}
+
+const actionLoopHtml = renderApp({
+  activeProjectId: actionLoopProject.id,
+  selectedActionId: actionLoopAction.id,
+  selectedNodeId: actionLoopNode.id,
+  projects: [actionLoopProject]
+});
+if (
+  !actionLoopHtml.includes("QA Action Loop") ||
+  !actionLoopHtml.includes("记忆治理影响") ||
+  !actionLoopHtml.includes("结果记录") ||
+  !actionLoopHtml.includes("Memory updates") ||
+  !actionLoopHtml.includes("node active") ||
+  !actionLoopHtml.includes("Node Detail")
+) {
+  throw new Error("Expected full action loop smoke UI to render governance, brief, result, memory update, and node suggestion.");
+}
+
 const priceConcernMemory = {
   id: "mem-price-concern",
   type: "customer_concern",
@@ -672,10 +741,16 @@ if (
       !item.expectedArtifact ||
       !Array.isArray(item.sourceMemoryIds) ||
       item.sourceMemoryIds.length < 1 ||
-      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds)
+      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds) ||
+      !Array.isArray(item.humanConfirmationChecklist) ||
+      !item.humanConfirmationChecklist.some((entry) => entry.includes("待确认"))
   )
 ) {
   throw new Error(`Generated actions should include Phase 3 evidence fields: ${JSON.stringify(generatedActions)}`);
+}
+
+if (generatedActions.some((item) => item.priority === "high")) {
+  throw new Error("Draft-only memories should lower generated action priority until memory governance confirms evidence.");
 }
 
 project = updateMemoryStatus(project, newestMemory.id, "confirmed");
@@ -696,9 +771,11 @@ const memoryActionsHtml = renderApp({
 
 if (
   !memoryActionsHtml.includes('data-action="update-memory-status"') ||
-  !memoryActionsHtml.includes('data-memory-status="archived"')
+  !memoryActionsHtml.includes('data-memory-status="archived"') ||
+  !memoryActionsHtml.includes('data-memory-governance-summary') ||
+  !memoryActionsHtml.includes('data-action-memory-governance')
 ) {
-  throw new Error("Expected memory cards to render quick status actions.");
+  throw new Error("Expected memory cards to render quick status actions and governance summary.");
 }
 
 const memoryDetailHtml = renderApp({
@@ -842,9 +919,57 @@ if (
   !Array.isArray(generatedBrief.evidenceMemoryIds) ||
   generatedBrief.evidenceMemoryIds.length < 1 ||
   !Array.isArray(generatedBrief.sourceContextIds) ||
-  generatedBrief.sourceContextIds.length < 1
+  generatedBrief.sourceContextIds.length < 1 ||
+  !Array.isArray(generatedBrief.sections.memoryGovernance) ||
+  !generatedBrief.sections.memoryGovernance.some((entry) => entry.includes("可参与推理"))
 ) {
   throw new Error(`Generated brief should include evidence and source context links: ${JSON.stringify(generatedBrief)}`);
+}
+
+const briefEvidenceStatuses = generatedBrief.evidenceMemoryIds.map(
+  (memoryId) => project.memories.find((memory) => memory.id === memoryId)?.status || "draft"
+);
+if (briefEvidenceStatuses.some((status) => ["outdated", "archived"].includes(status))) {
+  throw new Error("Brief evidence should exclude outdated and archived memories by default.");
+}
+
+let customerBriefProject = generateBrief(structuredClone(DEMO_PROJECT), "act-demo-customer");
+const customerBrief = customerBriefProject.briefs.find((brief) => brief.actionId === "act-demo-customer");
+if (
+  !customerBrief ||
+  !Array.isArray(customerBrief.sections.customerConcern) ||
+  !customerBrief.sections.draftMessage ||
+  !Array.isArray(customerBrief.sections.doNotPromise) ||
+  !Array.isArray(customerBrief.sections.entityContext) ||
+  !Array.isArray(customerBrief.sections.projectNodeContext)
+) {
+  throw new Error(`Expected customer follow-up brief to include scenario sections: ${JSON.stringify(customerBrief)}`);
+}
+
+const customerBriefHtml = renderApp({
+  activeProjectId: customerBriefProject.id,
+  selectedActionId: "act-demo-customer",
+  projects: [customerBriefProject]
+});
+if (
+  !customerBriefHtml.includes("客户顾虑") ||
+  !customerBriefHtml.includes("相关 Entity") ||
+  !customerBriefHtml.includes("相关节点") ||
+  !customerBriefHtml.includes("不要承诺")
+) {
+  throw new Error("Expected customer brief UI to render scenario-specific sections.");
+}
+
+let codingBriefProject = generateBrief(structuredClone(DEMO_PROJECT), "act-demo-engineering");
+const codingBrief = codingBriefProject.briefs.find((brief) => brief.actionId === "act-demo-engineering");
+if (
+  !codingBrief ||
+  !Array.isArray(codingBrief.sections.scope) ||
+  !Array.isArray(codingBrief.sections.nonGoals) ||
+  !Array.isArray(codingBrief.sections.testPlan) ||
+  !Array.isArray(codingBrief.sections.reviewChecklist)
+) {
+  throw new Error(`Expected coding brief to include implementation sections: ${JSON.stringify(codingBrief)}`);
 }
 
 project = recordActionResult(project, action.id, {
@@ -860,6 +985,51 @@ if (
   !Array.isArray(latestResult.relatedMemoryUpdates)
 ) {
   throw new Error(`Action result should include Phase 3 result fields: ${JSON.stringify(latestResult)}`);
+}
+
+let structuredResultProject = recordActionResult(structuredClone(DEMO_PROJECT), "act-demo-customer", {
+  outcome: "blocked",
+  summary: "客户试点被预算审批卡住。",
+  whatChanged: "客户确认 CFO 需要先看权限边界和预算审批材料。",
+  newEvidence: "客户明确说没有 CFO 批准就不能进入试点。",
+  followUpNeeded: true
+});
+const structuredResult = structuredResultProject.results[0];
+if (
+  structuredResult.whatChanged !== "客户确认 CFO 需要先看权限边界和预算审批材料。" ||
+  structuredResult.newEvidence !== "客户明确说没有 CFO 批准就不能进入试点。" ||
+  structuredResult.followUpNeeded !== true ||
+  !structuredResult.relatedMemoryUpdates.some((update) => update.operation === "dispute") ||
+  !structuredResult.projectNodeUpdates.some((update) => update.suggestedStatus === "blocked") ||
+  !structuredResultProject.pendingMemoryUpdates.some((update) => update.operation === "dispute")
+) {
+  throw new Error(`Expected structured result feedback fields to persist: ${JSON.stringify(structuredResult)}`);
+}
+
+const structuredResultSourceContext = structuredResultProject.contexts.find((context) =>
+  context.title.includes("行动结果")
+);
+if (
+  !structuredResultSourceContext?.body.includes("变化：客户确认 CFO") ||
+  !structuredResultSourceContext?.body.includes("新证据：客户明确说")
+) {
+  throw new Error("Expected structured result feedback to be preserved in source context body.");
+}
+
+const structuredResultHtml = renderApp({
+  activeProjectId: structuredResultProject.id,
+  selectedActionId: "act-demo-customer",
+  projects: [structuredResultProject]
+});
+if (
+  !structuredResultHtml.includes('name="whatChanged"') ||
+  !structuredResultHtml.includes('name="newEvidence"') ||
+  !structuredResultHtml.includes('name="followUpNeeded"') ||
+  !structuredResultHtml.includes("结果记录") ||
+  !structuredResultHtml.includes("新证据：客户明确说") ||
+  !structuredResultHtml.includes("node blocked")
+) {
+  throw new Error("Expected structured result feedback form and history to render.");
 }
 
 const resultContext = project.contexts.find(

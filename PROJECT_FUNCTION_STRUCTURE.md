@@ -515,6 +515,7 @@ v0.2 demo 至少覆盖：
 - 验证能生成行动。
 - 验证能生成 Brief。
 - 验证结果回流能写入结果和新记忆。
+- 验证 Wave 3 action loop：memory governance、scenario brief、structured result feedback、memory update suggestion、follow-up action 和 Project Node status suggestion。
 
 每个 issue 完成后至少运行：
 
@@ -618,6 +619,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - Top 3 actions。
 - whyNow。
 - evidenceMemoryIds。
+- memory governance 权重：confirmed 优先，draft / disputed 需要人工复核，outdated / archived 默认不作为新行动证据。
 - owner/deadline suggestion。
 - blockedBy。
 - expectedArtifact。
@@ -638,6 +640,9 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - customer_followup Brief。
 - investor_reply Brief。
 - coding_brief Brief。
+- 根据 action type 生成不同 sections，例如客户跟进、投资人回复和工程 brief 使用不同结构。
+- Brief 消费相关 Entity、ProjectNode、Memory 和 success criteria，而不是只复述 action 标题。
+- memory governance summary：说明 brief 使用了哪些可参与推理的 memory、排除了哪些过期或归档证据。
 - 可编辑保存。
 - 风险和人工确认。
 
@@ -659,7 +664,12 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - newEvidence。
 - followUpNeeded。
 - relatedMemoryUpdates。
+- projectNodeUpdates。
 - action history。
+- 结构化 Result Feedback 表单和 result history 展示。
+- 已完成 action 的保留和追溯，避免回流后丢失 result 入口。
+- result-to-memory update 建议：positive 可建议 confirm / update，blocked 可建议 dispute，neutral 可建议 update。
+- result-to-node status 建议：blocked 建议 node blocked，正向且无后续建议 done，否则继续 active；这些建议不自动应用。
 
 主要文件：
 

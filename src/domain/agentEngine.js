@@ -374,7 +374,7 @@ export function generateBrief(project, actionId) {
     };
   }
 
-  const memories = resolveMemories(project, action.sourceMemoryIds);
+  const memories = resolveActionBriefMemories(project, action);
   const brief = buildBrief(project, action, memories);
 
   return {
@@ -490,14 +490,23 @@ export function recordActionResult(project, actionId, resultInput) {
   if (!action) {
     return project;
   }
+  const summary = resultInput.summary || resultInput.whatChanged || resultInput.newEvidence || "行动结果已回流。";
+  const whatChanged = resultInput.whatChanged || summary;
+  const newEvidence = resultInput.newEvidence || summary;
+  const resultContextBody = buildResultContextBody({
+    summary,
+    whatChanged,
+    newEvidence,
+    followUpNeeded: Boolean(resultInput.followUpNeeded)
+  });
 
   const result = {
     id: makeId("result"),
     actionId,
     outcome: resultInput.outcome,
-    summary: resultInput.summary,
-    whatChanged: resultInput.whatChanged || resultInput.summary,
-    newEvidence: resultInput.newEvidence || resultInput.summary,
+    summary,
+    whatChanged,
+    newEvidence,
     followUpNeeded: Boolean(resultInput.followUpNeeded),
     createdAt: now,
     memoryIds: [],
@@ -509,7 +518,7 @@ export function recordActionResult(project, actionId, resultInput) {
     id: makeId("ctx"),
     kind: "other",
     title: `行动结果：${action.title}`,
-    body: resultInput.summary,
+    body: resultContextBody,
     occurredAt: now,
     participants: [],
     tags: ["结果回流"],
@@ -531,15 +540,15 @@ export function recordActionResult(project, actionId, resultInput) {
   const resultMemory = {
     id: makeId("mem"),
     type: "result_learning",
-    title: summarizeTitle(resultInput.summary, "执行结果已回流"),
-    detail: resultInput.summary,
+    title: summarizeTitle(summary, "执行结果已回流"),
+    detail: summary,
     source: resultContext.title,
     confidence: resultConfidence,
     status: "draft",
     sourceReferences: [
       makeSourceReference({
         contextId: resultContext.id,
-        quote: resultInput.summary,
+        quote: summary,
         note: resultContext.title,
         confidence: resultConfidence
       })
@@ -561,14 +570,26 @@ export function recordActionResult(project, actionId, resultInput) {
     now
   });
   const newMemories = reconciliation.acceptedMemories;
+  const resultDrivenMemoryUpdates = buildResultDrivenMemoryUpdates({
+    project,
+    action,
+    result,
+    resultInput,
+    now
+  });
+  const memoryUpdates = mergeMemoryUpdates([
+    ...reconciliation.memoryUpdates,
+    ...resultDrivenMemoryUpdates
+  ]);
 
   result.memoryIds = newMemories.map((memory) => memory.id);
-  result.relatedMemoryUpdates = reconciliation.memoryUpdates;
+  result.relatedMemoryUpdates = memoryUpdates;
   result.reconciliationResultIds = reconciliation.reconciliationResults.map((item) => item.id);
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
   result.followUpNeeded = result.followUpNeeded || followUpActions.length > 0;
+  result.projectNodeUpdates = buildResultNodeStatusSuggestions(project, action, result);
   resultContext.memoryIds = result.memoryIds;
   resultContext.actionIds = result.actionIds;
   resultContext.reconciliationResultIds = result.reconciliationResultIds;
@@ -601,8 +622,115 @@ export function recordActionResult(project, actionId, resultInput) {
       ...reconciliation.reconciliationResults,
       ...(project.reconciliationResults || [])
     ],
-    pendingMemoryUpdates: [...reconciliation.memoryUpdates, ...(project.pendingMemoryUpdates || [])]
+    pendingMemoryUpdates: [...memoryUpdates, ...(project.pendingMemoryUpdates || [])]
   };
+}
+
+function buildResultContextBody(result) {
+  return [
+    `结果摘要：${result.summary}`,
+    `变化：${result.whatChanged}`,
+    `新证据：${result.newEvidence}`,
+    `需要后续动作：${result.followUpNeeded ? "是" : "否"}`
+  ].join("\n");
+}
+
+function buildResultDrivenMemoryUpdates({ project, action, result, resultInput, now }) {
+  const evidenceMemories = resolveActionBriefMemories(project, action);
+  return evidenceMemories
+    .map((memory) => {
+      const operation = memoryUpdateOperationForResult(memory, result);
+      if (!operation) {
+        return null;
+      }
+
+      return {
+        memoryId: memory.id,
+        operation,
+        reason: memoryUpdateReasonForResult(memory, result, resultInput),
+        suggestedContent:
+          operation === "update"
+            ? `${memory.content || memory.detail}\n\n结果回流：${result.whatChanged}`
+            : undefined,
+        createdAt: now
+      };
+    })
+    .filter(Boolean);
+}
+
+function memoryUpdateOperationForResult(memory, result) {
+  if (result.outcome === "blocked") {
+    return "dispute";
+  }
+
+  if (result.outcome === "positive") {
+    return (memory.status || "draft") === "confirmed" ? "update" : "confirm";
+  }
+
+  if (result.outcome === "neutral") {
+    return "update";
+  }
+
+  return null;
+}
+
+function memoryUpdateReasonForResult(memory, result, resultInput) {
+  if (result.outcome === "blocked") {
+    return `结果显示行动遇到阻塞，需要复核 memory“${memory.title}”：${result.newEvidence}`;
+  }
+
+  if (result.outcome === "positive") {
+    return `结果支持或推进了 memory“${memory.title}”：${result.whatChanged}`;
+  }
+
+  return `结果为中性观察，需要更新 memory“${memory.title}”的证据：${resultInput.newEvidence || result.summary}`;
+}
+
+function mergeMemoryUpdates(updates) {
+  const seenMemoryIds = new Set();
+  return updates.filter((update) => {
+    const key = update?.memoryId || update?.sourceMemoryId || update?.targetMemoryId;
+    if (!key) {
+      return true;
+    }
+
+    if (seenMemoryIds.has(key)) {
+      return false;
+    }
+
+    seenMemoryIds.add(key);
+    return true;
+  });
+}
+
+function buildResultNodeStatusSuggestions(project, action, result) {
+  const relatedNodes = (project.nodes || []).filter((node) =>
+    nodeLinkIds(node, "action").includes(action.id)
+  );
+
+  return relatedNodes.map((node) => {
+    if (result.outcome === "blocked") {
+      return {
+        nodeId: node.id,
+        suggestedStatus: "blocked",
+        reason: `行动结果出现阻塞：${result.summary}`
+      };
+    }
+
+    if (result.outcome === "positive" && !result.followUpNeeded) {
+      return {
+        nodeId: node.id,
+        suggestedStatus: "done",
+        reason: `行动结果为正向且暂无后续动作：${result.summary}`
+      };
+    }
+
+    return {
+      nodeId: node.id,
+      suggestedStatus: "active",
+      reason: `行动已有结果回流，仍需继续推进：${result.summary}`
+    };
+  });
 }
 
 function proposeActions(project, memories) {
@@ -714,6 +842,8 @@ function buildActionForMemoryType(memoryType, memories) {
     return null;
   }
   const statusNote = actionEvidenceStatusNote(sourceMemories);
+  const governedPriority = actionPriorityForMemoryGovernance(template.priority, sourceMemories);
+  const governedRiskLevel = actionRiskForMemoryGovernance(template.riskLevel, sourceMemories);
 
   return {
     id: makeId("act"),
@@ -721,12 +851,13 @@ function buildActionForMemoryType(memoryType, memories) {
     title: adaptActionTitle(template.title, lead),
     rationale: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
     whyNow: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
-    priority: template.priority,
-    riskLevel: template.riskLevel,
+    priority: governedPriority,
+    riskLevel: governedRiskLevel,
     expectedOutput: template.expectedOutput,
     expectedArtifact: template.expectedOutput,
     sourceMemoryIds: sourceMemories.map((memory) => memory.id),
     evidenceMemoryIds: sourceMemories.map((memory) => memory.id),
+    humanConfirmationChecklist: actionMemoryGovernanceChecklist(sourceMemories),
     status: "pending",
     requiresHumanConfirmation: true,
     createdAt: new Date().toISOString()
@@ -736,6 +867,19 @@ function buildActionForMemoryType(memoryType, memories) {
 function buildBrief(project, action, memories) {
   const memoryText = memories.map((memory) => `- ${memory.title}: ${memory.detail}`).join("\n");
   const typeName = ACTION_TYPES[action.type] || action.type;
+  const governanceNotes = briefMemoryGovernanceNotes(project, action, memories);
+  const relatedEntities = entitiesForBrief(project, action, memories);
+  const relatedNodes = nodesForBrief(project, action, memories);
+  const sections = buildBriefSectionsForAction({
+    project,
+    action,
+    memories,
+    memoryText,
+    typeName,
+    governanceNotes,
+    relatedEntities,
+    relatedNodes
+  });
 
   return {
     id: makeId("brief"),
@@ -747,27 +891,124 @@ function buildBrief(project, action, memories) {
     evidenceMemoryIds: memories.map((memory) => memory.id),
     sourceContextIds: sourceContextIdsForMemories(memories),
     createdBy: "ai",
-    sections: {
-      goal: `完成“${action.title}”，产出 ${action.expectedOutput}。`,
-      background:
-        memoryText ||
-        `${project.name} 当前处于 ${project.stage}，需要把上下文转成可执行动作。`,
-      strategy: buildStrategy(action),
-      draft: buildDraft(project, action, memories, typeName),
-      risks: buildRiskNotes(action),
-      successCriteria: [
-        "输出能被团队成员直接审阅和修改",
-        "没有自动发送、自动承诺或自动修改外部系统",
-        "关键假设、证据缺口和风险边界被写清楚",
-        "执行后可以把结果回填到 TeamMind"
+    sections
+  };
+}
+
+function buildBriefSectionsForAction(input) {
+  const {
+    project,
+    action,
+    memories,
+    memoryText,
+    typeName,
+    governanceNotes,
+    relatedEntities,
+    relatedNodes
+  } = input;
+  const background =
+    memoryText ||
+    `${project.name} 当前处于 ${project.stage || "推进中"}，需要把上下文转成可执行动作。`;
+  const entityContext = relatedEntities.length
+    ? relatedEntities.map((entity) => `${entity.name}${entity.role ? `（${entity.role}）` : ""}`)
+    : ["暂无明确关联 Entity"];
+  const nodeContext = relatedNodes.length
+    ? relatedNodes.map((node) => `${node.title}: ${node.goal || "目标待补"}`)
+    : ["暂无明确关联 Project Node"];
+  const successCriteria = [
+    "输出能被团队成员直接审阅和修改",
+    "没有自动发送、自动承诺或自动修改外部系统",
+    "关键假设、证据缺口和风险边界被写清楚",
+    "执行后可以把结果回填到 TeamMind"
+  ];
+  const checklist = [
+    "创始人确认事实是否准确",
+    "负责人确认下一步是否可执行",
+    "高风险承诺已删除或改成待确认表述",
+    "对外发送前完成最后人工审阅"
+  ];
+
+  if (action.type === "customer_followup") {
+    return {
+      background,
+      entityContext,
+      projectNodeContext: nodeContext,
+      memoryGovernance: governanceNotes,
+      customerConcern: memories.map((memory) => `${memory.title}: ${memory.detail}`),
+      replyStrategy: buildStrategy(action),
+      draftMessage: buildDraft(project, action, memories, typeName),
+      doNotPromise: buildRiskNotes(action),
+      nextQuestions: [
+        "客户是否接受小范围试点边界？",
+        "哪些数据可以进入试点，哪些必须排除？",
+        "试点成功后下一步由谁确认？"
       ],
-      checklist: [
-        "创始人确认事实是否准确",
-        "负责人确认下一步是否可执行",
-        "高风险承诺已删除或改成待确认表述",
-        "对外发送前完成最后人工审阅"
-      ]
-    }
+      successCriteria,
+      humanConfirmationChecklist: checklist
+    };
+  }
+
+  if (action.type === "investor_reply") {
+    return {
+      investorQuestion: memories.map((memory) => `${memory.title}: ${memory.detail}`),
+      shortAnswer: `围绕“${action.title}”给出基于现有证据的谨慎回答。`,
+      entityContext,
+      memoryGovernance: governanceNotes,
+      evidenceWeHave: memories.map((memory) => memory.detail),
+      evidenceMissing: [
+        "需要补充最新可验证指标或客户证据",
+        "需要区分事实、假设和仍在验证的判断",
+        "需要创始人确认哪些内容可以对外表达"
+      ],
+      suggestedWording: buildDraft(project, action, memories, typeName),
+      doNotSay: [
+        "不要承诺尚未验证的 ARR、留存或客户数量",
+        "不要把待确认 memory 写成确定事实",
+        "不要承诺融资、法务或客户合作结果"
+      ],
+      followUpMaterials: [
+        "客户访谈摘要",
+        "使用频率或留存证据",
+        "关键风险处理计划"
+      ],
+      founderConfirmationChecklist: checklist
+    };
+  }
+
+  if (action.type === "coding_brief") {
+    return {
+      goal: `完成“${action.title}”，产出 ${action.expectedOutput || action.expectedArtifact}。`,
+      background,
+      projectNodeContext: nodeContext,
+      memoryGovernance: governanceNotes,
+      scope: [
+        "实现界面内闭环状态更新",
+        "保持数据可追溯并通过本地 smoke test",
+        "同步必要文档和 demo 数据"
+      ],
+      nonGoals: [
+        "不接真实外部工具",
+        "不自动发送消息",
+        "不自动修改、提交或 merge 外部代码仓库"
+      ],
+      acceptanceCriteria: successCriteria,
+      testPlan: ["运行 node scripts/smoke-test.mjs", "必要时用 renderApp() 验证新增 UI 文案"],
+      risks: buildRiskNotes(action),
+      reviewChecklist: checklist
+    };
+  }
+
+  return {
+    goal: `完成“${action.title}”，产出 ${action.expectedOutput || action.expectedArtifact}。`,
+    background,
+    entityContext,
+    projectNodeContext: nodeContext,
+    memoryGovernance: governanceNotes,
+    strategy: buildStrategy(action),
+    draft: buildDraft(project, action, memories, typeName),
+    risks: buildRiskNotes(action),
+    successCriteria,
+    checklist
   };
 }
 
@@ -780,6 +1021,29 @@ function sourceContextIdsForMemories(memories) {
         .filter(Boolean)
     )
   ];
+}
+
+function entitiesForBrief(project, action, memories) {
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.entities || []).filter((entity) => {
+    const entityMemoryIds = entityLinkIds(entity, "memory");
+    return (
+      entity.nextSuggestedActionId === action.id ||
+      entityMemoryIds.some((memoryId) => memoryIds.has(memoryId))
+    );
+  });
+}
+
+function nodesForBrief(project, action, memories) {
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.nodes || []).filter((node) => {
+    const actionIds = nodeLinkIds(node, "action");
+    const nodeMemoryIds = nodeLinkIds(node, "memory");
+    return (
+      actionIds.includes(action.id) ||
+      nodeMemoryIds.some((memoryId) => memoryIds.has(memoryId))
+    );
+  });
 }
 
 function buildStrategy(action) {
@@ -827,6 +1091,110 @@ function buildStrategy(action) {
   };
 
   return strategies[action.type] || strategies.learning_loop;
+}
+
+function resolveActionBriefMemories(project, action) {
+  const memoryIds = unique([
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ]);
+
+  return resolveMemories(project, memoryIds)
+    .filter(isUsableActionMemory)
+    .sort(compareMemoryEvidenceStrength);
+}
+
+function actionPriorityForMemoryGovernance(basePriority, memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("confirmed") && !statuses.has("disputed")) {
+    return basePriority;
+  }
+
+  if (basePriority === "high") {
+    return "medium";
+  }
+
+  return basePriority;
+}
+
+function actionRiskForMemoryGovernance(baseRisk, memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("disputed")) {
+    return "high";
+  }
+
+  if (statuses.has("draft") && baseRisk === "low") {
+    return "medium";
+  }
+
+  return baseRisk;
+}
+
+function actionMemoryGovernanceChecklist(memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  const checklist = [
+    "确认引用 memory 的来源片段仍然准确",
+    "确认对外内容只作为草稿，不自动执行"
+  ];
+
+  if (statuses.has("draft")) {
+    checklist.push("先确认待确认 memory，再把它作为强行动依据");
+  }
+
+  if (statuses.has("disputed")) {
+    checklist.push("先处理有争议 memory，避免把冲突判断写成确定事实");
+  }
+
+  if (!statuses.has("confirmed")) {
+    checklist.push("当前缺少已确认 memory，执行前需要负责人复核");
+  }
+
+  return checklist;
+}
+
+function briefMemoryGovernanceNotes(project, action, activeMemories) {
+  const referencedMemoryIds = unique([
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ]);
+  const referencedMemories = resolveMemories(project, referencedMemoryIds);
+  const activeIds = new Set(activeMemories.map((memory) => memory.id));
+  const excludedMemories = referencedMemories.filter((memory) => !activeIds.has(memory.id));
+  const notes = [];
+
+  if (activeMemories.length) {
+    notes.push(
+      `本 brief 使用 ${activeMemories.length} 条可参与推理的 memory：${memoryStatusSummary(activeMemories)}。`
+    );
+  } else {
+    notes.push("当前 action 没有可参与推理的 memory，执行前必须人工补证据。");
+  }
+
+  if (excludedMemories.length) {
+    notes.push(
+      `已排除 ${excludedMemories.length} 条过期或归档 memory：${excludedMemories
+        .map((memory) => memory.title)
+        .join("、")}。`
+    );
+  }
+
+  if (activeMemories.some((memory) => (memory.status || "draft") !== "confirmed")) {
+    notes.push("含待确认或有争议 memory，发送或执行前需要人工复核。");
+  }
+
+  return notes;
+}
+
+function memoryStatusSummary(memories) {
+  const counts = memories.reduce((summary, memory) => {
+    const status = memory.status || "draft";
+    summary[status] = (summary[status] || 0) + 1;
+    return summary;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([status, count]) => `${status} ${count}`)
+    .join("、");
 }
 
 function buildDraft(project, action, memories, typeName) {
@@ -912,15 +1280,16 @@ function groupBy(items, key) {
 }
 
 function mergeActions(incoming, existing) {
-  return [...incoming, ...existing].filter(
-    (action, index, items) =>
-      items.findIndex(
-        (item) =>
-          normalize(item.title) === normalize(action.title) &&
-          item.status !== "done" &&
-          action.status !== "done"
-      ) === index
-  );
+  return [...incoming, ...existing].reduce((merged, action) => {
+    const duplicateOpenAction = merged.some(
+      (item) =>
+        normalize(item.title) === normalize(action.title) &&
+        item.status !== "done" &&
+        action.status !== "done"
+    );
+
+    return duplicateOpenAction ? merged : [...merged, action];
+  }, []);
 }
 
 function resolveMemories(project, memoryIds) {

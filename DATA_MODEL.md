@@ -379,6 +379,8 @@ archived
 - 每个行动必须有 `whyNow`。
 - 每个行动必须有至少一个 `evidenceMemoryIds`，除非是人工创建。
 - 高风险 action 必须有 `humanConfirmationChecklist`。
+- Phase 3 Alpha Wave 3 起，action planning 必须受 memory governance 影响：`confirmed` memory 优先作为强证据，`draft` 和 `disputed` memory 需要人工复核，`outdated` 和 `archived` memory 默认不参与新 action 证据。
+- 当 action 只依赖待确认或有争议 memory 时，应降低优先级或提高风险提示，并在 `humanConfirmationChecklist` 中提示先处理 memory governance。
 
 ## 9. Brief
 
@@ -399,10 +401,21 @@ Brief
 
 `BriefSections` 根据 action type 不同而不同。
 
+通用可选 section：
+
+```text
+entityContext
+projectNodeContext
+memoryGovernance
+```
+
 ### customer_followup
 
 ```text
 background
+entityContext
+projectNodeContext
+memoryGovernance
 customerConcern
 replyStrategy
 draftMessage
@@ -417,6 +430,8 @@ humanConfirmationChecklist
 ```text
 investorQuestion
 shortAnswer
+entityContext
+memoryGovernance
 evidenceWeHave
 evidenceMissing
 suggestedWording
@@ -430,6 +445,8 @@ founderConfirmationChecklist
 ```text
 goal
 background
+projectNodeContext
+memoryGovernance
 scope
 nonGoals
 acceptanceCriteria
@@ -444,6 +461,7 @@ reviewChecklist
 - Brief 必须能被人工编辑。
 - Brief 必须能追溯证据记忆。
 - 高风险内容必须有不要承诺或人工确认项。
+- Phase 3 Alpha Wave 3 起，Brief 只默认引用可参与推理的 memory，并在 `sections.memoryGovernance` 中说明使用了哪些状态的 memory、排除了哪些过期或归档证据，以及是否需要人工复核。
 
 ## 10. ActionResult
 
@@ -457,6 +475,7 @@ ActionResult
   newEvidence: string
   followUpNeeded: boolean
   relatedMemoryUpdates: RelatedMemoryUpdate[]
+  projectNodeUpdates?: ProjectNodeUpdateSuggestion[]
   createdAt: string
 ```
 
@@ -466,6 +485,14 @@ RelatedMemoryUpdate
   operation: "confirm" | "update" | "dispute" | "outdate" | "archive"
   reason: string
   suggestedContent?: string
+  createdAt?: string
+```
+
+```text
+ProjectNodeUpdateSuggestion
+  nodeId: string
+  suggestedStatus: "planned" | "active" | "blocked" | "done" | "archived"
+  reason: string
 ```
 
 开发要求：
@@ -474,6 +501,9 @@ RelatedMemoryUpdate
 - 结果回流应触发 `processResult`。
 - 如果结果改变旧判断，应产生 memory update 建议。
 - 当前本地实现会把结果摘要同步为一个 `ContextItem`，供结果生成的 memory 通过 `sourceReferences` 回溯原文。
+- Phase 3 Alpha Wave 3 起，Result Feedback 表单分别记录 `summary`、`whatChanged`、`newEvidence` 和 `followUpNeeded`；同步生成的 `ContextItem.body` 应保留这些结构化字段，方便后续 memory update 追溯。
+- 已完成 action 必须保留在 `actions` 中，以便 result history、memory detail 和 Project Node detail 继续追溯。
+- Phase 3 Alpha Wave 3 起，result 可以生成 `relatedMemoryUpdates` 和 `projectNodeUpdates`，但这些都是建议：不自动覆盖 memory，也不自动关闭或阻塞 node。
 - 不要只把结果作为一段文本保存后结束。
 
 ## 11. AgentRun

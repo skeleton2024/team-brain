@@ -613,6 +613,96 @@ Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
 - `scripts/smoke-test.mjs`
 - `src/domain/agentEngine.js`
 
+### `docs/issues/MEM-05-memory-governance-live.md`
+
+Phase 3 Alpha Wave 3 的 Memory Governance Live issue。
+
+主要作用：
+
+- 要求 memory 状态真实影响展示、行动建议、brief 证据和优先级。
+- 要求 confirmed memory 更积极参与 action loop。
+- 要求 outdated / archived memory 默认不作为新行动强证据。
+- 明确本 issue 不自动删除或覆盖 memory，不接外部 API。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/ACTION-01-brief-generation.md`
+
+Phase 3 Alpha Wave 3 的 Action Brief Generation issue。
+
+主要作用：
+
+- 要求 Brief 从通用说明升级为场景化执行包。
+- 要求 Brief 消费 action、entity、node、memory、风险和成功标准。
+- 要求高风险 brief 保留人工确认和不要承诺项。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/ACTION-02-result-feedback.md`
+
+Phase 3 Alpha Wave 3 的 Result Feedback issue。
+
+主要作用：
+
+- 要求完善 result feedback 输入和记录。
+- 要求 result 保存 what changed、new evidence、follow-up needed 和相关 memory updates。
+- 要求 result 能挂回 action、memory 和 Project Node。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/REC-03-result-to-memory-update.md`
+
+Phase 3 Alpha Wave 3 的 Result to Memory Update issue。
+
+主要作用：
+
+- 要求根据 result 生成 memory update 建议。
+- 要求需要后续动作时生成 pending follow-up action。
+- 要求 Project Node 展示 result 带来的下一步建议或状态变化。
+- 明确关键 memory update 仍需人工确认，不自动覆盖旧判断。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/QA-03-action-loop-smoke.md`
+
+Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
+
+主要作用：
+
+- 要求 smoke 覆盖 Memory Governance -> Action Brief -> Result Feedback -> Memory Update / Follow-up Action / Project Node 的完整路径。
+- 要求验证 Wave 3 UI 渲染和核心对象链接。
+- 不新增产品功能或外部 API。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -631,6 +721,7 @@ Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
 - 检查新生成 action 的 `whyNow`、`evidenceMemoryIds`、`expectedArtifact`。
 - 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
 - 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
+- Phase 3 Alpha Wave 3 起，覆盖 Memory Governance -> Scenario Brief -> Structured Result Feedback -> Memory Update / Follow-up Action / Project Node suggestion 的完整 action loop。
 
 修改时注意：
 
@@ -652,6 +743,7 @@ Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
 - 调用 domain 层的 `absorbContext()`、`generateBrief()`、`recordActionResult()`。
 - 调用 store 层的 `loadState()`、`saveState()`、`resetState()`、`makeProject()`。
 - 管理 `activeProjectId` 和 `selectedActionId`。
+- 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
 
 修改时注意：
 
@@ -720,8 +812,8 @@ Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
 - 暴露核心闭环入口：`absorbContext(project, input)`、`generateBrief(project, actionId)`、`recordActionResult(project, actionId, resultInput)`。
 - 调用 `extractMemories()` pipeline 把上下文转成候选 memory。
 - 为 memory 生成 action。
-- 为 action 生成通用 Brief。
-- 处理结果回流并生成 result learning memory 和 follow-up actions。
+- 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
+- 处理结构化结果回流，保留 done action，生成 result learning memory、memory update 建议、node 状态建议和 follow-up actions。
 
 当前内部职责：
 
@@ -817,6 +909,7 @@ HTML 渲染层。
 
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
+- 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。
 

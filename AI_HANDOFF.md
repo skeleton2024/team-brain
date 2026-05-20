@@ -2,7 +2,7 @@
 
 用途：给新的 Codex / AI 对话框快速接手项目，减少重复解释和上下文丢失。
 
-最后更新：2026-05-19
+最后更新：2026-05-20
 
 ## 1. 当前产品判断
 
@@ -63,6 +63,12 @@ Wave 2 本地集成分支：
 
 ```text
 integration/phase-3-wave-02
+```
+
+Wave 3 本地集成分支：
+
+```text
+integration/phase-3-wave-03
 ```
 
 历史 memory foundation 分支仍可作为上下文参考，但不再作为后续开发主 base：
@@ -172,9 +178,9 @@ issue/PROJECT-02-node-detail-panel
 issue/QA-02-entity-project-flow
 ```
 
-## 8. 下一步：Wave 3
+## 8. Phase 3 Alpha Wave 3 状态
 
-下一轮建议从 Memory Governance 与 Action 回流开始：
+Wave 3 已完成 Memory Governance 与 Action Loop 的第一版可用闭环：
 
 ```text
 MEM-05-memory-governance-live
@@ -184,15 +190,52 @@ REC-03-result-to-memory-update
 QA-03-action-loop-smoke
 ```
 
-Wave 3 重点：
+关键结果：
 
-- 让 memory 状态真正影响展示、行动建议和优先级。
-- 让 Action Brief 更场景化，包含 entity、node、memory、风险和成功标准。
-- 完整化 Result Feedback review flow。
-- 根据 result 生成 memory update、follow-up action 和项目 / node 状态变化建议。
-- 继续保持人工确认边界，不自动执行外部动作。
+- Memory governance 已进入 action / brief：confirmed 优先，draft / disputed 需要人工复核，outdated / archived 默认不作为新 brief 证据。
+- Action Brief 已按 customer follow-up、investor reply、coding brief 等场景输出不同 sections，并消费 Entity、Project Node、Memory 和成功标准。
+- Result Feedback 表单已结构化保存 summary、whatChanged、newEvidence 和 followUpNeeded。
+- Result 会生成待确认 memory update 建议、follow-up action 和 Project Node 状态建议，但不自动覆盖 memory 或自动修改 node 状态。
+- 已完成 action 会保留在 actions 中，便于 result history、memory detail 和 node detail 继续追溯。
+- QA smoke 覆盖 Manual Source -> Signal -> Memory / Action -> Memory Governance -> Scenario Brief -> Structured Result -> Memory Update -> Follow-up Action -> Project Node suggestion。
+- 每个 issue 完成后、每次合回 `integration/phase-3-wave-03` 后均运行 `node scripts/smoke-test.mjs` 通过。
 
-## 9. 不要做
+Wave 3 明确不做：
+
+- 不接 Gmail / Slack API。
+- 不自动执行外部动作。
+- 不自动发送消息、邮件或承诺。
+- 不把主界面改成聊天产品。
+
+本轮 issue 分支：
+
+```text
+issue/MEM-05-memory-governance-live
+issue/ACTION-01-brief-generation
+issue/ACTION-02-result-feedback
+issue/REC-03-result-to-memory-update
+issue/QA-03-action-loop-smoke
+```
+
+## 9. 下一步：Wave 4
+
+下一轮建议从 Command Center Alpha 开始：
+
+```text
+DASH-01-command-center
+COMMIT-01-commitment-waiting
+RISK-01-risk-opportunity-radar
+PRIORITY-01-ai-priority-queue
+QA-04-alpha-e2e-smoke
+```
+
+Wave 4 重点：
+
+- 把 inbox、memory、project、node、action、commitment、risk 和 opportunity 聚合成公司级工作首页。
+- 展示今日最需要处理的 inbox、action、waiting、risk 和 memory review。
+- 形成 priority queue，但继续保持人工确认和不自动外部执行边界。
+
+## 10. 不要做
 
 - 不要把主界面改成聊天产品。
 - 不要优先接 Gmail / Slack / Notion / Linear / GitHub 自动执行。
@@ -202,7 +245,7 @@ Wave 3 重点：
 - 不要修改核心数据结构但不更新 `DATA_MODEL.md`。
 - 不要新增文件但不更新 `docs/FILE_FUNCTION_NOTES.md`。
 
-## 10. 完成后必须记录
+## 11. 完成后必须记录
 
 完成一个 issue 或一个 Wave 后，至少记录：
 

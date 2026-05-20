@@ -249,7 +249,29 @@ QA-02-entity-project-flow.md
 - 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
 - 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
 
-## 12. 推荐开工提示词
+## 12. Phase 3 Alpha Wave 3 issue
+
+Wave 3 的目标是落地 Memory Governance 与 Action Loop，让 memory 状态、Action Brief、Result Feedback 和 result-to-memory update 真正进入业务闭环。当前已按以下顺序串行完成：
+
+```text
+MEM-05-memory-governance-live.md
+ACTION-01-brief-generation.md
+ACTION-02-result-feedback.md
+REC-03-result-to-memory-update.md
+QA-03-action-loop-smoke.md
+```
+
+执行结果：
+
+- `MEM-05` 让 memory 状态影响展示、行动建议和优先级。
+- `ACTION-01` 把 Action Brief 场景化，消费 Entity / Node / Memory / Risk / Success Criteria。
+- `ACTION-02` 完整化 Result Feedback 输入和记录。
+- `REC-03` 根据 result 生成 memory update、follow-up action 和 project / node 状态建议。
+- `QA-03` 覆盖 Action Brief -> Result Feedback -> Memory Update 的完整闭环。
+- 本 Wave 全程串行；每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都已运行 `node scripts/smoke-test.mjs` 通过。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 13. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。
