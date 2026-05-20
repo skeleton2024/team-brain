@@ -330,6 +330,37 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 - 提交 REC-03，合回 Wave 3 集成分支并运行 smoke。
 
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 3：`QA-03-action-loop-smoke`
+
+分支：`issue/QA-03-action-loop-smoke`
+
+状态：开发中，已完成本地 smoke 增强
+
+改动文件：
+
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Smoke 新增完整 Action Loop 覆盖：Manual Source -> Signal -> Memory / Action -> Memory Governance -> Scenario Brief -> Structured Result -> Memory Update -> Follow-up Action -> Project Node suggestion。
+- 验证 UI 能渲染 governance summary、result history、memory update 数量和 node status suggestion。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Wave 3 结束前需要统一更新 handoff、当前系统状态、数据模型、结构文档、issue README 和 PR #8。
+
+下一步：
+
+- 提交 QA-03，合回 Wave 3 集成分支并运行 smoke。
+
 ### 2026-05-18
 
 负责人：Codex

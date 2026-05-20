@@ -515,6 +515,7 @@ v0.2 demo 至少覆盖：
 - 验证能生成行动。
 - 验证能生成 Brief。
 - 验证结果回流能写入结果和新记忆。
+- 验证 Wave 3 action loop：memory governance、scenario brief、structured result feedback、memory update suggestion、follow-up action 和 Project Node status suggestion。
 
 每个 issue 完成后至少运行：
 
