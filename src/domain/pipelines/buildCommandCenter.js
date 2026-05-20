@@ -162,7 +162,7 @@ function buildPriorityQueue({
     targetId: memory.id,
     targetType: "memory",
     evidenceLinks: memory.evidenceLinks,
-    score: memory.status === "disputed" ? 86 : memory.status === "draft" ? 58 : 38
+    score: memory.status === "disputed" ? 90 : memory.status === "draft" ? 68 : 45
   }));
 
   const opportunityItems = opportunityRadar.map((opportunity) => ({

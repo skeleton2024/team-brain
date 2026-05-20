@@ -302,6 +302,15 @@ QA-04-alpha-e2e-smoke
 - 最后合入 integration/phase-3-alpha，开 draft PR，不直接合 main。
 ```
 
+Wave 4 执行结果（2026-05-20）：
+
+- `DASH-01` 完成 Command Center 聚合 pipeline 和首页展示。
+- `COMMIT-01` 完成 commitment / waiting / dependency / follow-up 的 demo、migration 和展示。
+- `RISK-01` 完成显式 risk / opportunity demo、migration 和雷达展示。
+- `PRIORITY-01` 完成本地规则版 AI Priority Queue，包含 reason、targetId 和证据链。
+- `QA-04` 扩展 smoke test 覆盖 Inbox -> Memory -> Project / Node -> Action -> Result -> Dashboard。
+- Wave 4 保持不接外部 API、不自动执行外部动作、不把主界面改成聊天产品。
+
 ## 11. 后续阶段沿用方式
 
 这套规则不仅用于 Phase 3，也用于后续阶段。
