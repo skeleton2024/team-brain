@@ -600,3 +600,30 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 下一步：
 
 - 合入 `integration/phase-3-alpha`，推送远端分支，创建 draft PR。
+
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 4：Command Center Alpha
+
+分支：`issue/DASH-01-command-center`
+
+状态：DASH-01 进行中，已新增 Command Center 聚合 pipeline 和首页展示。
+
+改动文件：
+
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Commitment / Waiting、Risk / Opportunity 显式模型和 Priority Queue 排序将在后续 Wave 4 issue 中继续补齐。
