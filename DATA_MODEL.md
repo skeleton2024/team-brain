@@ -401,10 +401,21 @@ Brief
 
 `BriefSections` 根据 action type 不同而不同。
 
+通用可选 section：
+
+```text
+entityContext
+projectNodeContext
+memoryGovernance
+```
+
 ### customer_followup
 
 ```text
 background
+entityContext
+projectNodeContext
+memoryGovernance
 customerConcern
 replyStrategy
 draftMessage
@@ -419,6 +430,8 @@ humanConfirmationChecklist
 ```text
 investorQuestion
 shortAnswer
+entityContext
+memoryGovernance
 evidenceWeHave
 evidenceMissing
 suggestedWording
@@ -432,6 +445,8 @@ founderConfirmationChecklist
 ```text
 goal
 background
+projectNodeContext
+memoryGovernance
 scope
 nonGoals
 acceptanceCriteria

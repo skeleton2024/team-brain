@@ -810,7 +810,7 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - 暴露核心闭环入口：`absorbContext(project, input)`、`generateBrief(project, actionId)`、`recordActionResult(project, actionId, resultInput)`。
 - 调用 `extractMemories()` pipeline 把上下文转成候选 memory。
 - 为 memory 生成 action。
-- 为 action 生成通用 Brief。
+- 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
 - 处理结果回流并生成 result learning memory 和 follow-up actions。
 
 当前内部职责：

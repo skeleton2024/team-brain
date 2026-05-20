@@ -864,6 +864,45 @@ if (briefEvidenceStatuses.some((status) => ["outdated", "archived"].includes(sta
   throw new Error("Brief evidence should exclude outdated and archived memories by default.");
 }
 
+let customerBriefProject = generateBrief(structuredClone(DEMO_PROJECT), "act-demo-customer");
+const customerBrief = customerBriefProject.briefs.find((brief) => brief.actionId === "act-demo-customer");
+if (
+  !customerBrief ||
+  !Array.isArray(customerBrief.sections.customerConcern) ||
+  !customerBrief.sections.draftMessage ||
+  !Array.isArray(customerBrief.sections.doNotPromise) ||
+  !Array.isArray(customerBrief.sections.entityContext) ||
+  !Array.isArray(customerBrief.sections.projectNodeContext)
+) {
+  throw new Error(`Expected customer follow-up brief to include scenario sections: ${JSON.stringify(customerBrief)}`);
+}
+
+const customerBriefHtml = renderApp({
+  activeProjectId: customerBriefProject.id,
+  selectedActionId: "act-demo-customer",
+  projects: [customerBriefProject]
+});
+if (
+  !customerBriefHtml.includes("客户顾虑") ||
+  !customerBriefHtml.includes("相关 Entity") ||
+  !customerBriefHtml.includes("相关节点") ||
+  !customerBriefHtml.includes("不要承诺")
+) {
+  throw new Error("Expected customer brief UI to render scenario-specific sections.");
+}
+
+let codingBriefProject = generateBrief(structuredClone(DEMO_PROJECT), "act-demo-engineering");
+const codingBrief = codingBriefProject.briefs.find((brief) => brief.actionId === "act-demo-engineering");
+if (
+  !codingBrief ||
+  !Array.isArray(codingBrief.sections.scope) ||
+  !Array.isArray(codingBrief.sections.nonGoals) ||
+  !Array.isArray(codingBrief.sections.testPlan) ||
+  !Array.isArray(codingBrief.sections.reviewChecklist)
+) {
+  throw new Error(`Expected coding brief to include implementation sections: ${JSON.stringify(codingBrief)}`);
+}
+
 project = recordActionResult(project, action.id, {
   outcome: "positive",
   summary: resultSummary
