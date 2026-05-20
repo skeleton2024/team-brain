@@ -371,6 +371,39 @@ textarea:focus {
   gap: 8px;
 }
 
+.priority-queue {
+  display: grid;
+  gap: 10px;
+}
+
+.priority-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.priority-item {
+  display: grid;
+  gap: 7px;
+  min-height: 118px;
+  padding: 11px;
+  border: 1px solid rgba(15, 143, 123, 0.24);
+  border-radius: var(--radius);
+  background: #ffffff;
+}
+
+.priority-item strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.priority-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .command-metric {
   display: grid;
   gap: 2px;

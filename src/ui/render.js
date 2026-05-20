@@ -185,6 +185,8 @@ function renderCommandCenter(project) {
         </div>
       </div>
 
+      ${renderPriorityQueue(snapshot.priorityQueue)}
+
       <div class="command-metrics" aria-label="Command Center 指标">
         ${renderCommandMetric("Inbox", snapshot.metrics.inbox)}
         ${renderCommandMetric("Memory review", snapshot.metrics.memoryReview)}
@@ -235,6 +237,38 @@ function renderCommandCenter(project) {
         </section>
       </div>
     </section>
+  `;
+}
+
+function renderPriorityQueue(items) {
+  return `
+    <section class="priority-queue" data-priority-queue>
+      <div class="command-section-heading">
+        <h4>AI Priority Queue</h4>
+        <span>${items.length}</span>
+      </div>
+      ${
+        items.length
+          ? `<div class="priority-list">
+              ${items.map(renderPriorityItem).join("")}
+            </div>`
+          : `<div class="command-empty">暂无需要排序的事项。</div>`
+      }
+    </section>
+  `;
+}
+
+function renderPriorityItem(item) {
+  return `
+    <article class="priority-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(priorityTypeLabel(item.type))}</span>
+        <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(item.reason)}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
   `;
 }
 
@@ -2332,6 +2366,16 @@ function riskStatusLabel(status) {
 
 function opportunityStatusLabel(status) {
   return OPPORTUNITY_STATUS[status] || OPPORTUNITY_STATUS.new;
+}
+
+function priorityTypeLabel(type) {
+  return {
+    commitment: "Commitment",
+    risk: "Risk",
+    action: "Action",
+    memory_review: "Memory Review",
+    opportunity: "Opportunity"
+  }[type] || "Priority";
 }
 
 function confidenceScoreLabel(confidence) {

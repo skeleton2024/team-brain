@@ -840,6 +840,27 @@ Opportunity
 - 多个 Source / Signal 指向同一需求时，应优先合并为一个可追溯机会。
 - Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.opportunities`，不自动承诺销售、融资或产品结论。
 
+### 13.10 PriorityQueueItem
+
+```text
+PriorityQueueItem
+  id: string
+  type: "commitment" | "risk" | "action" | "memory_review" | "opportunity"
+  title: string
+  reason: string
+  priority: "low" | "medium" | "high"
+  targetId: string
+  targetType: string
+  evidenceLinks: EvidenceLink[]
+```
+
+开发要求：
+
+- PriorityQueueItem 是 Command Center 的只读派生对象，不需要直接持久化。
+- 每个队列项必须说明 `reason`，避免黑盒排序。
+- 队列项必须能追溯到 commitment、risk、action、memory 或 opportunity。
+- Priority Queue 只排序和提示，不自动执行任何外部动作。
+
 ## 14. 当前与目标模型的差异
 
 当前 v0.1 到 v0.2 过渡代码已经有：
