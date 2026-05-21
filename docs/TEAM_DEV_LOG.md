@@ -182,6 +182,34 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 负责人：Codex
 
+范围：Phase 3 Alpha Wave 5 alpha merge 收口
+
+分支：`integration/phase-3-alpha`
+
+状态：Wave 5 已合入 alpha，待推送并更新现有 draft PR #8
+
+改动文件：
+
+- `AI_HANDOFF.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- `integration/phase-3-wave-05` 已合入 `integration/phase-3-alpha`。
+- Alpha 上 `node scripts/smoke-test.mjs` 通过，summary 包含 Wave 5 hardening 字段。
+
+待决问题：
+
+- 需要推送 `integration/phase-3-alpha` 并更新 PR #8 描述。
+
+下一步：
+
+- 推送 alpha；更新现有 draft PR #8，不新建重复 PR。
+
+### 2026-05-21
+
+负责人：Codex
+
 范围：Phase 3 Alpha Wave 5：`QA-05-alpha-hardening-smoke`
 
 分支：`issue/QA-05-alpha-hardening-smoke`

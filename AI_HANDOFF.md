@@ -261,7 +261,7 @@ QA-05-alpha-hardening-smoke
 - `RESILIENCE-01` 已完成旧 localStorage、空项目、partial project 和 malformed item 的兼容保护。
 - `QA-05` 已扩展 smoke summary，覆盖 Wave 5 command targets、review actions、manual edit forms 和 hardening cases。
 - 每个 issue 分支和合回 `integration/phase-3-wave-05` 后均运行 `node scripts/smoke-test.mjs` 通过。
-- Wave 5 待执行收口：合入 `integration/phase-3-alpha`、推送 alpha、更新现有 draft PR #8，不新建重复 PR。
+- Wave 5 已合入 `integration/phase-3-alpha`。后续继续更新现有 draft PR #8，不新建重复 PR，不直接合 main。
 
 ## 10. 不要做
 
