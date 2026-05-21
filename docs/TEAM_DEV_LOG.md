@@ -182,6 +182,42 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 负责人：Codex
 
+范围：Phase 3 Alpha Wave 5：`REVIEW-01-human-review-actions`
+
+分支：`issue/REVIEW-01-human-review-actions`
+
+状态：开发中，已完成本地人工 review 动作和 smoke
+
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Memory Review、Commitment、Risk 和 Opportunity 均有本地状态推进入口。
+- 状态推进只修改本地 state 和 `updatedAt`，不会发送外部消息或外部承诺。
+- Smoke 直接验证状态推进后原有 evidence links / source references 保留。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- EDIT-01 需要补 Action priority / status 和 Commitment dueAt 等轻量手动编辑入口。
+
+下一步：
+
+- 提交 REVIEW-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
 范围：Phase 3 Alpha Wave 5：`NAV-01-command-center-deep-links`
 
 分支：`issue/NAV-01-command-center-deep-links`

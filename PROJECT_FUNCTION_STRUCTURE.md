@@ -271,6 +271,10 @@ Data：
 absorbContext(project, input)
 generateBrief(project, actionId)
 recordActionResult(project, actionId, resultInput)
+updateMemoryStatus(project, memoryId, status)
+updateCommitmentStatus(project, commitmentId, status)
+updateRiskStatus(project, riskId, status)
+updateOpportunityStatus(project, opportunityId, status)
 ```
 
 v0.2 目标：
@@ -279,6 +283,7 @@ v0.2 目标：
 - 把内部逻辑迁移到 `src/domain/pipelines/*`。
 - 每次 pipeline 运行产生 `AgentRun`。
 - 每个 AI 或规则输出都能追溯 sourceReferences。
+- Wave 5 起，提供本地人工 review 状态推进函数，只更新本地 state，不触发外部执行。
 
 REC-01 当前进展：
 

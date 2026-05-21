@@ -845,6 +845,7 @@ Phase 3 Alpha Wave 5 的 hardening smoke issue。
 - 管理 `activeProjectId` 和 `selectedActionId`。
 - 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
 - Phase 3 Alpha Wave 5 起，处理 Command Center 定位链接，把 priority queue 的 target 转成现有 selected action / memory / node state 并滚动到锚点。
+- Phase 3 Alpha Wave 5 起，绑定 Commitment、Risk 和 Opportunity 的本地 review 状态推进按钮。
 
 修改时注意：
 
@@ -917,6 +918,7 @@ Phase 3 Alpha Wave 5 的 hardening smoke issue。
 - 为 memory 生成 action。
 - 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
 - 处理结构化结果回流，保留 done action，生成 result learning memory、memory update 建议、node 状态建议和 follow-up actions。
+- Phase 3 Alpha Wave 5 起，提供 Memory、Commitment、Risk 和 Opportunity 的本地人工 review 状态推进函数，保留原有证据链。
 
 当前内部职责：
 
@@ -1034,6 +1036,7 @@ HTML 渲染层。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
 - 渲染 Command Center 工作首页。
 - 渲染 Command Center / Priority Queue 的对象定位入口、目标锚点和证据链接。
+- 渲染 Command Center 和项目区里的 Memory / Commitment / Risk / Opportunity 最小 review 操作按钮。
 - 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。

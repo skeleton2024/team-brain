@@ -7,9 +7,12 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
+  updateCommitmentStatus,
   updateEntityStatus,
   updateMemoryStatus,
-  updateProjectNodeStatus
+  updateOpportunityStatus,
+  updateProjectNodeStatus,
+  updateRiskStatus
 } from "../src/domain/agentEngine.js";
 import { buildCommandCenter } from "../src/domain/pipelines/buildCommandCenter.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
@@ -100,9 +103,55 @@ if (
   !commandCenterHtml.includes('id="memory-') ||
   !commandCenterHtml.includes('id="commitment-') ||
   !commandCenterHtml.includes('id="risk-') ||
-  !commandCenterHtml.includes('href="#source-')
+  !commandCenterHtml.includes('href="#source-') ||
+  !commandCenterHtml.includes('data-action="update-memory-status"') ||
+  !commandCenterHtml.includes('data-action="update-commitment-status"') ||
+  !commandCenterHtml.includes('data-action="update-risk-status"') ||
+  !commandCenterHtml.includes('data-action="update-opportunity-status"')
 ) {
   throw new Error("Expected Command Center dashboard to render in smoke HTML.");
+}
+
+let reviewProject = structuredClone(DEMO_PROJECT);
+const reviewMemoryBefore = reviewProject.memories.find((memory) => memory.id === "mem-demo-engineering");
+reviewProject = updateMemoryStatus(reviewProject, "mem-demo-engineering", "confirmed");
+const reviewMemoryAfter = reviewProject.memories.find((memory) => memory.id === "mem-demo-engineering");
+if (
+  reviewMemoryAfter.status !== "confirmed" ||
+  !reviewMemoryAfter.lastVerifiedAt ||
+  reviewMemoryAfter.sourceReferences.length !== reviewMemoryBefore.sourceReferences.length
+) {
+  throw new Error(`Expected memory review action to confirm without losing evidence: ${JSON.stringify(reviewMemoryAfter)}`);
+}
+
+const reviewCommitmentBefore = reviewProject.commitments.find((item) => item.id === "commit-demo-security-brief");
+reviewProject = updateCommitmentStatus(reviewProject, "commit-demo-security-brief", "done");
+const reviewCommitmentAfter = reviewProject.commitments.find((item) => item.id === "commit-demo-security-brief");
+if (
+  reviewCommitmentAfter.status !== "done" ||
+  reviewCommitmentAfter.evidenceLinks.length !== reviewCommitmentBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected commitment review action to mark done without losing evidence: ${JSON.stringify(reviewCommitmentAfter)}`);
+}
+
+const reviewRiskBefore = reviewProject.risks.find((item) => item.id === "risk-demo-security-boundary");
+reviewProject = updateRiskStatus(reviewProject, "risk-demo-security-boundary", "mitigated");
+const reviewRiskAfter = reviewProject.risks.find((item) => item.id === "risk-demo-security-boundary");
+if (
+  reviewRiskAfter.status !== "mitigated" ||
+  reviewRiskAfter.evidenceLinks.length !== reviewRiskBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected risk review action to mark mitigated without losing evidence: ${JSON.stringify(reviewRiskAfter)}`);
+}
+
+const reviewOpportunityBefore = reviewProject.opportunities.find((item) => item.id === "opp-demo-investor-materials");
+reviewProject = updateOpportunityStatus(reviewProject, "opp-demo-investor-materials", "pursuing");
+const reviewOpportunityAfter = reviewProject.opportunities.find((item) => item.id === "opp-demo-investor-materials");
+if (
+  reviewOpportunityAfter.status !== "pursuing" ||
+  reviewOpportunityAfter.evidenceLinks.length !== reviewOpportunityBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected opportunity review action to move to pursuing without losing evidence: ${JSON.stringify(reviewOpportunityAfter)}`);
 }
 
 const demoMemoriesMissingSources = project.memories.filter(
