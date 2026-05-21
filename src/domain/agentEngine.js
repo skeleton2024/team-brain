@@ -85,6 +85,23 @@ const PROJECT_NODE_TRANSITION_STATUS = new Set([
   "done",
   "archived"
 ]);
+const COMMITMENT_TRANSITION_STATUS = new Set([
+  "open",
+  "waiting",
+  "blocked",
+  "done",
+  "overdue",
+  "archived"
+]);
+const RISK_TRANSITION_STATUS = new Set(["open", "monitoring", "mitigated", "archived"]);
+const OPPORTUNITY_TRANSITION_STATUS = new Set([
+  "new",
+  "evaluating",
+  "pursuing",
+  "won",
+  "lost",
+  "archived"
+]);
 
 export function addManualSource(project, input) {
   const now = new Date().toISOString();
@@ -481,6 +498,102 @@ export function updateProjectNodeStatus(project, nodeId, status) {
     ...project,
     updatedAt: now,
     nodes
+  };
+}
+
+export function updateCommitmentStatus(project, commitmentId, status) {
+  if (!COMMITMENT_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const commitments = (project.commitments || []).map((commitment) => {
+    if (commitment.id !== commitmentId || commitment.status === status) {
+      return commitment;
+    }
+
+    changed = true;
+    return {
+      ...commitment,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    commitments
+  };
+}
+
+export function updateRiskStatus(project, riskId, status) {
+  if (!RISK_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const risks = (project.risks || []).map((risk) => {
+    if (risk.id !== riskId || risk.status === status) {
+      return risk;
+    }
+
+    changed = true;
+    return {
+      ...risk,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    risks
+  };
+}
+
+export function updateOpportunityStatus(project, opportunityId, status) {
+  if (!OPPORTUNITY_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const opportunities = (project.opportunities || []).map((opportunity) => {
+    if (opportunity.id !== opportunityId || opportunity.status === status) {
+      return opportunity;
+    }
+
+    changed = true;
+    return {
+      ...opportunity,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    opportunities
   };
 }
 

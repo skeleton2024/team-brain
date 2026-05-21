@@ -47,6 +47,24 @@ const PROJECT_NODE_STATUS_ACTIONS = [
   { status: "archived", label: "归档" }
 ];
 
+const COMMITMENT_REVIEW_ACTIONS = [
+  { status: "done", label: "完成" },
+  { status: "blocked", label: "阻塞" },
+  { status: "archived", label: "归档" }
+];
+
+const RISK_REVIEW_ACTIONS = [
+  { status: "monitoring", label: "监控" },
+  { status: "mitigated", label: "缓解" },
+  { status: "archived", label: "归档" }
+];
+
+const OPPORTUNITY_REVIEW_ACTIONS = [
+  { status: "evaluating", label: "评估" },
+  { status: "pursuing", label: "推进" },
+  { status: "archived", label: "归档" }
+];
+
 const BRIEF_SECTION_LABELS = {
   goal: "目标",
   background: "已知背景",
@@ -343,6 +361,7 @@ function renderCommandCommitmentItem(item) {
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(commitmentLine(item))}</p>
       ${renderCommandTargetLink(item)}
+      ${renderCommitmentReviewActions(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -358,6 +377,7 @@ function renderCommandMemoryItem(item) {
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.summary)}</p>
       ${renderCommandTargetLink(item)}
+      ${renderCommandMemoryReviewActions(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -394,6 +414,7 @@ function renderRiskOpportunityPreview(snapshot) {
               <strong>${escapeHtml(item.title)}</strong>
               <p>${escapeHtml(item.description)}</p>
               ${renderCommandTargetLink(item)}
+              ${item.kind === "Risk" ? renderRiskReviewActions(item) : renderOpportunityReviewActions(item)}
               ${renderCommandEvidence(item.evidenceLinks)}
             </article>
           `
@@ -1233,6 +1254,7 @@ function renderCommitmentCard(project, commitment) {
         ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
         ${commitment.evidenceLinks?.length ? `<span>证据 ${commitment.evidenceLinks.length}</span>` : ""}
       </div>
+      ${renderCommitmentReviewActions(commitment)}
     </article>
   `;
 }
@@ -1306,6 +1328,7 @@ function renderRadarCard(project, item, kind) {
         <span>证据 ${evidenceCount}</span>
         <span>建议 action ${actionCount}</span>
       </div>
+      ${kind === "risk" ? renderRiskReviewActions(item) : renderOpportunityReviewActions(item)}
     </article>
   `;
 }
@@ -1761,6 +1784,105 @@ function renderMemoryStatusActions(memory) {
               data-action="update-memory-status"
               data-memory-id="${escapeHtml(memory.id)}"
               data-memory-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderCommandMemoryReviewActions(memory) {
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Memory review 操作">
+      ${MEMORY_STATUS_ACTIONS.filter((action) => action.status !== (memory.status || "draft"))
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-memory-status"
+              data-memory-id="${escapeHtml(memory.id)}"
+              data-memory-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderCommitmentReviewActions(commitment) {
+  const currentStatus = commitment.status || "open";
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Commitment review 操作">
+      ${COMMITMENT_REVIEW_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-commitment-status"
+              data-commitment-id="${escapeHtml(commitment.id)}"
+              data-commitment-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRiskReviewActions(risk) {
+  if ((risk.targetType || "risk") !== "risk") {
+    return "";
+  }
+
+  const currentStatus = risk.status || "open";
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Risk review 操作">
+      ${RISK_REVIEW_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-risk-status"
+              data-risk-id="${escapeHtml(risk.id)}"
+              data-risk-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderOpportunityReviewActions(opportunity) {
+  if ((opportunity.targetType || "opportunity") !== "opportunity") {
+    return "";
+  }
+
+  const currentStatus = opportunity.status || "new";
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Opportunity review 操作">
+      ${OPPORTUNITY_REVIEW_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-opportunity-status"
+              data-opportunity-id="${escapeHtml(opportunity.id)}"
+              data-opportunity-status="${escapeHtml(action.status)}"
               type="button"
             >
               ${escapeHtml(action.label)}

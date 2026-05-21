@@ -1269,6 +1269,10 @@ textarea:focus {
   gap: 6px;
 }
 
+.compact-review-actions {
+  margin-top: 2px;
+}
+
 .memory-status-action {
   min-height: 28px;
   border: 1px solid var(--line);
@@ -1300,6 +1304,21 @@ textarea:focus {
 
 .memory-status-action.archived {
   color: #64748b;
+}
+
+.memory-status-action.done,
+.memory-status-action.mitigated,
+.memory-status-action.pursuing {
+  color: var(--green);
+}
+
+.memory-status-action.blocked {
+  color: var(--red);
+}
+
+.memory-status-action.monitoring,
+.memory-status-action.evaluating {
+  color: var(--blue);
 }
 
 .memory-detail-panel {

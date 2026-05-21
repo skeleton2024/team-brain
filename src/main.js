@@ -6,9 +6,12 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
+  updateCommitmentStatus,
   updateEntityStatus,
   updateMemoryStatus,
-  updateProjectNodeStatus
+  updateOpportunityStatus,
+  updateProjectNodeStatus,
+  updateRiskStatus
 } from "./domain/agentEngine.js";
 import {
   createInitialState,
@@ -80,6 +83,34 @@ function bindEvents() {
     button.addEventListener("click", () => {
       updateActiveProject((project) =>
         updateProjectNodeStatus(project, button.dataset.nodeId, button.dataset.nodeStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-commitment-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateCommitmentStatus(project, button.dataset.commitmentId, button.dataset.commitmentStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-risk-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateRiskStatus(project, button.dataset.riskId, button.dataset.riskStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-opportunity-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateOpportunityStatus(
+          project,
+          button.dataset.opportunityId,
+          button.dataset.opportunityStatus
+        )
       );
     });
   });
