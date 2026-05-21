@@ -1273,6 +1273,27 @@ textarea:focus {
   margin-top: 2px;
 }
 
+.inline-edit-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 8px;
+  border: 1px solid rgba(15, 143, 123, 0.16);
+  border-radius: var(--radius);
+  background: #f8fbf9;
+}
+
+.inline-edit-form label {
+  font-size: 12px;
+}
+
+.inline-edit-form select,
+.inline-edit-form input {
+  height: 34px;
+  padding: 0 9px;
+}
+
 .memory-status-action {
   min-height: 28px;
   border: 1px solid var(--line);

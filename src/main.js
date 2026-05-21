@@ -19,7 +19,11 @@ import {
   makeProject,
   resetState,
   saveState,
-  updateMemory
+  updateAction,
+  updateCommitment,
+  updateMemory,
+  updateOpportunity,
+  updateRisk
 } from "./services/store.js";
 import { getActiveProject, renderApp } from "./ui/render.js";
 
@@ -41,6 +45,18 @@ function bindEvents() {
   app.querySelector('[data-form="record-result"]')?.addEventListener("submit", handleRecordResult);
   app.querySelectorAll('[data-form="edit-memory"]').forEach((form) => {
     form.addEventListener("submit", handleEditMemory);
+  });
+  app.querySelectorAll('[data-form="edit-action"]').forEach((form) => {
+    form.addEventListener("submit", handleEditAction);
+  });
+  app.querySelectorAll('[data-form="edit-commitment"]').forEach((form) => {
+    form.addEventListener("submit", handleEditCommitment);
+  });
+  app.querySelectorAll('[data-form="edit-risk"]').forEach((form) => {
+    form.addEventListener("submit", handleEditRisk);
+  });
+  app.querySelectorAll('[data-form="edit-opportunity"]').forEach((form) => {
+    form.addEventListener("submit", handleEditOpportunity);
   });
 
   app.querySelectorAll('[data-action="process-source"]').forEach((button) => {
@@ -354,6 +370,58 @@ function handleEditMemory(event) {
     };
     return updateMemory(project, memoryId, input);
   });
+}
+
+function handleEditAction(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const actionId = event.currentTarget.dataset.actionId;
+
+  updateActiveProject(
+    (project) =>
+      updateAction(project, actionId, {
+        priority: String(form.get("priority") || "medium"),
+        status: String(form.get("status") || "pending")
+      }),
+    actionId
+  );
+}
+
+function handleEditCommitment(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const commitmentId = event.currentTarget.dataset.commitmentId;
+
+  updateActiveProject((project) =>
+    updateCommitment(project, commitmentId, {
+      status: String(form.get("status") || "open"),
+      dueAt: String(form.get("dueAt") || "")
+    })
+  );
+}
+
+function handleEditRisk(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const riskId = event.currentTarget.dataset.riskId;
+
+  updateActiveProject((project) =>
+    updateRisk(project, riskId, {
+      status: String(form.get("status") || "open")
+    })
+  );
+}
+
+function handleEditOpportunity(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const opportunityId = event.currentTarget.dataset.opportunityId;
+
+  updateActiveProject((project) =>
+    updateOpportunity(project, opportunityId, {
+      status: String(form.get("status") || "new")
+    })
+  );
 }
 
 function handleRecordResult(event) {

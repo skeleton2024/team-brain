@@ -1,5 +1,6 @@
 import { DEMO_PROJECT } from "../data/demo.js";
 import {
+  ACTION_STATUS,
   MEMORY_STATUS,
   MEMORY_TYPES,
   ENTITY_TYPES,
@@ -119,6 +120,92 @@ export function updateMemory(project, memoryId, input) {
   };
 }
 
+export function updateAction(project, actionId, input) {
+  const action = project.actions.find((item) => item.id === actionId);
+  if (!action) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextAction = {
+    ...action,
+    priority: normalizePriority(input.priority, action.priority || "medium"),
+    status: normalizeActionStatus(input.status, action.status || "pending"),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    actions: project.actions.map((item) => (item.id === actionId ? nextAction : item))
+  };
+}
+
+export function updateCommitment(project, commitmentId, input) {
+  const commitment = (project.commitments || []).find((item) => item.id === commitmentId);
+  if (!commitment) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextCommitment = {
+    ...commitment,
+    status: normalizeCommitmentStatus(input.status || commitment.status),
+    dueAt: cleanText(input.dueAt),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    commitments: (project.commitments || []).map((item) =>
+      item.id === commitmentId ? nextCommitment : item
+    )
+  };
+}
+
+export function updateRisk(project, riskId, input) {
+  const risk = (project.risks || []).find((item) => item.id === riskId);
+  if (!risk) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextRisk = {
+    ...risk,
+    status: normalizeRiskStatus(input.status || risk.status),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    risks: (project.risks || []).map((item) => (item.id === riskId ? nextRisk : item))
+  };
+}
+
+export function updateOpportunity(project, opportunityId, input) {
+  const opportunity = (project.opportunities || []).find((item) => item.id === opportunityId);
+  if (!opportunity) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextOpportunity = {
+    ...opportunity,
+    status: normalizeOpportunityStatus(input.status || opportunity.status),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    opportunities: (project.opportunities || []).map((item) =>
+      item.id === opportunityId ? nextOpportunity : item
+    )
+  };
+}
+
 export function makeId(prefix) {
   if (globalThis.crypto?.randomUUID) {
     return `${prefix}-${globalThis.crypto.randomUUID()}`;
@@ -137,6 +224,14 @@ function normalizeMemoryType(value, fallback) {
 
 function normalizeEditedMemoryStatus(value, fallback) {
   return MEMORY_STATUS[value] ? value : fallback;
+}
+
+function normalizeActionStatus(value, fallback) {
+  return ACTION_STATUS[value] ? value : fallback;
+}
+
+function normalizePriority(value, fallback) {
+  return ["low", "medium", "high"].includes(value) ? value : fallback;
 }
 
 function cloneProject(project) {

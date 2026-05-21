@@ -846,6 +846,7 @@ Phase 3 Alpha Wave 5 的 hardening smoke issue。
 - 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
 - Phase 3 Alpha Wave 5 起，处理 Command Center 定位链接，把 priority queue 的 target 转成现有 selected action / memory / node state 并滚动到锚点。
 - Phase 3 Alpha Wave 5 起，绑定 Commitment、Risk 和 Opportunity 的本地 review 状态推进按钮。
+- Phase 3 Alpha Wave 5 起，绑定 Action、Commitment、Risk 和 Opportunity 的轻量手动编辑表单。
 
 修改时注意：
 
@@ -1018,6 +1019,7 @@ Command Center 聚合 pipeline。
 - 生成稳定 ID。
 - 兼容迁移 `commitments`，保证旧 localStorage 缺少字段时不会白屏。
 - 兼容迁移 `risks` 和 `opportunities`，保证 Command Center 输入稳定。
+- Phase 3 Alpha Wave 5 起，提供 Action priority / status、Commitment status / dueAt、Risk status 和 Opportunity status 的轻量本地编辑 helper。
 
 修改时注意：
 
@@ -1037,6 +1039,7 @@ HTML 渲染层。
 - 渲染 Command Center 工作首页。
 - 渲染 Command Center / Priority Queue 的对象定位入口、目标锚点和证据链接。
 - 渲染 Command Center 和项目区里的 Memory / Commitment / Risk / Opportunity 最小 review 操作按钮。
+- 渲染 Action、Commitment、Risk 和 Opportunity 的轻量手动编辑表单。
 - 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。

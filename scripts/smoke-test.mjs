@@ -18,7 +18,14 @@ import { buildCommandCenter } from "../src/domain/pipelines/buildCommandCenter.j
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
-import { makeProject, updateMemory } from "../src/services/store.js";
+import {
+  makeProject,
+  updateAction,
+  updateCommitment,
+  updateMemory,
+  updateOpportunity,
+  updateRisk
+} from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
@@ -80,7 +87,7 @@ if (
 
 const commandCenterHtml = renderApp({
   activeProjectId: project.id,
-  selectedActionId: null,
+  selectedActionId: "act-demo-customer",
   projects: [project]
 });
 if (
@@ -107,7 +114,12 @@ if (
   !commandCenterHtml.includes('data-action="update-memory-status"') ||
   !commandCenterHtml.includes('data-action="update-commitment-status"') ||
   !commandCenterHtml.includes('data-action="update-risk-status"') ||
-  !commandCenterHtml.includes('data-action="update-opportunity-status"')
+  !commandCenterHtml.includes('data-action="update-opportunity-status"') ||
+  !commandCenterHtml.includes('data-form="edit-action"') ||
+  !commandCenterHtml.includes('data-form="edit-commitment"') ||
+  !commandCenterHtml.includes('data-form="edit-risk"') ||
+  !commandCenterHtml.includes('data-form="edit-opportunity"') ||
+  !commandCenterHtml.includes('name="dueAt"')
 ) {
   throw new Error("Expected Command Center dashboard to render in smoke HTML.");
 }
@@ -152,6 +164,41 @@ if (
   reviewOpportunityAfter.evidenceLinks.length !== reviewOpportunityBefore.evidenceLinks.length
 ) {
   throw new Error(`Expected opportunity review action to move to pursuing without losing evidence: ${JSON.stringify(reviewOpportunityAfter)}`);
+}
+
+let editProject = structuredClone(DEMO_PROJECT);
+editProject = updateAction(editProject, "act-demo-product", {
+  priority: "high",
+  status: "briefed"
+});
+const editedAction = editProject.actions.find((action) => action.id === "act-demo-product");
+if (editedAction.priority !== "high" || editedAction.status !== "briefed") {
+  throw new Error(`Expected action manual edit to update priority and status: ${JSON.stringify(editedAction)}`);
+}
+
+editProject = updateCommitment(editProject, "commit-demo-investor-follow-up", {
+  status: "waiting",
+  dueAt: "2026-06-01"
+});
+const editedCommitment = editProject.commitments.find(
+  (commitment) => commitment.id === "commit-demo-investor-follow-up"
+);
+if (editedCommitment.status !== "waiting" || editedCommitment.dueAt !== "2026-06-01") {
+  throw new Error(`Expected commitment manual edit to update status and dueAt: ${JSON.stringify(editedCommitment)}`);
+}
+
+editProject = updateRisk(editProject, "risk-demo-scope-creep", { status: "archived" });
+const editedRisk = editProject.risks.find((risk) => risk.id === "risk-demo-scope-creep");
+if (editedRisk.status !== "archived" || !editedRisk.evidenceLinks.length) {
+  throw new Error(`Expected risk manual edit to update status without losing evidence: ${JSON.stringify(editedRisk)}`);
+}
+
+editProject = updateOpportunity(editProject, "opp-demo-paid-pilot", { status: "pursuing" });
+const editedOpportunity = editProject.opportunities.find(
+  (opportunity) => opportunity.id === "opp-demo-paid-pilot"
+);
+if (editedOpportunity.status !== "pursuing" || !editedOpportunity.evidenceLinks.length) {
+  throw new Error(`Expected opportunity manual edit to update status without losing evidence: ${JSON.stringify(editedOpportunity)}`);
 }
 
 const demoMemoriesMissingSources = project.memories.filter(

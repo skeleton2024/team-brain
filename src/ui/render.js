@@ -1254,6 +1254,7 @@ function renderCommitmentCard(project, commitment) {
         ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
         ${commitment.evidenceLinks?.length ? `<span>证据 ${commitment.evidenceLinks.length}</span>` : ""}
       </div>
+      ${renderCommitmentEditForm(commitment)}
       ${renderCommitmentReviewActions(commitment)}
     </article>
   `;
@@ -1328,6 +1329,7 @@ function renderRadarCard(project, item, kind) {
         <span>证据 ${evidenceCount}</span>
         <span>建议 action ${actionCount}</span>
       </div>
+      ${kind === "risk" ? renderRiskEditForm(item) : renderOpportunityEditForm(item)}
       ${kind === "risk" ? renderRiskReviewActions(item) : renderOpportunityReviewActions(item)}
     </article>
   `;
@@ -2067,6 +2069,7 @@ function renderBrief(project, action, brief) {
       }
     </article>
 
+    ${renderActionEditForm(action)}
     ${renderActionResultHistory(project, action)}
 
     <form class="result-form" data-form="record-result" data-action-id="${action.id}">
@@ -2106,6 +2109,97 @@ function renderBrief(project, action, brief) {
           <span>✓</span>
         </button>
       </div>
+    </form>
+  `;
+}
+
+function renderActionEditForm(action) {
+  return `
+    <form class="inline-edit-form" data-form="edit-action" data-action-id="${escapeHtml(action.id)}">
+      <label>
+        优先级
+        <select name="priority">
+          ${["high", "medium", "low"]
+            .map(
+              (priority) =>
+                `<option value="${escapeHtml(priority)}" ${priority === (action.priority || "medium") ? "selected" : ""}>${escapeHtml(PRIORITY_LABELS[priority] || priority)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <label>
+        状态
+        <select name="status">
+          ${Object.entries(ACTION_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (action.status || "pending") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存行动</button>
+    </form>
+  `;
+}
+
+function renderCommitmentEditForm(commitment) {
+  return `
+    <form class="inline-edit-form" data-form="edit-commitment" data-commitment-id="${escapeHtml(commitment.id)}">
+      <label>
+        状态
+        <select name="status">
+          ${Object.entries(COMMITMENT_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (commitment.status || "open") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <label>
+        截止日
+        <input name="dueAt" type="date" value="${escapeHtml(dateForInput(commitment.dueAt))}" />
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存承诺</button>
+    </form>
+  `;
+}
+
+function renderRiskEditForm(risk) {
+  return `
+    <form class="inline-edit-form" data-form="edit-risk" data-risk-id="${escapeHtml(risk.id)}">
+      <label>
+        风险状态
+        <select name="status">
+          ${Object.entries(RISK_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (risk.status || "open") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存风险</button>
+    </form>
+  `;
+}
+
+function renderOpportunityEditForm(opportunity) {
+  return `
+    <form class="inline-edit-form" data-form="edit-opportunity" data-opportunity-id="${escapeHtml(opportunity.id)}">
+      <label>
+        机会状态
+        <select name="status">
+          ${Object.entries(OPPORTUNITY_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (opportunity.status || "new") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存机会</button>
     </form>
   `;
 }
@@ -2491,6 +2585,19 @@ function formatDateOnly(value) {
 
 function todayForInput() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function dateForInput(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10);
+  }
+
+  return date.toISOString().slice(0, 10);
 }
 
 function trimInline(value, maxLength = 80) {
