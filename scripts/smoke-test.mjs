@@ -20,6 +20,7 @@ import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
 import {
   makeProject,
+  normalizeStoredState,
   updateAction,
   updateCommitment,
   updateMemory,
@@ -223,6 +224,73 @@ if (
   !Array.isArray(freshProject.opportunities)
 ) {
   throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
+}
+
+const legacyState = normalizeStoredState({
+  projects: [
+    {
+      id: "legacy-hardening-project",
+      name: "Legacy Hardening",
+      memories: [
+        {
+          id: "legacy-hardening-memory",
+          title: "旧 memory 只有基础字段",
+          detail: "旧 localStorage 可能没有 status、sourceReferences 或 evidence links。"
+        }
+      ],
+      actions: [
+        {
+          id: "legacy-hardening-action",
+          title: "旧 action 只有标题"
+        }
+      ],
+      commitments: [{}],
+      risks: [{}],
+      opportunities: [{}]
+    }
+  ]
+});
+const legacyProject = legacyState.projects[0];
+if (
+  legacyState.schemaVersion !== 2 ||
+  legacyProject.nodes.length !== 1 ||
+  legacyProject.memories[0].status !== "draft" ||
+  legacyProject.actions[0].priority !== "medium" ||
+  legacyProject.commitments[0].status !== "open" ||
+  legacyProject.risks[0].status !== "open" ||
+  legacyProject.opportunities[0].status !== "new"
+) {
+  throw new Error(`Expected legacy state migration to fill Phase 3 defaults: ${JSON.stringify(legacyState)}`);
+}
+
+const emptyStateHtml = renderApp({ activeProjectId: null, projects: [] });
+if (!emptyStateHtml.includes("未选择项目") || !emptyStateHtml.includes("暂无公司记忆")) {
+  throw new Error("Expected empty state render to avoid blank screens.");
+}
+
+const partialProject = {
+  id: "partial-hardening-project",
+  name: "Partial Hardening",
+  sources: [null, { title: "缺字段 Source" }],
+  signals: [null, { title: "缺字段 Signal", type: "risk" }],
+  memories: null,
+  actions: undefined,
+  commitments: [{ title: "缺字段 Commitment" }],
+  risks: [{ title: "缺字段 Risk" }],
+  opportunities: [{ title: "缺字段 Opportunity" }]
+};
+const partialSnapshot = buildCommandCenter({ project: partialProject });
+const partialHtml = renderApp({
+  activeProjectId: partialProject.id,
+  projects: [partialProject]
+});
+if (
+  partialSnapshot.metrics.inbox < 2 ||
+  !partialHtml.includes("Partial Hardening") ||
+  !partialHtml.includes("缺字段 Source") ||
+  !partialHtml.includes("缺字段 Commitment")
+) {
+  throw new Error("Expected partial project data to render and aggregate without crashing.");
 }
 
 project = absorbContext(project, {

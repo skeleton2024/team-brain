@@ -150,7 +150,8 @@ const BRIEF_SECTION_ORDER = {
 };
 
 export function renderApp(state) {
-  const project = getActiveProject(state);
+  state = state && typeof state === "object" ? state : {};
+  const project = getRenderableProject(getActiveProject(state));
   const selectedAction = project?.actions.find((action) => action.id === state.selectedActionId);
   const selectedBrief = selectedAction
     ? project.briefs.find((brief) => brief.actionId === selectedAction.id)
@@ -514,10 +515,10 @@ function renderSidebar(state, activeProject) {
       </form>
 
       <div class="project-list" aria-label="项目列表">
-        ${state.projects
-          .map(
-            (project) => `
-              <button class="project-item ${project.id === activeProject?.id ? "active" : ""}" data-project-id="${project.id}" type="button">
+          ${(Array.isArray(state.projects) ? state.projects : [])
+            .map(
+              (project) => `
+                <button class="project-item ${project.id === activeProject?.id ? "active" : ""}" data-project-id="${project.id}" type="button">
                 <span>${escapeHtml(project.name)}</span>
                 <small>${escapeHtml(project.stage)}</small>
               </button>
@@ -2363,7 +2364,40 @@ function emptyState(text) {
 }
 
 export function getActiveProject(state) {
-  return state.projects.find((project) => project.id === state.activeProjectId) || state.projects[0];
+  const projects = Array.isArray(state?.projects) ? state.projects : [];
+  return projects.find((project) => project.id === state.activeProjectId) || projects[0] || null;
+}
+
+function getRenderableProject(project) {
+  const safeProject = project && typeof project === "object" ? project : {};
+
+  return {
+    id: safeProject.id || "",
+    name: safeProject.name || "未选择项目",
+    stage: safeProject.stage || "待创建",
+    description: safeProject.description || "",
+    createdAt: safeProject.createdAt || "",
+    updatedAt: safeProject.updatedAt || "",
+    sources: safeItems(safeProject.sources),
+    signals: safeItems(safeProject.signals),
+    entities: safeItems(safeProject.entities),
+    entityRelations: safeItems(safeProject.entityRelations),
+    nodes: safeItems(safeProject.nodes),
+    contexts: safeItems(safeProject.contexts),
+    memories: safeItems(safeProject.memories),
+    actions: safeItems(safeProject.actions),
+    briefs: safeItems(safeProject.briefs),
+    results: safeItems(safeProject.results),
+    commitments: safeItems(safeProject.commitments),
+    risks: safeItems(safeProject.risks),
+    opportunities: safeItems(safeProject.opportunities),
+    reconciliationResults: safeItems(safeProject.reconciliationResults),
+    pendingMemoryUpdates: safeItems(safeProject.pendingMemoryUpdates)
+  };
+}
+
+function safeItems(value) {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === "object") : [];
 }
 
 function latestReconciliationResults(project) {

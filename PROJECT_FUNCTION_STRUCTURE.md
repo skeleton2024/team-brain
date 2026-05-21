@@ -416,6 +416,7 @@ Phase 3 Alpha Wave 4 已新增。
 - 从 localStorage 读取 state。
 - 保存 state。
 - 创建项目和 ID。
+- Wave 5 起，统一补齐旧 localStorage / partial project 的缺失数组、默认节点、对象状态和证据数组，避免空项目或坏数据白屏。
 
 v0.2 要求：
 
