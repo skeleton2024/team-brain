@@ -295,7 +295,7 @@ QA-04-alpha-e2e-smoke.md
 
 ## 14. Phase 3 Alpha Wave 5 issue
 
-Wave 5 的目标是 Alpha Hardening / Human Review Loop / Usability Polish，让现有 Alpha 从“能展示闭环”变成“更像用户可以每天使用的工作台”。当前建议按以下顺序串行执行：
+Wave 5 的目标是 Alpha Hardening / Human Review Loop / Usability Polish，让现有 Alpha 从“能展示闭环”变成“更像用户可以每天使用的工作台”。当前已按以下顺序串行完成：
 
 ```text
 NAV-01-command-center-deep-links.md
@@ -312,8 +312,16 @@ QA-05-alpha-hardening-smoke.md
 - `EDIT-01` 在 review 动作稳定后补 Action / Commitment / Risk / Opportunity 的轻量手动修改。
 - `RESILIENCE-01` 加强旧 localStorage、缺字段、空状态和异常状态兼容。
 - `QA-05` 最后扩展 smoke，覆盖 Wave 5 hardening 行为和文档收口。
-- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs` 通过。
 - 不接 Gmail / Slack / Notion / Linear / GitHub 等真实外部 API，不自动发送消息，不把主界面改成聊天产品。
+
+执行结果：
+
+- `NAV-01` 让 Priority Queue 条目带 `targetAnchor`、`targetLabel` 和 `nextStepLabel`。
+- `REVIEW-01` 让 Memory、Commitment、Risk、Opportunity 能本地状态推进并保留证据链。
+- `EDIT-01` 让 Action、Commitment、Risk、Opportunity 有轻量手动编辑入口。
+- `RESILIENCE-01` 增强旧 localStorage、空项目和 partial project 兼容。
+- `QA-05` 在 smoke summary 中加入 `commandTargets`、`reviewActions`、`manualEditForms` 和 `hardeningCases`。
 
 ## 15. 推荐开工提示词
 

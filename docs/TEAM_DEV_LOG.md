@@ -182,6 +182,40 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 负责人：Codex
 
+范围：Phase 3 Alpha Wave 5：`QA-05-alpha-hardening-smoke`
+
+分支：`issue/QA-05-alpha-hardening-smoke`
+
+状态：开发中，已完成 Wave 5 smoke summary 和文档收口
+
+改动文件：
+
+- `scripts/smoke-test.mjs`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`
+- `docs/issues/README.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Smoke summary 新增 `commandTargets`、`reviewActions`、`manualEditForms` 和 `hardeningCases`。
+- Handoff、当前系统状态、阶段计划和 issue README 已同步 Wave 5 状态。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Wave 5 合回 `integration/phase-3-alpha` 后需要最终 smoke、推送 alpha 并更新现有 draft PR #8。
+
+下一步：
+
+- 提交 QA-05，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
 范围：Phase 3 Alpha Wave 5：`RESILIENCE-01-local-storage-hardening`
 
 分支：`issue/RESILIENCE-01-local-storage-hardening`
