@@ -182,6 +182,43 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 负责人：Codex
 
+范围：Phase 3 Alpha Wave 5：`EDIT-01-alpha-manual-editing`
+
+分支：`issue/EDIT-01-alpha-manual-editing`
+
+状态：开发中，已完成轻量手动编辑入口和 smoke
+
+改动文件：
+
+- `src/services/store.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Action 支持本地修改 priority / status。
+- Commitment 支持本地修改 status / dueAt。
+- Risk / Opportunity 支持本地修改 status。
+- Smoke 覆盖手动编辑 helper 和 UI 表单结构。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- RESILIENCE-01 需要继续加强旧 localStorage、空项目和缺字段项目兼容。
+
+下一步：
+
+- 提交 EDIT-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
 范围：Phase 3 Alpha Wave 5：`REVIEW-01-human-review-actions`
 
 分支：`issue/REVIEW-01-human-review-actions`
