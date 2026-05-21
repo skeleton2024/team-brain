@@ -180,15 +180,40 @@ function buildPriorityQueue({
     score: opportunity.impact === "high" ? 72 : 44
   }));
 
-  return [
-    ...commitmentItems,
-    ...riskItems,
-    ...actionItems,
-    ...memoryItems,
-    ...opportunityItems
-  ]
-    .sort((left, right) => right.score - left.score)
-    .slice(0, 8);
+  const itemGroups = [
+    commitmentItems,
+    riskItems,
+    actionItems,
+    memoryItems,
+    opportunityItems
+  ];
+  const selected = [];
+  const selectedIds = new Set();
+  const allItems = itemGroups.flat().sort(comparePriorityItems);
+
+  for (const group of itemGroups) {
+    const [topItem] = [...group].sort(comparePriorityItems);
+    if (topItem && !selectedIds.has(topItem.id)) {
+      selected.push(topItem);
+      selectedIds.add(topItem.id);
+    }
+  }
+
+  for (const item of allItems) {
+    if (selected.length >= 8) {
+      break;
+    }
+    if (!selectedIds.has(item.id)) {
+      selected.push(item);
+      selectedIds.add(item.id);
+    }
+  }
+
+  return selected.sort(comparePriorityItems);
+}
+
+function comparePriorityItems(left, right) {
+  return right.score - left.score || left.id.localeCompare(right.id);
 }
 
 function buildInboxItems(sources, signals) {

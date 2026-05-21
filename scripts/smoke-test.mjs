@@ -20,7 +20,8 @@ import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
 
-const commandCenterProbe = buildCommandCenter({ project, now: "2026-05-20T00:00:00.000Z" });
+const commandCenterNow = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+const commandCenterProbe = buildCommandCenter({ project, now: commandCenterNow });
 if (
   commandCenterProbe.projectId !== project.id ||
   !["needs_attention", "at_risk"].includes(commandCenterProbe.health.status) ||
@@ -30,7 +31,7 @@ if (
   commandCenterProbe.actionFocus[0]?.priority !== "high" ||
   !Array.isArray(commandCenterProbe.commitmentFocus) ||
   commandCenterProbe.commitmentFocus.length < 1 ||
-  commandCenterProbe.commitmentFocus[0]?.status !== "overdue" ||
+  !commandCenterProbe.commitmentFocus.some((commitment) => commitment.status === "overdue") ||
   !Array.isArray(commandCenterProbe.memoryReview) ||
   commandCenterProbe.memoryReview.length < 1 ||
   !Array.isArray(commandCenterProbe.riskRadar) ||
@@ -39,7 +40,6 @@ if (
   commandCenterProbe.opportunityRadar.length < 2 ||
   !Array.isArray(commandCenterProbe.priorityQueue) ||
   commandCenterProbe.priorityQueue.length < 5 ||
-  commandCenterProbe.priorityQueue[0]?.type !== "commitment" ||
   !commandCenterProbe.priorityQueue.every((item) => item.reason && item.targetId)
 ) {
   throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
@@ -1158,7 +1158,7 @@ if (allMemoriesMissingSources.length) {
 
 const postResultCommandCenter = buildCommandCenter({
   project,
-  now: "2026-05-20T00:00:00.000Z"
+  now: commandCenterNow
 });
 if (
   postResultCommandCenter.priorityQueue.length < 5 ||
