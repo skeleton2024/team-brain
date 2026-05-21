@@ -293,7 +293,29 @@ QA-04-alpha-e2e-smoke.md
 - 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
 - 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
 
-## 14. 推荐开工提示词
+## 14. Phase 3 Alpha Wave 5 issue
+
+Wave 5 的目标是 Alpha Hardening / Human Review Loop / Usability Polish，让现有 Alpha 从“能展示闭环”变成“更像用户可以每天使用的工作台”。当前建议按以下顺序串行执行：
+
+```text
+NAV-01-command-center-deep-links.md
+REVIEW-01-human-review-actions.md
+EDIT-01-alpha-manual-editing.md
+RESILIENCE-01-local-storage-hardening.md
+QA-05-alpha-hardening-smoke.md
+```
+
+执行原则：
+
+- `NAV-01` 先补 Command Center / Priority Queue 到具体对象的定位和证据链路。
+- `REVIEW-01` 再补 Memory、Commitment、Risk、Opportunity 的最小人工 review 动作。
+- `EDIT-01` 在 review 动作稳定后补 Action / Commitment / Risk / Opportunity 的轻量手动修改。
+- `RESILIENCE-01` 加强旧 localStorage、缺字段、空状态和异常状态兼容。
+- `QA-05` 最后扩展 smoke，覆盖 Wave 5 hardening 行为和文档收口。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack / Notion / Linear / GitHub 等真实外部 API，不自动发送消息，不把主界面改成聊天产品。
+
+## 15. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。
