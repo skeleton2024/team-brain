@@ -404,6 +404,41 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.priority-route {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid rgba(15, 143, 123, 0.16);
+  border-radius: var(--radius);
+  background: #f6fbf8;
+}
+
+.priority-route span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.priority-route strong {
+  font-size: 12px;
+}
+
+.command-target-link {
+  min-height: 32px;
+  justify-self: start;
+  padding: 0 10px;
+  text-decoration: none;
+}
+
+.command-evidence a {
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+.command-evidence a:hover {
+  text-decoration: underline;
+}
+
 .command-metric {
   display: grid;
   gap: 2px;

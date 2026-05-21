@@ -851,6 +851,9 @@ PriorityQueueItem
   priority: "low" | "medium" | "high"
   targetId: string
   targetType: string
+  targetAnchor?: string
+  targetLabel?: string
+  nextStepLabel?: string
   evidenceLinks: EvidenceLink[]
 ```
 
@@ -859,6 +862,7 @@ PriorityQueueItem
 - PriorityQueueItem 是 Command Center 的只读派生对象，不需要直接持久化。
 - 每个队列项必须说明 `reason`，避免黑盒排序。
 - 队列项必须能追溯到 commitment、risk、action、memory 或 opportunity。
+- Wave 5 起，队列项可以带 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，用于从 Command Center 定位到对应对象或证据区；这些字段仍是派生 UI 定位信息，不持久化。
 - Priority Queue 只排序和提示，不自动执行任何外部动作。
 
 ## 14. 当前与目标模型的差异

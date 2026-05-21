@@ -260,13 +260,23 @@ function renderPriorityQueue(items) {
 
 function renderPriorityItem(item) {
   return `
-    <article class="priority-item">
+    <article
+      class="priority-item"
+      data-priority-target-type="${escapeHtml(item.targetType || item.type)}"
+      data-priority-target-id="${escapeHtml(item.targetId || "")}"
+      data-priority-anchor="${escapeHtml(item.targetAnchor || "")}"
+    >
       <div class="command-item-top">
         <span>${escapeHtml(priorityTypeLabel(item.type))}</span>
         <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.reason)}</p>
+      <div class="priority-route">
+        <span>下一步</span>
+        <strong>${escapeHtml(item.nextStepLabel || "打开对象处理")}</strong>
+      </div>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -295,13 +305,14 @@ function renderCommandList(items, emptyText, renderer) {
 
 function renderCommandInboxItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(item.type === "source" ? "Source" : "Signal")}</span>
         <span>${escapeHtml(item.status)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.summary)}</p>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -309,13 +320,14 @@ function renderCommandInboxItem(item) {
 
 function renderCommandActionItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(ACTION_TYPES[item.type] || item.type)}</span>
         <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.reason || "等待补充 why now。")}</p>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -323,13 +335,14 @@ function renderCommandActionItem(item) {
 
 function renderCommandCommitmentItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(commitmentTypeLabel(item.type))}</span>
         <span>${escapeHtml(commitmentStatusLabel(item.status))}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(commitmentLine(item))}</p>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -337,13 +350,14 @@ function renderCommandCommitmentItem(item) {
 
 function renderCommandMemoryItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(memoryTypeLabel(item.type))}</span>
         <span>${escapeHtml(memoryStatusLabel(item.status).label)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.summary)}</p>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -372,19 +386,51 @@ function renderRiskOpportunityPreview(snapshot) {
       ${items
         .map(
           (item) => `
-            <article class="command-item">
+            <article class="command-item" id="command-${escapeHtml(item.kind.toLowerCase())}-${escapeHtml(item.id)}" ${commandTargetAttributes(item)}>
               <div class="command-item-top">
                 <span>${escapeHtml(item.kind)}</span>
                 <span>${escapeHtml(item.meta)}</span>
               </div>
               <strong>${escapeHtml(item.title)}</strong>
               <p>${escapeHtml(item.description)}</p>
+              ${renderCommandTargetLink(item)}
               ${renderCommandEvidence(item.evidenceLinks)}
             </article>
           `
         )
         .join("")}
     </div>
+  `;
+}
+
+function renderCommandTargetLink(item) {
+  if (!item?.targetAnchor || !item?.targetId) {
+    return "";
+  }
+
+  return `
+    <a
+      class="secondary-link compact-button command-target-link"
+      href="${escapeHtml(item.targetAnchor)}"
+      data-command-target
+      data-target-type="${escapeHtml(item.targetType || item.type)}"
+      data-target-id="${escapeHtml(item.targetId)}"
+      data-target-anchor="${escapeHtml(item.targetAnchor)}"
+    >
+      ${escapeHtml(item.targetLabel || "定位对象")}
+    </a>
+  `;
+}
+
+function commandTargetAttributes(item) {
+  if (!item?.targetId) {
+    return "";
+  }
+
+  return `
+    data-command-target-type="${escapeHtml(item.targetType || item.type)}"
+    data-command-target-id="${escapeHtml(item.targetId)}"
+    data-command-target-anchor="${escapeHtml(item.targetAnchor || "")}"
   `;
 }
 
@@ -401,7 +447,30 @@ function renderCommandEvidence(evidenceLinks = []) {
     firstEvidence.memoryId ? `Memory ${firstEvidence.memoryId}` : ""
   ].filter(Boolean);
 
-  return `<small class="command-evidence">${escapeHtml(parts.join(" · ") || firstEvidence.note || "有证据链")}</small>`;
+  const label = parts.join(" · ") || firstEvidence.note || "有证据链";
+  const href = commandEvidenceHref(firstEvidence);
+  const quote = firstEvidence.quote ? ` · "${trimInline(firstEvidence.quote, 48)}"` : "";
+  const evidence = href
+    ? `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`
+    : `<span>${escapeHtml(label)}</span>`;
+
+  return `<small class="command-evidence">${evidence}${escapeHtml(quote)}</small>`;
+}
+
+function commandEvidenceHref(evidence) {
+  if (evidence?.signalId) {
+    return `#signal-${evidence.signalId}`;
+  }
+  if (evidence?.sourceId) {
+    return `#source-${evidence.sourceId}`;
+  }
+  if (evidence?.memoryId) {
+    return `#memory-${evidence.memoryId}`;
+  }
+  if (evidence?.contextId) {
+    return `#context-${evidence.contextId}`;
+  }
+  return "";
 }
 
 function renderSidebar(state, activeProject) {
@@ -1152,7 +1221,7 @@ function renderCommitmentCard(project, commitment) {
   const status = displayCommitmentStatus(commitment);
 
   return `
-    <article class="commitment-card" data-commitment-id="${escapeHtml(commitment.id)}">
+    <article class="commitment-card" id="commitment-${escapeHtml(commitment.id)}" data-commitment-id="${escapeHtml(commitment.id)}">
       <div class="context-item-top">
         <span class="context-type">${escapeHtml(commitmentTypeLabel(commitment.type))}</span>
         <span class="status ${escapeHtml(status)}">${escapeHtml(commitmentStatusLabel(status))}</span>
@@ -1225,7 +1294,7 @@ function renderRadarCard(project, item, kind) {
       : `${IMPACT_LABELS[item.potentialImpact] || item.potentialImpact} · ${opportunityStatusLabel(item.status)}`;
 
   return `
-    <article class="radar-card ${escapeHtml(kind)}" data-radar-id="${escapeHtml(item.id)}">
+    <article class="radar-card ${escapeHtml(kind)}" id="${escapeHtml(kind)}-${escapeHtml(item.id)}" data-radar-id="${escapeHtml(item.id)}">
       <div class="context-item-top">
         <span class="context-type">${escapeHtml(kind === "risk" ? "Risk" : "Opportunity")}</span>
         <span>${escapeHtml(meta)}</span>
@@ -1440,7 +1509,7 @@ function renderMemoryItem(project, memory, isSelected = false) {
   const sourceLabel = memorySourceLabel(memory);
 
   return `
-    <div class="memory-item ${isSelected ? "selected" : ""}" data-memory-open-id="${escapeHtml(memory.id)}">
+    <div class="memory-item ${isSelected ? "selected" : ""}" id="memory-${escapeHtml(memory.id)}" data-memory-open-id="${escapeHtml(memory.id)}">
       <div class="memory-item-top">
         <span class="memory-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
         <span>${escapeHtml(sourceCountLabel(sourceCount, sourceLabel))}</span>
@@ -1830,7 +1899,7 @@ function renderActions(project, selectedActionId) {
 
 function renderActionCard(project, action, selectedActionId) {
   return `
-    <button class="action-card ${action.id === selectedActionId ? "selected" : ""}" data-action-id="${action.id}" type="button">
+    <button class="action-card ${action.id === selectedActionId ? "selected" : ""}" id="action-${escapeHtml(action.id)}" data-action-id="${action.id}" type="button">
       <div class="action-card-top">
         <span class="action-type">${escapeHtml(ACTION_TYPES[action.type] || action.type)}</span>
         <span class="status ${action.status}">${escapeHtml(ACTION_STATUS[action.status])}</span>
@@ -2300,6 +2369,11 @@ function formatDateOnly(value) {
 
 function todayForInput() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function trimInline(value, maxLength = 80) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
 function contextTypeLabel(kind) {

@@ -398,6 +398,7 @@ Phase 3 Alpha Wave 4 已新增。
 - 汇总 inbox、memory、project、node、action、commitment、risk 和 opportunity。
 - 生成今日优先级队列。
 - 输出可追溯的 Dashboard 数据，不直接执行外部动作。
+- Wave 5 起，Priority Queue 输出只读定位字段，帮助 UI 从 Command Center 跳到 Action、Memory、Commitment、Risk、Opportunity 或 Source / Signal 证据。
 - 第一版使用本地规则生成 Command Center snapshot，后续 `COMMIT-01`、`RISK-01` 和 `PRIORITY-01` 会继续补齐输入和排序。
 
 ### `src/services/store.js`

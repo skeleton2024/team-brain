@@ -84,6 +84,13 @@ function bindEvents() {
     });
   });
 
+  app.querySelectorAll("[data-command-target]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      focusCommandTarget(link.dataset.targetType, link.dataset.targetId, link.dataset.targetAnchor);
+    });
+  });
+
   app.querySelectorAll("[data-project-id]").forEach((button) => {
     button.addEventListener("click", () => {
       setState({
@@ -372,6 +379,35 @@ function setState(nextState) {
   state = nextState;
   saveState(state);
   render();
+}
+
+function focusCommandTarget(targetType, targetId, targetAnchor) {
+  const nextState = {
+    ...state,
+    selectedActionId: targetType === "action" ? targetId : state.selectedActionId,
+    selectedMemoryId: targetType === "memory" ? targetId : state.selectedMemoryId,
+    selectedNodeId: targetType === "node" ? targetId : state.selectedNodeId
+  };
+
+  setState(nextState);
+  scrollToAnchor(targetAnchor);
+}
+
+function scrollToAnchor(anchor) {
+  const id = String(anchor || "").replace(/^#/, "");
+  if (!id) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    const target = document.getElementById(id);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    window.history.replaceState(null, "", `#${id}`);
+  });
 }
 
 function exportState() {

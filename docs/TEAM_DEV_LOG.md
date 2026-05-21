@@ -178,6 +178,42 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 ## 9. 开发日志
 
+### 2026-05-21
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 5：`NAV-01-command-center-deep-links`
+
+分支：`issue/NAV-01-command-center-deep-links`
+
+状态：开发中，已完成 Command Center / Priority Queue 定位链路和 smoke
+
+改动文件：
+
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Priority Queue 条目新增 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，可定位到 Action、Memory、Commitment、Risk、Opportunity 或证据区。
+- Command Center UI 新增定位按钮和证据链接，继续只做本地定位，不自动执行外部动作。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- REVIEW-01 需要继续补 Memory / Commitment / Risk / Opportunity 的本地人工状态推进。
+
+下一步：
+
+- 提交 NAV-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
 ### 2026-05-20
 
 负责人：Codex
