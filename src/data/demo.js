@@ -1,6 +1,7 @@
 const now = new Date().toISOString();
 const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+const oneDayAhead = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 const demoContextId = "ctx-demo-1";
 
 export const DEMO_PROJECT = {
@@ -129,8 +130,8 @@ export const DEMO_PROJECT = {
       signalIds: ["sig-demo-1"],
       memoryIds: ["mem-demo-customer", "mem-demo-risk"],
       actionIds: ["act-demo-customer"],
-      waitingIds: [],
-      riskIds: [],
+      waitingIds: ["commit-demo-security-brief", "commit-demo-customer-feedback"],
+      riskIds: ["risk-demo-security-boundary"],
       resultIds: [],
       createdAt: twoDaysAgo,
       updatedAt: oneDayAgo
@@ -149,10 +150,192 @@ export const DEMO_PROJECT = {
       signalIds: [],
       memoryIds: ["mem-demo-engineering", "mem-demo-product"],
       actionIds: ["act-demo-engineering", "act-demo-product"],
-      waitingIds: [],
-      riskIds: [],
+      waitingIds: ["commit-demo-engineering-dependency"],
+      riskIds: ["risk-demo-scope-creep"],
       resultIds: [],
       createdAt: oneDayAgo,
+      updatedAt: now
+    }
+  ],
+  commitments: [
+    {
+      id: "commit-demo-security-brief",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      type: "commitment",
+      title: "给客户发送权限边界 follow-up 草稿",
+      who: "创始人",
+      toWhom: "客户访谈小组",
+      dueAt: oneDayAgo,
+      status: "open",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          quote: "一个付费意向客户愿意下周试点，但要求先确认权限设置、删除机制和数据范围。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.88
+        }
+      ],
+      createdAt: twoDaysAgo,
+      updatedAt: oneDayAgo
+    },
+    {
+      id: "commit-demo-customer-feedback",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      type: "waiting",
+      title: "等待客户确认试点范围",
+      who: "客户访谈小组",
+      toWhom: "Northstar Copilot",
+      dueAt: oneDayAhead,
+      status: "waiting",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          quote: "他们希望 follow-up 草稿里不要承诺自动导入所有历史数据。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.76
+        }
+      ],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "commit-demo-engineering-dependency",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-engineering-loop",
+      type: "dependency",
+      title: "工程需要确认本周只保留手动录入范围",
+      who: "工程负责人",
+      toWhom: "产品负责人",
+      dueAt: now,
+      status: "blocked",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-3",
+          quote: "工程同步确认本周不做 Slack 导入，先把手动粘贴上下文、生成记忆、生成行动 Brief 和结果回流路径做稳定。",
+          note: "手动粘贴闭环工程同步",
+          confidence: 0.82
+        }
+      ],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "commit-demo-investor-follow-up",
+      projectId: "project-demo-northstar",
+      nodeId: "",
+      type: "follow_up",
+      title: "复盘投资人问答材料缺口",
+      who: "创始人",
+      toWhom: "",
+      dueAt: oneDayAhead,
+      status: "open",
+      evidenceLinks: [
+        {
+          sourceId: "src-demo-1",
+          signalId: "sig-demo-1",
+          quote: "一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+          note: "周一增长复盘",
+          confidence: 0.66
+        }
+      ],
+      createdAt: twoDaysAgo,
+      updatedAt: now
+    }
+  ],
+  risks: [
+    {
+      id: "risk-demo-security-boundary",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      entityIds: ["ent-demo-customer-team"],
+      title: "试点前权限边界不清会阻塞客户推进",
+      description: "客户已经表达试用兴趣，但权限设置、删除机制和数据范围仍未确认。",
+      severity: "high",
+      likelihood: "medium",
+      status: "open",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          memoryId: "mem-demo-customer",
+          quote: "要求先确认权限设置、删除机制和数据范围。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.9
+        }
+      ],
+      suggestedActionIds: ["act-demo-customer"],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "risk-demo-scope-creep",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-engineering-loop",
+      entityIds: ["ent-demo-founder"],
+      title: "过早接 Slack 导入会冲掉手动闭环交付",
+      description: "团队容量有限，本周应避免外部集成，把手动闭环做稳。",
+      severity: "medium",
+      likelihood: "high",
+      status: "monitoring",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-3",
+          memoryId: "mem-demo-engineering",
+          quote: "本周不做 Slack 导入，先把手动粘贴上下文、生成记忆、生成行动 Brief 和结果回流路径做稳定。",
+          note: "手动粘贴闭环工程同步",
+          confidence: 0.82
+        }
+      ],
+      suggestedActionIds: ["act-demo-engineering"],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    }
+  ],
+  opportunities: [
+    {
+      id: "opp-demo-paid-pilot",
+      projectId: "project-demo-northstar",
+      nodeId: "node-demo-customer-discovery",
+      entityIds: ["ent-demo-customer-team"],
+      title: "付费意向客户试点可成为 Alpha 证明点",
+      description: "客户愿意下周试点，只要权限和数据边界能先被清楚说明。",
+      potentialImpact: "high",
+      confidence: 0.78,
+      status: "evaluating",
+      evidenceLinks: [
+        {
+          contextId: "ctx-demo-2",
+          memoryId: "mem-demo-customer",
+          quote: "一个付费意向客户愿意下周试点。",
+          note: "付费意向客户安全顾虑",
+          confidence: 0.82
+        }
+      ],
+      suggestedActionIds: ["act-demo-customer"],
+      createdAt: oneDayAgo,
+      updatedAt: now
+    },
+    {
+      id: "opp-demo-investor-materials",
+      projectId: "project-demo-northstar",
+      nodeId: "",
+      entityIds: ["ent-demo-founder"],
+      title: "投资人问答草稿可以复用为 demo 资产",
+      description: "客户希望先看到投资人问答和 follow-up 草稿，说明这些材料能作为产品价值展示。",
+      potentialImpact: "medium",
+      confidence: 0.64,
+      status: "new",
+      evidenceLinks: [
+        {
+          sourceId: "src-demo-1",
+          quote: "一个付费意向客户希望先看到投资人问答和客户 follow-up 的草稿。",
+          note: "周一增长复盘",
+          confidence: 0.66
+        }
+      ],
+      suggestedActionIds: ["act-demo-product"],
+      createdAt: twoDaysAgo,
       updatedAt: now
     }
   ],

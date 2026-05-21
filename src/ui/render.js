@@ -1,6 +1,8 @@
 import {
   ACTION_STATUS,
   ACTION_TYPES,
+  COMMITMENT_STATUS,
+  COMMITMENT_TYPES,
   CONTEXT_IMPORTANCE,
   CONTEXT_IMPORTANCE_LABELS,
   CONTEXT_TYPES,
@@ -8,16 +10,20 @@ import {
   ENTITY_TYPES,
   MEMORY_STATUS,
   MEMORY_TYPES,
+  IMPACT_LABELS,
+  OPPORTUNITY_STATUS,
   PRIORITY_LABELS,
   PROJECT_NODE_STATUS,
   RESULT_OUTCOMES,
   RISK_LABELS,
+  RISK_STATUS,
   SIGNAL_STATUS,
   SIGNAL_TYPES,
   SOURCE_STATUS,
   SOURCE_TYPES,
   SOURCE_TYPE_LABELS
 } from "../domain/types.js";
+import { buildCommandCenter } from "../domain/pipelines/buildCommandCenter.js";
 
 const MEMORY_STATUS_ACTIONS = [
   { status: "confirmed", label: "确认" },
@@ -137,10 +143,13 @@ export function renderApp(state) {
       ${renderSidebar(state, project)}
       <main class="workspace">
         ${renderTopbar(project)}
+        ${renderCommandCenter(project)}
         ${renderPipeline(project)}
         ${renderInbox(project)}
         ${renderEntityProfiles(project, state.selectedEntityId)}
         ${renderProjectNodes(project, state.selectedNodeId)}
+        ${renderCommitments(project)}
+        ${renderRiskOpportunityRadar(project)}
         <div class="work-grid">
           <section class="panel intake-panel">
             ${renderContextIntake(project)}
@@ -158,6 +167,241 @@ export function renderApp(state) {
       </main>
     </div>
   `;
+}
+
+function renderCommandCenter(project) {
+  const snapshot = buildCommandCenter({ project });
+
+  return `
+    <section class="command-center-panel" data-command-center>
+      <div class="command-center-header">
+        <div>
+          <p class="eyebrow">Command Center</p>
+          <h3>今天最该处理什么</h3>
+        </div>
+        <div class="command-health ${escapeHtml(snapshot.health.status)}" data-command-center-health>
+          <strong>${escapeHtml(snapshot.health.label)}</strong>
+          <span>${escapeHtml(snapshot.health.reasons[0] || "等待新信号")}</span>
+        </div>
+      </div>
+
+      ${renderPriorityQueue(snapshot.priorityQueue)}
+
+      <div class="command-metrics" aria-label="Command Center 指标">
+        ${renderCommandMetric("Inbox", snapshot.metrics.inbox)}
+        ${renderCommandMetric("Memory review", snapshot.metrics.memoryReview)}
+        ${renderCommandMetric("Open action", snapshot.metrics.openActions)}
+        ${renderCommandMetric("Risk", snapshot.metrics.risks)}
+        ${renderCommandMetric("Opportunity", snapshot.metrics.opportunities)}
+      </div>
+
+      <div class="command-grid">
+        <section class="command-section" data-command-center-inbox>
+          <div class="command-section-heading">
+            <h4>今日 Inbox</h4>
+            <span>${snapshot.todayInbox.length}</span>
+          </div>
+          ${renderCommandList(snapshot.todayInbox, "没有待整理的 Source / Signal。", renderCommandInboxItem)}
+        </section>
+
+        <section class="command-section" data-command-center-actions>
+          <div class="command-section-heading">
+            <h4>行动焦点</h4>
+            <span>${snapshot.actionFocus.length}</span>
+          </div>
+          ${renderCommandList(snapshot.actionFocus, "暂无待处理行动。", renderCommandActionItem)}
+        </section>
+
+        <section class="command-section" data-command-center-commitments>
+          <div class="command-section-heading">
+            <h4>承诺 / Waiting</h4>
+            <span>${snapshot.commitmentFocus.length}</span>
+          </div>
+          ${renderCommandList(snapshot.commitmentFocus, "暂无承诺或等待项。", renderCommandCommitmentItem)}
+        </section>
+
+        <section class="command-section" data-command-center-memory-review>
+          <div class="command-section-heading">
+            <h4>记忆复核</h4>
+            <span>${snapshot.memoryReview.length}</span>
+          </div>
+          ${renderCommandList(snapshot.memoryReview, "没有待复核 memory。", renderCommandMemoryItem)}
+        </section>
+
+        <section class="command-section" data-command-center-risk>
+          <div class="command-section-heading">
+            <h4>风险 / 机会</h4>
+            <span>${snapshot.riskRadar.length + snapshot.opportunityRadar.length}</span>
+          </div>
+          ${renderRiskOpportunityPreview(snapshot)}
+        </section>
+      </div>
+    </section>
+  `;
+}
+
+function renderPriorityQueue(items) {
+  return `
+    <section class="priority-queue" data-priority-queue>
+      <div class="command-section-heading">
+        <h4>AI Priority Queue</h4>
+        <span>${items.length}</span>
+      </div>
+      ${
+        items.length
+          ? `<div class="priority-list">
+              ${items.map(renderPriorityItem).join("")}
+            </div>`
+          : `<div class="command-empty">暂无需要排序的事项。</div>`
+      }
+    </section>
+  `;
+}
+
+function renderPriorityItem(item) {
+  return `
+    <article class="priority-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(priorityTypeLabel(item.type))}</span>
+        <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(item.reason)}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
+  `;
+}
+
+function renderCommandMetric(label, value) {
+  return `
+    <div class="command-metric">
+      <strong>${escapeHtml(value)}</strong>
+      <span>${escapeHtml(label)}</span>
+    </div>
+  `;
+}
+
+function renderCommandList(items, emptyText, renderer) {
+  if (!items.length) {
+    return `<div class="command-empty">${escapeHtml(emptyText)}</div>`;
+  }
+
+  return `
+    <div class="command-list">
+      ${items.map((item) => renderer(item)).join("")}
+    </div>
+  `;
+}
+
+function renderCommandInboxItem(item) {
+  return `
+    <article class="command-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(item.type === "source" ? "Source" : "Signal")}</span>
+        <span>${escapeHtml(item.status)}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(item.summary)}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
+  `;
+}
+
+function renderCommandActionItem(item) {
+  return `
+    <article class="command-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(ACTION_TYPES[item.type] || item.type)}</span>
+        <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(item.reason || "等待补充 why now。")}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
+  `;
+}
+
+function renderCommandCommitmentItem(item) {
+  return `
+    <article class="command-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(commitmentTypeLabel(item.type))}</span>
+        <span>${escapeHtml(commitmentStatusLabel(item.status))}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(commitmentLine(item))}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
+  `;
+}
+
+function renderCommandMemoryItem(item) {
+  return `
+    <article class="command-item">
+      <div class="command-item-top">
+        <span>${escapeHtml(memoryTypeLabel(item.type))}</span>
+        <span>${escapeHtml(memoryStatusLabel(item.status).label)}</span>
+      </div>
+      <strong>${escapeHtml(item.title)}</strong>
+      <p>${escapeHtml(item.summary)}</p>
+      ${renderCommandEvidence(item.evidenceLinks)}
+    </article>
+  `;
+}
+
+function renderRiskOpportunityPreview(snapshot) {
+  const items = [
+    ...snapshot.riskRadar.map((risk) => ({
+      ...risk,
+      kind: "Risk",
+      meta: risk.severity || "medium"
+    })),
+    ...snapshot.opportunityRadar.map((opportunity) => ({
+      ...opportunity,
+      kind: "Opportunity",
+      meta: opportunity.impact || "medium"
+    }))
+  ].slice(0, 5);
+
+  if (!items.length) {
+    return `<div class="command-empty">暂无风险或机会信号。</div>`;
+  }
+
+  return `
+    <div class="command-list">
+      ${items
+        .map(
+          (item) => `
+            <article class="command-item">
+              <div class="command-item-top">
+                <span>${escapeHtml(item.kind)}</span>
+                <span>${escapeHtml(item.meta)}</span>
+              </div>
+              <strong>${escapeHtml(item.title)}</strong>
+              <p>${escapeHtml(item.description)}</p>
+              ${renderCommandEvidence(item.evidenceLinks)}
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderCommandEvidence(evidenceLinks = []) {
+  const firstEvidence = Array.isArray(evidenceLinks) ? evidenceLinks.find(Boolean) : null;
+  if (!firstEvidence) {
+    return `<small class="command-evidence">证据待补</small>`;
+  }
+
+  const parts = [
+    firstEvidence.sourceId ? `Source ${firstEvidence.sourceId}` : "",
+    firstEvidence.signalId ? `Signal ${firstEvidence.signalId}` : "",
+    firstEvidence.contextId ? `Context ${firstEvidence.contextId}` : "",
+    firstEvidence.memoryId ? `Memory ${firstEvidence.memoryId}` : ""
+  ].filter(Boolean);
+
+  return `<small class="command-evidence">${escapeHtml(parts.join(" · ") || firstEvidence.note || "有证据链")}</small>`;
 }
 
 function renderSidebar(state, activeProject) {
@@ -874,6 +1118,126 @@ function renderNodeResults(results) {
         )
         .join("")}
     </div>
+  `;
+}
+
+function renderCommitments(project) {
+  const commitments = project?.commitments || [];
+  const activeCommitments = commitments.filter(
+    (commitment) => !["done", "archived"].includes(commitment.status)
+  );
+
+  return `
+    <section class="panel commitment-panel" data-commitment-panel>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Commitment / Waiting</p>
+          <h3>承诺、等待与依赖</h3>
+        </div>
+        <span class="count-pill">${activeCommitments.length}</span>
+      </div>
+      ${
+        activeCommitments.length
+          ? `<div class="commitment-list">
+              ${activeCommitments.map((commitment) => renderCommitmentCard(project, commitment)).join("")}
+            </div>`
+          : emptyState("暂无承诺、等待项或依赖项。")
+      }
+    </section>
+  `;
+}
+
+function renderCommitmentCard(project, commitment) {
+  const node = (project.nodes || []).find((item) => item.id === commitment.nodeId);
+  const status = displayCommitmentStatus(commitment);
+
+  return `
+    <article class="commitment-card" data-commitment-id="${escapeHtml(commitment.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(commitmentTypeLabel(commitment.type))}</span>
+        <span class="status ${escapeHtml(status)}">${escapeHtml(commitmentStatusLabel(status))}</span>
+        ${commitment.dueAt ? `<span>截止 ${escapeHtml(formatDateOnly(commitment.dueAt))}</span>` : ""}
+      </div>
+      <h4>${escapeHtml(commitment.title)}</h4>
+      <p>${escapeHtml(commitmentLine(commitment))}</p>
+      <div class="context-meta">
+        ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
+        ${commitment.evidenceLinks?.length ? `<span>证据 ${commitment.evidenceLinks.length}</span>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function renderRiskOpportunityRadar(project) {
+  const risks = (project?.risks || []).filter((risk) => !["mitigated", "archived"].includes(risk.status));
+  const opportunities = (project?.opportunities || []).filter(
+    (opportunity) => !["lost", "archived"].includes(opportunity.status)
+  );
+
+  return `
+    <section class="panel radar-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Risk / Opportunity Radar</p>
+          <h3>风险与机会雷达</h3>
+        </div>
+        <span class="count-pill">${risks.length + opportunities.length}</span>
+      </div>
+      <div class="radar-layout">
+        <div data-risk-radar>
+          <div class="context-history-heading">
+            <strong>风险</strong>
+            <span class="count-pill">${risks.length}</span>
+          </div>
+          ${renderRadarList(project, risks, "risk")}
+        </div>
+        <div data-opportunity-radar>
+          <div class="context-history-heading">
+            <strong>机会</strong>
+            <span class="count-pill">${opportunities.length}</span>
+          </div>
+          ${renderRadarList(project, opportunities, "opportunity")}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderRadarList(project, items, kind) {
+  if (!items.length) {
+    return emptyState(kind === "risk" ? "暂无显式风险。" : "暂无显式机会。");
+  }
+
+  return `
+    <div class="radar-list">
+      ${items.map((item) => renderRadarCard(project, item, kind)).join("")}
+    </div>
+  `;
+}
+
+function renderRadarCard(project, item, kind) {
+  const node = (project.nodes || []).find((nodeItem) => nodeItem.id === item.nodeId);
+  const actionCount = Array.isArray(item.suggestedActionIds) ? item.suggestedActionIds.length : 0;
+  const evidenceCount = Array.isArray(item.evidenceLinks) ? item.evidenceLinks.length : 0;
+  const meta =
+    kind === "risk"
+      ? `${RISK_LABELS[item.severity] || item.severity} · ${riskStatusLabel(item.status)}`
+      : `${IMPACT_LABELS[item.potentialImpact] || item.potentialImpact} · ${opportunityStatusLabel(item.status)}`;
+
+  return `
+    <article class="radar-card ${escapeHtml(kind)}" data-radar-id="${escapeHtml(item.id)}">
+      <div class="context-item-top">
+        <span class="context-type">${escapeHtml(kind === "risk" ? "Risk" : "Opportunity")}</span>
+        <span>${escapeHtml(meta)}</span>
+      </div>
+      <h4>${escapeHtml(item.title)}</h4>
+      <p>${escapeHtml(item.description)}</p>
+      <div class="context-meta">
+        ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
+        <span>证据 ${evidenceCount}</span>
+        <span>建议 action ${actionCount}</span>
+      </div>
+    </article>
   `;
 }
 
@@ -1870,6 +2234,10 @@ function memoryStatusLabel(status) {
   return MEMORY_STATUS[status] || MEMORY_STATUS.draft;
 }
 
+function memoryTypeLabel(type) {
+  return MEMORY_TYPES[type]?.label || "公司记忆";
+}
+
 function confidenceLabel(confidence) {
   const labels = {
     high: "高置信",
@@ -1964,6 +2332,50 @@ function entityStatusLabel(status) {
 
 function projectNodeStatusLabel(status) {
   return PROJECT_NODE_STATUS[status] || PROJECT_NODE_STATUS.planned;
+}
+
+function commitmentTypeLabel(type) {
+  return COMMITMENT_TYPES[type] || COMMITMENT_TYPES.commitment;
+}
+
+function commitmentStatusLabel(status) {
+  return COMMITMENT_STATUS[status] || COMMITMENT_STATUS.open;
+}
+
+function displayCommitmentStatus(commitment) {
+  if (["done", "archived", "blocked", "overdue"].includes(commitment.status)) {
+    return commitment.status;
+  }
+
+  if (commitment.dueAt && new Date(commitment.dueAt).getTime() < Date.now()) {
+    return "overdue";
+  }
+
+  return commitment.status || "open";
+}
+
+function commitmentLine(commitment) {
+  const target = commitment.toWhom ? ` -> ${commitment.toWhom}` : "";
+  const due = commitment.dueAt ? ` · ${formatDateOnly(commitment.dueAt)}` : "";
+  return `${commitment.who || "待确认"}${target}${due}`;
+}
+
+function riskStatusLabel(status) {
+  return RISK_STATUS[status] || RISK_STATUS.open;
+}
+
+function opportunityStatusLabel(status) {
+  return OPPORTUNITY_STATUS[status] || OPPORTUNITY_STATUS.new;
+}
+
+function priorityTypeLabel(type) {
+  return {
+    commitment: "Commitment",
+    risk: "Risk",
+    action: "Action",
+    memory_review: "Memory Review",
+    opportunity: "Opportunity"
+  }[type] || "Priority";
 }
 
 function confidenceScoreLabel(confidence) {

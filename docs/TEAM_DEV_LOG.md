@@ -600,3 +600,102 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 下一步：
 
 - 合入 `integration/phase-3-alpha`，推送远端分支，创建 draft PR。
+
+### 2026-05-20
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 4：Command Center Alpha
+
+分支：`issue/DASH-01-command-center`
+
+状态：DASH-01 进行中，已新增 Command Center 聚合 pipeline 和首页展示。
+
+改动文件：
+
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
+分支：`issue/QA-04-alpha-e2e-smoke`
+
+状态：QA-04 进行中，已扩展 Alpha E2E smoke，并更新 Wave 4 handoff、当前状态和阶段计划。
+
+改动文件：
+
+- `scripts/smoke-test.mjs`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
+分支：`issue/PRIORITY-01-ai-priority-queue`
+
+状态：PRIORITY-01 进行中，已新增本地规则版 Priority Queue，聚合 commitment、risk、action、memory review 和 opportunity。
+
+改动文件：
+
+- `DATA_MODEL.md`
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
+分支：`issue/RISK-01-risk-opportunity-radar`
+
+状态：RISK-01 进行中，已补显式 `risks` / `opportunities` demo / migration、Command Center 雷达和项目区雷达展示。
+
+改动文件：
+
+- `DATA_MODEL.md`
+- `src/data/demo.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Commitment / Waiting、Risk / Opportunity 显式模型和 Priority Queue 排序将在后续 Wave 4 issue 中继续补齐。
+
+分支：`issue/COMMIT-01-commitment-waiting`
+
+状态：COMMIT-01 进行中，已补 `Project.commitments` demo / migration、Command Center 承诺区和项目区展示。
+
+改动文件：
+
+- `DATA_MODEL.md`
+- `src/data/demo.js`
+- `src/domain/types.js`
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+验证结果：
+
+- `node scripts/smoke-test.mjs` 通过。

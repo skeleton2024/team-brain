@@ -703,6 +703,56 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - `src/domain/agentEngine.js`
 - `src/ui/render.js`
 
+### `docs/issues/DASH-01-command-center.md`
+
+Phase 3 Alpha Wave 4 的 Command Center 首页 issue。
+
+主要作用：
+
+- 要求新增公司级 Command Center 视图。
+- 要求聚合 Inbox、Memory、Project、Node、Action、Risk 和 Opportunity。
+- 明确 Command Center 是工作首页，不是营销 landing page 或聊天入口。
+
+### `docs/issues/COMMIT-01-commitment-waiting.md`
+
+Phase 3 Alpha Wave 4 的 Commitment / Waiting / Dependency issue。
+
+主要作用：
+
+- 要求落地承诺、等待项、依赖项和 follow-up 的第一版展示。
+- 要求 Command Center 能识别逾期承诺和阻塞等待。
+- 明确不自动发送催办、不代表用户承诺。
+
+### `docs/issues/RISK-01-risk-opportunity-radar.md`
+
+Phase 3 Alpha Wave 4 的 Risk / Opportunity Radar issue。
+
+主要作用：
+
+- 要求展示风险和机会雷达。
+- 要求每条风险 / 机会能追溯证据。
+- 明确不做复杂图谱、外部任务同步或自动业务结论。
+
+### `docs/issues/PRIORITY-01-ai-priority-queue.md`
+
+Phase 3 Alpha Wave 4 的 AI Priority Queue issue。
+
+主要作用：
+
+- 要求用本地规则生成可解释的优先级队列。
+- 要求聚合 action、commitment、risk 和 memory review。
+- 明确不自动执行队列项或外部动作。
+
+### `docs/issues/QA-04-alpha-e2e-smoke.md`
+
+Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
+
+主要作用：
+
+- 要求 smoke test 覆盖 Command Center、Priority Queue、Commitment、Risk 和 Opportunity。
+- 要求验证 render output 包含 Wave 4 关键 UI。
+- 不引入浏览器 e2e 框架或真实外部服务。
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -783,7 +833,7 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 修改时注意：
 
 - 每次数据模型新增字段，都要同步 demo 数据。
-- demo 应覆盖新增能力，例如 memory status、sourceReferences、context metadata。
+- demo 应覆盖新增能力，例如 memory status、sourceReferences、context metadata、commitment / waiting、risk / opportunity。
 - demo 不应包含真实敏感信息。
 
 ### `src/domain/types.js`
@@ -796,6 +846,8 @@ Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
 - 定义 `MEMORY_TYPES` 及其标签、短标签和色调。
 - 定义 `ACTION_TYPES`。
 - 定义 priority、risk、action status、result outcome 的展示标签。
+- 定义 commitment type / status 的展示标签。
+- 定义 risk / opportunity status 和 impact 展示标签。
 
 修改时注意：
 
@@ -880,6 +932,23 @@ Signal 到 Entity / Project 建议关联 pipeline。
 - 不做复杂实体合并或关系图可视化。
 - 不接 CRM、Gmail、Slack 等外部系统。
 
+### `src/domain/pipelines/buildCommandCenter.js`
+
+Command Center 聚合 pipeline。
+
+主要作用：
+
+- 暴露 `buildCommandCenter({ project, now })`。
+- 汇总 Source / Signal、Memory review、Open Action、Project Node、Risk 和 Opportunity。
+- 输出只读 `CommandCenterSnapshot`，供首页展示今日焦点。
+- 生成本地规则版 Priority Queue，每个队列项包含 reason 和证据链接。
+- 第一版使用本地规则，不写入 state，不执行外部动作。
+
+修改时注意：
+
+- 新增 commitment、risk、opportunity 或 priority 规则时，保持输出可追溯。
+- 不在这里触发 DOM、localStorage 或外部 SaaS。
+
 ### `src/services/store.js`
 
 本地持久化服务。
@@ -893,6 +962,8 @@ Signal 到 Entity / Project 建议关联 pipeline。
 - 重置 demo state。
 - 创建新 project。
 - 生成稳定 ID。
+- 兼容迁移 `commitments`，保证旧 localStorage 缺少字段时不会白屏。
+- 兼容迁移 `risks` 和 `opportunities`，保证 Command Center 输入稳定。
 
 修改时注意：
 
@@ -909,6 +980,7 @@ HTML 渲染层。
 
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
+- 渲染 Command Center 工作首页。
 - 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。
@@ -917,6 +989,8 @@ HTML 渲染层。
 
 - `renderSidebar()`
 - `renderTopbar()`
+- `renderCommandCenter()`
+- `renderPriorityQueue()`
 - `renderPipeline()`
 - `renderContextIntake()`
 - `renderMemories()`

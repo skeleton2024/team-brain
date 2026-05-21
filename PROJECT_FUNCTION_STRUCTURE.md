@@ -124,6 +124,11 @@ team-brain/
       PROJECT-01-project-nodes.md
       PROJECT-02-node-detail-panel.md
       QA-02-entity-project-flow.md
+      DASH-01-command-center.md
+      COMMIT-01-commitment-waiting.md
+      RISK-01-risk-opportunity-radar.md
+      PRIORITY-01-ai-priority-queue.md
+      QA-04-alpha-e2e-smoke.md
   scripts/
     smoke-test.mjs
   src/
@@ -136,7 +141,10 @@ team-brain/
       types.js
       pipelines/
         extractMemories.js
+        extractSignals.js
+        linkSignals.js
         reconcileMemories.js
+        buildCommandCenter.js
     services/
       store.js
     ui/
@@ -383,13 +391,14 @@ v0.2 计划新增。
 
 ### `src/domain/pipelines/buildCommandCenter.js`
 
-Phase 3 Alpha 计划新增。
+Phase 3 Alpha Wave 4 已新增。
 
 职责：
 
 - 汇总 inbox、memory、project、node、action、commitment、risk 和 opportunity。
 - 生成今日优先级队列。
 - 输出可追溯的 Dashboard 数据，不直接执行外部动作。
+- 第一版使用本地规则生成 Command Center snapshot，后续 `COMMIT-01`、`RISK-01` 和 `PRIORITY-01` 会继续补齐输入和排序。
 
 ### `src/services/store.js`
 
@@ -748,7 +757,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 
 主要文件：
 
-- 未来 `src/domain/pipelines/buildCommandCenter.js`
+- `src/domain/pipelines/buildCommandCenter.js`
 - 未来 `src/domain/pipelines/processResult.js`
 - `src/ui/render.js`
 - `src/main.js`

@@ -3,7 +3,11 @@ import {
   MEMORY_STATUS,
   MEMORY_TYPES,
   ENTITY_TYPES,
+  COMMITMENT_STATUS,
+  COMMITMENT_TYPES,
+  OPPORTUNITY_STATUS,
   PROJECT_NODE_STATUS,
+  RISK_STATUS,
   SIGNAL_TYPES,
   SOURCE_TYPE_LABELS
 } from "../domain/types.js";
@@ -72,6 +76,9 @@ export function makeProject(name) {
     actions: [],
     briefs: [],
     results: [],
+    commitments: [],
+    risks: [],
+    opportunities: [],
     reconciliationResults: [],
     pendingMemoryUpdates: []
   };
@@ -164,6 +171,13 @@ function normalizeProject(project) {
     actions: Array.isArray(project.actions) ? project.actions : [],
     briefs: Array.isArray(project.briefs) ? project.briefs : [],
     results: Array.isArray(project.results) ? project.results.map(normalizeActionResult) : [],
+    commitments: Array.isArray(project.commitments)
+      ? project.commitments.map((commitment) => normalizeCommitment(commitment, project))
+      : [],
+    risks: Array.isArray(project.risks) ? project.risks.map((risk) => normalizeRisk(risk, project)) : [],
+    opportunities: Array.isArray(project.opportunities)
+      ? project.opportunities.map((opportunity) => normalizeOpportunity(opportunity, project))
+      : [],
     reconciliationResults: Array.isArray(project.reconciliationResults)
       ? project.reconciliationResults.map(normalizeReconciliationResult)
       : [],
@@ -351,6 +365,68 @@ function normalizeActionResult(result) {
   };
 }
 
+function normalizeCommitment(commitment, project) {
+  const createdAt = commitment.createdAt || new Date().toISOString();
+
+  return {
+    ...commitment,
+    id: commitment.id || makeId("commitment"),
+    projectId: commitment.projectId || project.id,
+    nodeId: commitment.nodeId || "",
+    type: normalizeCommitmentType(commitment.type),
+    title: commitment.title || "未命名承诺",
+    who: commitment.who || "待确认",
+    toWhom: commitment.toWhom || "",
+    dueAt: commitment.dueAt || "",
+    status: normalizeCommitmentStatus(commitment.status),
+    evidenceLinks: normalizeEvidenceLinks(commitment.evidenceLinks),
+    createdAt,
+    updatedAt: commitment.updatedAt || createdAt
+  };
+}
+
+function normalizeRisk(risk, project) {
+  const createdAt = risk.createdAt || new Date().toISOString();
+
+  return {
+    ...risk,
+    id: risk.id || makeId("risk"),
+    projectId: risk.projectId || project.id,
+    nodeId: risk.nodeId || "",
+    entityIds: normalizeIds(risk.entityIds),
+    title: risk.title || "未命名风险",
+    description: risk.description || "",
+    severity: normalizeLevel(risk.severity),
+    likelihood: normalizeLevel(risk.likelihood),
+    status: normalizeRiskStatus(risk.status),
+    evidenceLinks: normalizeEvidenceLinks(risk.evidenceLinks),
+    suggestedActionIds: normalizeIds(risk.suggestedActionIds),
+    createdAt,
+    updatedAt: risk.updatedAt || createdAt
+  };
+}
+
+function normalizeOpportunity(opportunity, project) {
+  const createdAt = opportunity.createdAt || new Date().toISOString();
+
+  return {
+    ...opportunity,
+    id: opportunity.id || makeId("opportunity"),
+    projectId: opportunity.projectId || project.id,
+    nodeId: opportunity.nodeId || "",
+    entityIds: normalizeIds(opportunity.entityIds),
+    title: opportunity.title || "未命名机会",
+    description: opportunity.description || "",
+    potentialImpact: normalizeLevel(opportunity.potentialImpact),
+    confidence: normalizeOpportunityConfidence(opportunity.confidence),
+    status: normalizeOpportunityStatus(opportunity.status),
+    evidenceLinks: normalizeEvidenceLinks(opportunity.evidenceLinks),
+    suggestedActionIds: normalizeIds(opportunity.suggestedActionIds),
+    createdAt,
+    updatedAt: opportunity.updatedAt || createdAt
+  };
+}
+
 function normalizeReconciliationResult(result) {
   const createdAt = result.createdAt || new Date().toISOString();
 
@@ -421,6 +497,27 @@ function normalizeSourceReferences(value) {
     }));
 }
 
+function normalizeEvidenceLinks(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((link) => ({
+      sourceId: String(link?.sourceId || "").trim(),
+      contextId: String(link?.contextId || "").trim(),
+      signalId: String(link?.signalId || "").trim(),
+      memoryId: String(link?.memoryId || "").trim(),
+      quote: String(link?.quote || "").trim(),
+      note: link?.note ? String(link.note).trim() : undefined,
+      confidence:
+        typeof link?.confidence === "number"
+          ? Math.max(0, Math.min(1, link.confidence))
+          : undefined
+    }))
+    .filter((link) => link.sourceId || link.contextId || link.signalId || link.memoryId || link.quote);
+}
+
 function normalizeMemoryStatus(value) {
   return ["draft", "confirmed", "outdated", "disputed", "archived"].includes(value)
     ? value
@@ -465,6 +562,34 @@ function normalizeEntityStatus(value) {
 
 function normalizeProjectNodeStatus(value) {
   return PROJECT_NODE_STATUS[value] ? value : "planned";
+}
+
+function normalizeCommitmentType(value) {
+  return COMMITMENT_TYPES[value] ? value : "commitment";
+}
+
+function normalizeCommitmentStatus(value) {
+  return COMMITMENT_STATUS[value] ? value : "open";
+}
+
+function normalizeRiskStatus(value) {
+  return RISK_STATUS[value] ? value : "open";
+}
+
+function normalizeOpportunityStatus(value) {
+  return OPPORTUNITY_STATUS[value] ? value : "new";
+}
+
+function normalizeLevel(value) {
+  return ["low", "medium", "high"].includes(value) ? value : "medium";
+}
+
+function normalizeOpportunityConfidence(value) {
+  if (typeof value === "number") {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  return 0.5;
 }
 
 function normalizeReconciliationOperation(value) {

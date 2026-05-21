@@ -11,6 +11,7 @@ import {
   updateMemoryStatus,
   updateProjectNodeStatus
 } from "../src/domain/agentEngine.js";
+import { buildCommandCenter } from "../src/domain/pipelines/buildCommandCenter.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
@@ -18,6 +19,64 @@ import { makeProject, updateMemory } from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
+
+const commandCenterProbe = buildCommandCenter({ project, now: "2026-05-20T00:00:00.000Z" });
+if (
+  commandCenterProbe.projectId !== project.id ||
+  !["needs_attention", "at_risk"].includes(commandCenterProbe.health.status) ||
+  !Array.isArray(commandCenterProbe.todayInbox) ||
+  commandCenterProbe.todayInbox.length < 1 ||
+  !Array.isArray(commandCenterProbe.actionFocus) ||
+  commandCenterProbe.actionFocus[0]?.priority !== "high" ||
+  !Array.isArray(commandCenterProbe.commitmentFocus) ||
+  commandCenterProbe.commitmentFocus.length < 1 ||
+  commandCenterProbe.commitmentFocus[0]?.status !== "overdue" ||
+  !Array.isArray(commandCenterProbe.memoryReview) ||
+  commandCenterProbe.memoryReview.length < 1 ||
+  !Array.isArray(commandCenterProbe.riskRadar) ||
+  !commandCenterProbe.riskRadar.some((risk) => risk.id === "risk-demo-security-boundary") ||
+  !Array.isArray(commandCenterProbe.opportunityRadar) ||
+  commandCenterProbe.opportunityRadar.length < 2 ||
+  !Array.isArray(commandCenterProbe.priorityQueue) ||
+  commandCenterProbe.priorityQueue.length < 5 ||
+  commandCenterProbe.priorityQueue[0]?.type !== "commitment" ||
+  !commandCenterProbe.priorityQueue.every((item) => item.reason && item.targetId)
+) {
+  throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
+}
+
+const commandCenterQueueTypes = new Set(commandCenterProbe.priorityQueue.map((item) => item.type));
+if (
+  !commandCenterQueueTypes.has("commitment") ||
+  !commandCenterQueueTypes.has("risk") ||
+  !commandCenterQueueTypes.has("action") ||
+  !commandCenterQueueTypes.has("memory_review") ||
+  !commandCenterQueueTypes.has("opportunity")
+) {
+  throw new Error(`Expected Priority Queue to cover Wave 4 inputs: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
+}
+
+const commandCenterHtml = renderApp({
+  activeProjectId: project.id,
+  selectedActionId: null,
+  projects: [project]
+});
+if (
+  !commandCenterHtml.includes('data-command-center') ||
+  !commandCenterHtml.includes('data-priority-queue') ||
+  !commandCenterHtml.includes("Command Center") ||
+  !commandCenterHtml.includes("AI Priority Queue") ||
+  !commandCenterHtml.includes("今天最该处理什么") ||
+  !commandCenterHtml.includes("今日 Inbox") ||
+  !commandCenterHtml.includes("行动焦点") ||
+  !commandCenterHtml.includes("承诺 / Waiting") ||
+  !commandCenterHtml.includes("记忆复核") ||
+  !commandCenterHtml.includes("风险 / 机会") ||
+  !commandCenterHtml.includes("试点前权限边界不清会阻塞客户推进") ||
+  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点")
+) {
+  throw new Error("Expected Command Center dashboard to render in smoke HTML.");
+}
 
 const demoMemoriesMissingSources = project.memories.filter(
   (memory) => !hasUsableSourceReference(memory)
@@ -35,7 +94,10 @@ if (
   !Array.isArray(freshProject.nodes) ||
   freshProject.nodes.length !== 1 ||
   freshProject.nodes[0].status !== "active" ||
-  freshProject.nodes[0].projectId !== freshProject.id
+  freshProject.nodes[0].projectId !== freshProject.id ||
+  !Array.isArray(freshProject.commitments) ||
+  !Array.isArray(freshProject.risks) ||
+  !Array.isArray(freshProject.opportunities)
 ) {
   throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
 }
@@ -352,6 +414,15 @@ const projectNodeHtml = renderApp({
 });
 if (
   !projectNodeHtml.includes("Project Nodes") ||
+  !projectNodeHtml.includes("Commitment / Waiting") ||
+  !projectNodeHtml.includes('data-commitment-panel') ||
+  !projectNodeHtml.includes('data-commitment-id="commit-demo-security-brief"') ||
+  !projectNodeHtml.includes("给客户发送权限边界 follow-up 草稿") ||
+  !projectNodeHtml.includes("Risk / Opportunity Radar") ||
+  !projectNodeHtml.includes('data-risk-radar') ||
+  !projectNodeHtml.includes('data-opportunity-radar') ||
+  !projectNodeHtml.includes("试点前权限边界不清会阻塞客户推进") ||
+  !projectNodeHtml.includes("付费意向客户试点可成为 Alpha 证明点") ||
   !projectNodeHtml.includes("Node Detail") ||
   !projectNodeHtml.includes("项目推进节点") ||
   !projectNodeHtml.includes("客户试点与权限边界确认") ||
@@ -1085,6 +1156,20 @@ if (allMemoriesMissingSources.length) {
   );
 }
 
+const postResultCommandCenter = buildCommandCenter({
+  project,
+  now: "2026-05-20T00:00:00.000Z"
+});
+if (
+  postResultCommandCenter.priorityQueue.length < 5 ||
+  !postResultCommandCenter.actionFocus.length ||
+  !postResultCommandCenter.memoryReview.length ||
+  !postResultCommandCenter.riskRadar.length ||
+  !postResultCommandCenter.opportunityRadar.length
+) {
+  throw new Error(`Expected post-result project to still produce a full Command Center: ${JSON.stringify(postResultCommandCenter)}`);
+}
+
 const legacyHtml = renderApp({
   activeProjectId: "legacy-project",
   selectedActionId: null,
@@ -1130,7 +1215,11 @@ const summary = {
   results: project.results.length,
   openActions: project.actions.filter((item) => item.status !== "done").length,
   sourceReferencedMemories: project.memories.filter((memory) => hasUsableSourceReference(memory)).length,
-  resultSourceContextId: resultContext.id
+  resultSourceContextId: resultContext.id,
+  priorityQueue: postResultCommandCenter.priorityQueue.length,
+  commitments: postResultCommandCenter.commitmentFocus.length,
+  risks: postResultCommandCenter.riskRadar.length,
+  opportunities: postResultCommandCenter.opportunityRadar.length
 };
 
 if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {

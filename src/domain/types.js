@@ -94,6 +94,22 @@ export const PROJECT_NODE_STATUS = {
   archived: "已归档"
 };
 
+export const COMMITMENT_TYPES = {
+  commitment: "承诺",
+  waiting: "等待项",
+  dependency: "依赖项",
+  follow_up: "Follow-up"
+};
+
+export const COMMITMENT_STATUS = {
+  open: "待处理",
+  waiting: "等待中",
+  blocked: "阻塞",
+  done: "已完成",
+  overdue: "已逾期",
+  archived: "已归档"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",
@@ -186,6 +202,28 @@ export const RISK_LABELS = {
   high: "高风险",
   medium: "中风险",
   low: "低风险"
+};
+
+export const RISK_STATUS = {
+  open: "待处理",
+  monitoring: "观察中",
+  mitigated: "已缓解",
+  archived: "已归档"
+};
+
+export const OPPORTUNITY_STATUS = {
+  new: "新机会",
+  evaluating: "评估中",
+  pursuing: "推进中",
+  won: "已赢得",
+  lost: "已丢失",
+  archived: "已归档"
+};
+
+export const IMPACT_LABELS = {
+  high: "高影响",
+  medium: "中影响",
+  low: "低影响"
 };
 
 export const ACTION_STATUS = {

@@ -788,6 +788,7 @@ Commitment
 - Commitment 是 Command Center 的关键输入。
 - 逾期判断可以先本地规则实现。
 - 不自动代表用户发送催办或承诺内容。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示 `commitment` / `waiting` / `dependency` / `follow_up`，逾期状态可由 `dueAt` 派生但不自动写回外部系统。
 
 ### 13.8 Risk
 
@@ -812,6 +813,7 @@ Risk
 
 - Risk 必须能追溯证据。
 - Risk 可以生成 action 建议，但高风险 action 仍然只是草稿和人工确认项。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.risks`，并继续兼容从 memory 派生的风险信号。
 
 ### 13.9 Opportunity
 
@@ -836,6 +838,28 @@ Opportunity
 
 - Opportunity 不是销售承诺，只是机会判断。
 - 多个 Source / Signal 指向同一需求时，应优先合并为一个可追溯机会。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.opportunities`，不自动承诺销售、融资或产品结论。
+
+### 13.10 PriorityQueueItem
+
+```text
+PriorityQueueItem
+  id: string
+  type: "commitment" | "risk" | "action" | "memory_review" | "opportunity"
+  title: string
+  reason: string
+  priority: "low" | "medium" | "high"
+  targetId: string
+  targetType: string
+  evidenceLinks: EvidenceLink[]
+```
+
+开发要求：
+
+- PriorityQueueItem 是 Command Center 的只读派生对象，不需要直接持久化。
+- 每个队列项必须说明 `reason`，避免黑盒排序。
+- 队列项必须能追溯到 commitment、risk、action、memory 或 opportunity。
+- Priority Queue 只排序和提示，不自动执行任何外部动作。
 
 ## 14. 当前与目标模型的差异
 
