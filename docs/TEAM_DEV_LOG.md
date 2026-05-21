@@ -182,6 +182,42 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 负责人：Codex
 
+范围：Phase 3 Alpha Wave 5：`RESILIENCE-01-local-storage-hardening`
+
+分支：`issue/RESILIENCE-01-local-storage-hardening`
+
+状态：开发中，已完成旧数据和 partial project hardening
+
+改动文件：
+
+- `src/services/store.js`
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- `normalizeStoredState()` 覆盖旧 localStorage 迁移，补齐 schemaVersion、默认节点和关键对象默认字段。
+- `buildCommandCenter()` 会过滤 malformed array item，partial project 仍能聚合。
+- `renderApp()` 对空 state、空项目和缺字段项目提供 fallback，不白屏。
+- Smoke 新增 legacy / empty / partial project case。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- QA-05 需要最终整理 Wave 5 smoke summary 和文档收口。
+
+下一步：
+
+- 提交 RESILIENCE-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
 范围：Phase 3 Alpha Wave 5：`EDIT-01-alpha-manual-editing`
 
 分支：`issue/EDIT-01-alpha-manual-editing`

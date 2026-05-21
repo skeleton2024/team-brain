@@ -15,12 +15,12 @@ export function buildCommandCenter({ project, now = new Date().toISOString() } =
     return emptySnapshot(now);
   }
 
-  const sources = Array.isArray(project.sources) ? project.sources : [];
-  const signals = Array.isArray(project.signals) ? project.signals : [];
-  const memories = Array.isArray(project.memories) ? project.memories : [];
-  const actions = Array.isArray(project.actions) ? project.actions : [];
-  const nodes = Array.isArray(project.nodes) ? project.nodes : [];
-  const commitments = Array.isArray(project.commitments) ? project.commitments : [];
+  const sources = objectItems(project.sources);
+  const signals = objectItems(project.signals);
+  const memories = objectItems(project.memories);
+  const actions = objectItems(project.actions);
+  const nodes = objectItems(project.nodes);
+  const commitments = objectItems(project.commitments);
 
   const todayInbox = buildInboxItems(sources, signals);
   const memoryReview = buildMemoryReview(memories);
@@ -346,8 +346,7 @@ function buildCommitmentFocus(commitments, now) {
 }
 
 function buildRiskRadar(project, memories, actions) {
-  const explicitRisks = Array.isArray(project.risks)
-    ? project.risks
+  const explicitRisks = objectItems(project.risks)
         .filter((risk) => !["mitigated", "archived"].includes(risk.status))
         .map((risk) => ({
           id: risk.id,
@@ -358,8 +357,7 @@ function buildRiskRadar(project, memories, actions) {
           evidenceLinks: normalizeEvidenceLinks(risk.evidenceLinks),
           source: "risk",
           ...targetLocator("risk", risk.id, "查看 Risk", "评估缓解动作或归档风险")
-        }))
-    : [];
+        }));
 
   const memoryRisks = memories
     .filter((memory) => memory.type === "risk" && !["archived"].includes(memory.status))
@@ -396,8 +394,7 @@ function buildRiskRadar(project, memories, actions) {
 }
 
 function buildOpportunityRadar(project, memories, signals) {
-  const explicitOpportunities = Array.isArray(project.opportunities)
-    ? project.opportunities
+  const explicitOpportunities = objectItems(project.opportunities)
         .filter((opportunity) => !["lost", "archived"].includes(opportunity.status))
         .map((opportunity) => ({
           id: opportunity.id,
@@ -409,8 +406,7 @@ function buildOpportunityRadar(project, memories, signals) {
           evidenceLinks: normalizeEvidenceLinks(opportunity.evidenceLinks),
           source: "opportunity",
           ...targetLocator("opportunity", opportunity.id, "查看 Opportunity", "安排验证或推进动作")
-        }))
-    : [];
+        }));
 
   const memoryOpportunities = memories
     .filter((memory) => memory.type === "opportunity" && !["archived"].includes(memory.status))
@@ -515,11 +511,16 @@ function normalizeEvidenceLinks(links = []) {
   }));
 }
 
+function objectItems(value) {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === "object") : [];
+}
+
 function targetLocator(type, id, targetLabel, nextStepLabel) {
+  const targetId = id || `${type}-unknown`;
   return {
-    targetId: id,
+    targetId,
     targetType: type,
-    targetAnchor: `#${type}-${id}`,
+    targetAnchor: `#${type}-${targetId}`,
     targetLabel,
     nextStepLabel
   };
