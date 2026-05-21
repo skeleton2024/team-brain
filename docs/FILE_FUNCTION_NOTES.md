@@ -844,6 +844,7 @@ Phase 3 Alpha Wave 5 的 hardening smoke issue。
 - 调用 store 层的 `loadState()`、`saveState()`、`resetState()`、`makeProject()`。
 - 管理 `activeProjectId` 和 `selectedActionId`。
 - 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
+- Phase 3 Alpha Wave 5 起，处理 Command Center 定位链接，把 priority queue 的 target 转成现有 selected action / memory / node state 并滚动到锚点。
 
 修改时注意：
 
@@ -992,6 +993,7 @@ Command Center 聚合 pipeline。
 - 汇总 Source / Signal、Memory review、Open Action、Project Node、Risk 和 Opportunity。
 - 输出只读 `CommandCenterSnapshot`，供首页展示今日焦点。
 - 生成本地规则版 Priority Queue，每个队列项包含 reason 和证据链接。
+- Phase 3 Alpha Wave 5 起，Priority Queue 条目包含只读 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，用于定位到 Action、Memory、Commitment、Risk、Opportunity 或证据区。
 - 第一版使用本地规则，不写入 state，不执行外部动作。
 
 修改时注意：
@@ -1031,6 +1033,7 @@ HTML 渲染层。
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
 - 渲染 Command Center 工作首页。
+- 渲染 Command Center / Priority Queue 的对象定位入口、目标锚点和证据链接。
 - 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。

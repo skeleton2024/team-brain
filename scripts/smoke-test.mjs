@@ -40,7 +40,15 @@ if (
   commandCenterProbe.opportunityRadar.length < 2 ||
   !Array.isArray(commandCenterProbe.priorityQueue) ||
   commandCenterProbe.priorityQueue.length < 5 ||
-  !commandCenterProbe.priorityQueue.every((item) => item.reason && item.targetId)
+  !commandCenterProbe.priorityQueue.every(
+    (item) =>
+      item.reason &&
+      item.targetId &&
+      item.targetType &&
+      item.targetAnchor?.startsWith("#") &&
+      item.targetLabel &&
+      item.nextStepLabel
+  )
 ) {
   throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
 }
@@ -54,6 +62,17 @@ if (
   !commandCenterQueueTypes.has("opportunity")
 ) {
   throw new Error(`Expected Priority Queue to cover Wave 4 inputs: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
+}
+
+const commandCenterTargetTypes = new Set(commandCenterProbe.priorityQueue.map((item) => item.targetType));
+if (
+  !commandCenterTargetTypes.has("commitment") ||
+  !commandCenterTargetTypes.has("risk") ||
+  !commandCenterTargetTypes.has("action") ||
+  !commandCenterTargetTypes.has("memory") ||
+  !commandCenterTargetTypes.has("opportunity")
+) {
+  throw new Error(`Expected Priority Queue to expose Wave 5 target locators: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
 }
 
 const commandCenterHtml = renderApp({
@@ -73,7 +92,15 @@ if (
   !commandCenterHtml.includes("记忆复核") ||
   !commandCenterHtml.includes("风险 / 机会") ||
   !commandCenterHtml.includes("试点前权限边界不清会阻塞客户推进") ||
-  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点")
+  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点") ||
+  !commandCenterHtml.includes("data-command-target") ||
+  !commandCenterHtml.includes("data-priority-target-type=") ||
+  !commandCenterHtml.includes("command-target-link") ||
+  !commandCenterHtml.includes('id="action-') ||
+  !commandCenterHtml.includes('id="memory-') ||
+  !commandCenterHtml.includes('id="commitment-') ||
+  !commandCenterHtml.includes('id="risk-') ||
+  !commandCenterHtml.includes('href="#source-')
 ) {
   throw new Error("Expected Command Center dashboard to render in smoke HTML.");
 }
