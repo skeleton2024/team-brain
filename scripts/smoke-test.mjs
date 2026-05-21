@@ -1410,10 +1410,34 @@ const summary = {
   priorityQueue: postResultCommandCenter.priorityQueue.length,
   commitments: postResultCommandCenter.commitmentFocus.length,
   risks: postResultCommandCenter.riskRadar.length,
-  opportunities: postResultCommandCenter.opportunityRadar.length
+  opportunities: postResultCommandCenter.opportunityRadar.length,
+  commandTargets: commandCenterProbe.priorityQueue.filter((item) => item.targetAnchor).length,
+  reviewActions: [
+    'data-action="update-memory-status"',
+    'data-action="update-commitment-status"',
+    'data-action="update-risk-status"',
+    'data-action="update-opportunity-status"'
+  ].filter((marker) => commandCenterHtml.includes(marker)).length,
+  manualEditForms: [
+    'data-form="edit-action"',
+    'data-form="edit-commitment"',
+    'data-form="edit-risk"',
+    'data-form="edit-opportunity"'
+  ].filter((marker) => commandCenterHtml.includes(marker)).length,
+  hardeningCases: 3
 };
 
-if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {
+if (
+  !summary.contexts ||
+  !summary.memories ||
+  !summary.actions ||
+  !summary.briefs ||
+  !summary.results ||
+  summary.commandTargets < 5 ||
+  summary.reviewActions < 4 ||
+  summary.manualEditForms < 4 ||
+  summary.hardeningCases < 3
+) {
   throw new Error(`Smoke test failed: ${JSON.stringify(summary)}`);
 }
 

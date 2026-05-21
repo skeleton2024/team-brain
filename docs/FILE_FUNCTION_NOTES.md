@@ -822,6 +822,7 @@ Phase 3 Alpha Wave 5 的 hardening smoke issue。
 - 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
 - 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
 - Phase 3 Alpha Wave 3 起，覆盖 Memory Governance -> Scenario Brief -> Structured Result Feedback -> Memory Update / Follow-up Action / Project Node suggestion 的完整 action loop。
+- Phase 3 Alpha Wave 5 起，覆盖 Command Center 定位、人工 review、轻量编辑、legacy / empty / partial project hardening，并在 summary 输出 Wave 5 关键计数。
 
 修改时注意：
 
