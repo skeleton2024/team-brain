@@ -1,5 +1,6 @@
 import { DEMO_PROJECT } from "../data/demo.js";
 import {
+  ACTION_STATUS,
   MEMORY_STATUS,
   MEMORY_TYPES,
   ENTITY_TYPES,
@@ -119,6 +120,92 @@ export function updateMemory(project, memoryId, input) {
   };
 }
 
+export function updateAction(project, actionId, input) {
+  const action = project.actions.find((item) => item.id === actionId);
+  if (!action) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextAction = {
+    ...action,
+    priority: normalizePriority(input.priority, action.priority || "medium"),
+    status: normalizeActionStatus(input.status, action.status || "pending"),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    actions: project.actions.map((item) => (item.id === actionId ? nextAction : item))
+  };
+}
+
+export function updateCommitment(project, commitmentId, input) {
+  const commitment = (project.commitments || []).find((item) => item.id === commitmentId);
+  if (!commitment) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextCommitment = {
+    ...commitment,
+    status: normalizeCommitmentStatus(input.status || commitment.status),
+    dueAt: cleanText(input.dueAt),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    commitments: (project.commitments || []).map((item) =>
+      item.id === commitmentId ? nextCommitment : item
+    )
+  };
+}
+
+export function updateRisk(project, riskId, input) {
+  const risk = (project.risks || []).find((item) => item.id === riskId);
+  if (!risk) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextRisk = {
+    ...risk,
+    status: normalizeRiskStatus(input.status || risk.status),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    risks: (project.risks || []).map((item) => (item.id === riskId ? nextRisk : item))
+  };
+}
+
+export function updateOpportunity(project, opportunityId, input) {
+  const opportunity = (project.opportunities || []).find((item) => item.id === opportunityId);
+  if (!opportunity) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const nextOpportunity = {
+    ...opportunity,
+    status: normalizeOpportunityStatus(input.status || opportunity.status),
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    opportunities: (project.opportunities || []).map((item) =>
+      item.id === opportunityId ? nextOpportunity : item
+    )
+  };
+}
+
 export function makeId(prefix) {
   if (globalThis.crypto?.randomUUID) {
     return `${prefix}-${globalThis.crypto.randomUUID()}`;
@@ -139,26 +226,46 @@ function normalizeEditedMemoryStatus(value, fallback) {
   return MEMORY_STATUS[value] ? value : fallback;
 }
 
+function normalizeActionStatus(value, fallback) {
+  return ACTION_STATUS[value] ? value : fallback;
+}
+
+function normalizePriority(value, fallback) {
+  return ["low", "medium", "high"].includes(value) ? value : fallback;
+}
+
 function cloneProject(project) {
   return JSON.parse(JSON.stringify(project));
 }
 
+export function normalizeStoredState(state) {
+  return normalizeState(state);
+}
+
 function normalizeState(state) {
-  const projects = Array.isArray(state.projects) ? state.projects.map(normalizeProject) : [];
+  const safeState = state && typeof state === "object" ? state : {};
+  const projects = Array.isArray(safeState.projects) ? safeState.projects.map(normalizeProject) : [];
 
   return {
-    ...state,
-    activeProjectId: state.activeProjectId || projects[0]?.id || null,
-    selectedActionId: state.selectedActionId ?? projects[0]?.actions?.[0]?.id ?? null,
+    ...safeState,
+    schemaVersion: Number(safeState.schemaVersion) || 2,
+    activeProjectId: safeState.activeProjectId || projects[0]?.id || null,
+    selectedActionId: safeState.selectedActionId ?? projects[0]?.actions?.[0]?.id ?? null,
     projects
   };
 }
 
 function normalizeProject(project) {
+  project = project && typeof project === "object" ? project : {};
   const now = new Date().toISOString();
+  const projectId = project.id || makeId("project");
 
   return {
     ...project,
+    id: projectId,
+    name: project.name || "未命名项目",
+    stage: project.stage || "待整理",
+    description: project.description || "",
     createdAt: project.createdAt || now,
     updatedAt: project.updatedAt || project.createdAt || now,
     sources: Array.isArray(project.sources) ? project.sources.map(normalizeSource) : [],
@@ -168,8 +275,8 @@ function normalizeProject(project) {
     nodes: normalizeProjectNodes(project),
     contexts: Array.isArray(project.contexts) ? project.contexts.map(normalizeContext) : [],
     memories: Array.isArray(project.memories) ? project.memories.map(normalizeMemory) : [],
-    actions: Array.isArray(project.actions) ? project.actions : [],
-    briefs: Array.isArray(project.briefs) ? project.briefs : [],
+    actions: Array.isArray(project.actions) ? project.actions.map(normalizeAction) : [],
+    briefs: Array.isArray(project.briefs) ? project.briefs.map(normalizeBrief) : [],
     results: Array.isArray(project.results) ? project.results.map(normalizeActionResult) : [],
     commitments: Array.isArray(project.commitments)
       ? project.commitments.map((commitment) => normalizeCommitment(commitment, project))
@@ -193,6 +300,7 @@ function normalizeProjectNodes(project) {
 }
 
 function normalizeProjectNode(node, project) {
+  node = node && typeof node === "object" ? node : {};
   const createdAt = node.createdAt || project.createdAt || new Date().toISOString();
 
   return {
@@ -245,6 +353,7 @@ function makeDefaultProjectNode(project) {
 }
 
 function normalizeSource(source) {
+  source = source && typeof source === "object" ? source : {};
   const createdAt = source.createdAt || new Date().toISOString();
   const receivedAt = source.receivedAt || createdAt;
 
@@ -270,6 +379,7 @@ function normalizeSource(source) {
 }
 
 function normalizeSignal(signal) {
+  signal = signal && typeof signal === "object" ? signal : {};
   const createdAt = signal.createdAt || new Date().toISOString();
 
   return {
@@ -293,6 +403,7 @@ function normalizeSignal(signal) {
 }
 
 function normalizeEntity(entity) {
+  entity = entity && typeof entity === "object" ? entity : {};
   const createdAt = entity.createdAt || new Date().toISOString();
   const sourceIds = normalizeIds(entity.sourceIds, entity.relatedSourceIds);
   const signalIds = normalizeIds(entity.signalIds, entity.relatedSignalIds);
@@ -327,6 +438,7 @@ function normalizeEntity(entity) {
 }
 
 function normalizeContext(context) {
+  context = context && typeof context === "object" ? context : {};
   const createdAt = context.createdAt || new Date().toISOString();
 
   return {
@@ -349,6 +461,7 @@ function normalizeContext(context) {
 }
 
 function normalizeActionResult(result) {
+  result = result && typeof result === "object" ? result : {};
   const createdAt = result.createdAt || new Date().toISOString();
 
   return {
@@ -365,7 +478,52 @@ function normalizeActionResult(result) {
   };
 }
 
+function normalizeAction(action) {
+  action = action && typeof action === "object" ? action : {};
+  const createdAt = action.createdAt || new Date().toISOString();
+
+  return {
+    ...action,
+    id: action.id || makeId("action"),
+    type: action.type || "research_task",
+    title: action.title || "未命名行动",
+    rationale: action.rationale || action.whyNow || "",
+    whyNow: action.whyNow || action.rationale || "等待补充处理原因。",
+    priority: normalizePriority(action.priority, "medium"),
+    riskLevel: normalizeLevel(action.riskLevel),
+    expectedOutput: action.expectedOutput || action.expectedArtifact || "待补输出物",
+    expectedArtifact: action.expectedArtifact || action.expectedOutput || "待补输出物",
+    sourceMemoryIds: normalizeIds(action.sourceMemoryIds),
+    evidenceMemoryIds: normalizeIds(action.evidenceMemoryIds, action.sourceMemoryIds),
+    blockedBy: normalizeList(action.blockedBy),
+    humanConfirmationChecklist: normalizeList(action.humanConfirmationChecklist),
+    status: normalizeActionStatus(action.status, "pending"),
+    createdAt,
+    updatedAt: action.updatedAt || createdAt
+  };
+}
+
+function normalizeBrief(brief) {
+  brief = brief && typeof brief === "object" ? brief : {};
+  const createdAt = brief.createdAt || new Date().toISOString();
+
+  return {
+    ...brief,
+    id: brief.id || makeId("brief"),
+    actionId: brief.actionId || "",
+    type: brief.type || "research_task",
+    title: brief.title || "未命名 Brief",
+    sections: brief.sections && typeof brief.sections === "object" ? brief.sections : {},
+    evidenceMemoryIds: normalizeIds(brief.evidenceMemoryIds),
+    sourceContextIds: normalizeIds(brief.sourceContextIds),
+    createdBy: brief.createdBy === "human" ? "human" : "ai",
+    createdAt,
+    updatedAt: brief.updatedAt || createdAt
+  };
+}
+
 function normalizeCommitment(commitment, project) {
+  commitment = commitment && typeof commitment === "object" ? commitment : {};
   const createdAt = commitment.createdAt || new Date().toISOString();
 
   return {
@@ -386,6 +544,7 @@ function normalizeCommitment(commitment, project) {
 }
 
 function normalizeRisk(risk, project) {
+  risk = risk && typeof risk === "object" ? risk : {};
   const createdAt = risk.createdAt || new Date().toISOString();
 
   return {
@@ -407,6 +566,7 @@ function normalizeRisk(risk, project) {
 }
 
 function normalizeOpportunity(opportunity, project) {
+  opportunity = opportunity && typeof opportunity === "object" ? opportunity : {};
   const createdAt = opportunity.createdAt || new Date().toISOString();
 
   return {
@@ -428,6 +588,7 @@ function normalizeOpportunity(opportunity, project) {
 }
 
 function normalizeReconciliationResult(result) {
+  result = result && typeof result === "object" ? result : {};
   const createdAt = result.createdAt || new Date().toISOString();
 
   return {
@@ -442,6 +603,7 @@ function normalizeReconciliationResult(result) {
 }
 
 function normalizeRelatedMemoryUpdate(update) {
+  update = update && typeof update === "object" ? update : {};
   return {
     ...update,
     memoryId: update.memoryId || "",
@@ -451,6 +613,7 @@ function normalizeRelatedMemoryUpdate(update) {
 }
 
 function normalizeMemory(memory) {
+  memory = memory && typeof memory === "object" ? memory : {};
   const createdAt = memory.createdAt || new Date().toISOString();
   const sourceReferences = normalizeSourceReferences(memory.sourceReferences);
   const normalized = {

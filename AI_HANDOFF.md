@@ -217,9 +217,9 @@ issue/REC-03-result-to-memory-update
 issue/QA-03-action-loop-smoke
 ```
 
-## 9. 下一步：Wave 4
+## 9. Phase 3 Alpha Wave 4 / Wave 5 状态
 
-下一轮建议从 Command Center Alpha 开始：
+Wave 4 已从 Command Center Alpha 开始：
 
 ```text
 DASH-01-command-center
@@ -243,7 +243,25 @@ Wave 4 当前状态（2026-05-20）：
 - `PRIORITY-01` 已完成本地规则版 Priority Queue，队列项包含 reason、targetId 和证据链。
 - `QA-04` 已扩展 Alpha 端到端 smoke，覆盖 Command Center、Priority Queue、Commitment、Risk 和 Opportunity。
 - 每个已完成 issue 分支和合回 Wave 4 后均运行 `node scripts/smoke-test.mjs` 通过。
-- Wave 4 待执行收口：合入 `integration/phase-3-alpha` 并更新现有 draft PR #8。
+- Wave 4 已合入 `integration/phase-3-alpha` 并更新现有 draft PR #8。
+
+Wave 5 当前状态（2026-05-21）：
+
+```text
+NAV-01-command-center-deep-links
+REVIEW-01-human-review-actions
+EDIT-01-alpha-manual-editing
+RESILIENCE-01-local-storage-hardening
+QA-05-alpha-hardening-smoke
+```
+
+- `NAV-01` 已完成 Command Center / Priority Queue 到 Action、Memory、Commitment、Risk、Opportunity 和证据区的定位链路。
+- `REVIEW-01` 已完成 Memory、Commitment、Risk、Opportunity 的本地人工 review 状态推进。
+- `EDIT-01` 已完成 Action priority / status、Commitment status / dueAt、Risk status、Opportunity status 的轻量本地编辑。
+- `RESILIENCE-01` 已完成旧 localStorage、空项目、partial project 和 malformed item 的兼容保护。
+- `QA-05` 已扩展 smoke summary，覆盖 Wave 5 command targets、review actions、manual edit forms 和 hardening cases。
+- 每个 issue 分支和合回 `integration/phase-3-wave-05` 后均运行 `node scripts/smoke-test.mjs` 通过。
+- Wave 5 待执行收口：合入 `integration/phase-3-alpha`、推送 alpha、更新现有 draft PR #8，不新建重复 PR。
 
 ## 10. 不要做
 

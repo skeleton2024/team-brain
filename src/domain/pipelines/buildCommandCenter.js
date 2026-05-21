@@ -15,12 +15,12 @@ export function buildCommandCenter({ project, now = new Date().toISOString() } =
     return emptySnapshot(now);
   }
 
-  const sources = Array.isArray(project.sources) ? project.sources : [];
-  const signals = Array.isArray(project.signals) ? project.signals : [];
-  const memories = Array.isArray(project.memories) ? project.memories : [];
-  const actions = Array.isArray(project.actions) ? project.actions : [];
-  const nodes = Array.isArray(project.nodes) ? project.nodes : [];
-  const commitments = Array.isArray(project.commitments) ? project.commitments : [];
+  const sources = objectItems(project.sources);
+  const signals = objectItems(project.signals);
+  const memories = objectItems(project.memories);
+  const actions = objectItems(project.actions);
+  const nodes = objectItems(project.nodes);
+  const commitments = objectItems(project.commitments);
 
   const todayInbox = buildInboxItems(sources, signals);
   const memoryReview = buildMemoryReview(memories);
@@ -117,6 +117,9 @@ function buildPriorityQueue({
       priority: item.status === "overdue" || item.status === "blocked" ? "high" : "medium",
       targetId: item.id,
       targetType: "commitment",
+      targetAnchor: item.targetAnchor,
+      targetLabel: item.targetLabel,
+      nextStepLabel: item.nextStepLabel,
       evidenceLinks: item.evidenceLinks,
       score: item.status === "overdue" ? 100 : item.status === "blocked" ? 88 : 64
     }));
@@ -133,7 +136,10 @@ function buildPriorityQueue({
           : "风险正在被监控，适合进入今日检查列表。",
       priority: risk.severity === "high" ? "high" : "medium",
       targetId: risk.id,
-      targetType: "risk",
+      targetType: risk.targetType,
+      targetAnchor: risk.targetAnchor,
+      targetLabel: risk.targetLabel,
+      nextStepLabel: risk.nextStepLabel,
       evidenceLinks: risk.evidenceLinks,
       score: risk.severity === "high" ? 94 : 62
     }));
@@ -146,6 +152,9 @@ function buildPriorityQueue({
     priority: action.priority,
     targetId: action.id,
     targetType: "action",
+    targetAnchor: action.targetAnchor,
+    targetLabel: action.targetLabel,
+    nextStepLabel: action.nextStepLabel,
     evidenceLinks: action.evidenceLinks,
     score: action.score + (action.priority === "high" ? 42 : 20)
   }));
@@ -161,6 +170,9 @@ function buildPriorityQueue({
     priority: memory.status === "disputed" ? "high" : "medium",
     targetId: memory.id,
     targetType: "memory",
+    targetAnchor: memory.targetAnchor,
+    targetLabel: memory.targetLabel,
+    nextStepLabel: memory.nextStepLabel,
     evidenceLinks: memory.evidenceLinks,
     score: memory.status === "disputed" ? 90 : memory.status === "draft" ? 68 : 45
   }));
@@ -175,7 +187,10 @@ function buildPriorityQueue({
         : "机会信号可作为今日低风险推进项。",
     priority: opportunity.impact === "high" ? "high" : "medium",
     targetId: opportunity.id,
-    targetType: "opportunity",
+    targetType: opportunity.targetType,
+    targetAnchor: opportunity.targetAnchor,
+    targetLabel: opportunity.targetLabel,
+    nextStepLabel: opportunity.nextStepLabel,
     evidenceLinks: opportunity.evidenceLinks,
     score: opportunity.impact === "high" ? 72 : 44
   }));
@@ -226,6 +241,7 @@ function buildInboxItems(sources, signals) {
       summary: source.body || "",
       status: source.status || "new",
       occurredAt: source.occurredAt || source.receivedAt || source.createdAt,
+      ...targetLocator("source", source.id, "查看 Source", "提取或复核这条 Source"),
       evidenceLinks: [
         {
           sourceId: source.id,
@@ -243,6 +259,7 @@ function buildInboxItems(sources, signals) {
       summary: signal.summary || signal.quote || "",
       status: signal.status || "new",
       occurredAt: signal.updatedAt || signal.createdAt,
+      ...targetLocator("signal", signal.id, "查看 Signal", "确认、忽略或转成 Memory / Action"),
       evidenceLinks: [
         {
           sourceId: signal.sourceId,
@@ -267,6 +284,7 @@ function buildMemoryReview(memories) {
       summary: memory.content || memory.detail || "",
       status: memory.status || "draft",
       updatedAt: memory.updatedAt || memory.createdAt,
+      ...targetLocator("memory", memory.id, "查看 Memory", "确认、标记争议或归档"),
       evidenceLinks: normalizeEvidenceLinks(memory.sourceReferences)
     }))
     .sort((left, right) => memoryReviewWeight(right.status) - memoryReviewWeight(left.status))
@@ -285,6 +303,7 @@ function buildActionFocus(actions) {
       riskLevel: action.riskLevel || "medium",
       status: action.status || "pending",
       targetId: action.id,
+      ...targetLocator("action", action.id, "查看 Action", "生成 brief 或回流执行结果"),
       evidenceLinks: (action.evidenceMemoryIds || action.sourceMemoryIds || []).map((memoryId) => ({
         memoryId,
         note: "action evidence"
@@ -312,6 +331,7 @@ function buildCommitmentFocus(commitments, now) {
         dueAt: commitment.dueAt || "",
         status,
         nodeId: commitment.nodeId || "",
+        ...targetLocator("commitment", commitment.id, "查看 Commitment", "确认承诺、等待或依赖状态"),
         evidenceLinks: normalizeEvidenceLinks(commitment.evidenceLinks),
         score:
           (status === "overdue" ? 40 : 0) +
@@ -326,8 +346,7 @@ function buildCommitmentFocus(commitments, now) {
 }
 
 function buildRiskRadar(project, memories, actions) {
-  const explicitRisks = Array.isArray(project.risks)
-    ? project.risks
+  const explicitRisks = objectItems(project.risks)
         .filter((risk) => !["mitigated", "archived"].includes(risk.status))
         .map((risk) => ({
           id: risk.id,
@@ -336,9 +355,9 @@ function buildRiskRadar(project, memories, actions) {
           severity: risk.severity || "medium",
           status: risk.status || "open",
           evidenceLinks: normalizeEvidenceLinks(risk.evidenceLinks),
-          source: "risk"
-        }))
-    : [];
+          source: "risk",
+          ...targetLocator("risk", risk.id, "查看 Risk", "评估缓解动作或归档风险")
+        }));
 
   const memoryRisks = memories
     .filter((memory) => memory.type === "risk" && !["archived"].includes(memory.status))
@@ -349,7 +368,8 @@ function buildRiskRadar(project, memories, actions) {
       severity: memory.status === "confirmed" ? "high" : "medium",
       status: memory.status || "draft",
       evidenceLinks: normalizeEvidenceLinks(memory.sourceReferences),
-      source: "memory"
+      source: "memory",
+      ...targetLocator("memory", memory.id, "查看风险 Memory", "复核这条风险判断")
     }));
 
   const actionRisks = actions
@@ -364,7 +384,8 @@ function buildRiskRadar(project, memories, actions) {
         memoryId,
         note: "high-risk action"
       })),
-      source: "action"
+      source: "action",
+      ...targetLocator("action", action.id, "查看高风险 Action", "确认行动证据和人工检查项")
     }));
 
   return [...explicitRisks, ...memoryRisks, ...actionRisks]
@@ -373,8 +394,7 @@ function buildRiskRadar(project, memories, actions) {
 }
 
 function buildOpportunityRadar(project, memories, signals) {
-  const explicitOpportunities = Array.isArray(project.opportunities)
-    ? project.opportunities
+  const explicitOpportunities = objectItems(project.opportunities)
         .filter((opportunity) => !["lost", "archived"].includes(opportunity.status))
         .map((opportunity) => ({
           id: opportunity.id,
@@ -384,9 +404,9 @@ function buildOpportunityRadar(project, memories, signals) {
           confidence: opportunity.confidence,
           status: opportunity.status || "new",
           evidenceLinks: normalizeEvidenceLinks(opportunity.evidenceLinks),
-          source: "opportunity"
-        }))
-    : [];
+          source: "opportunity",
+          ...targetLocator("opportunity", opportunity.id, "查看 Opportunity", "安排验证或推进动作")
+        }));
 
   const memoryOpportunities = memories
     .filter((memory) => memory.type === "opportunity" && !["archived"].includes(memory.status))
@@ -398,7 +418,8 @@ function buildOpportunityRadar(project, memories, signals) {
       confidence: memory.confidence,
       status: memory.status || "draft",
       evidenceLinks: normalizeEvidenceLinks(memory.sourceReferences),
-      source: "memory"
+      source: "memory",
+      ...targetLocator("memory", memory.id, "查看机会 Memory", "复核机会判断和证据")
     }));
 
   const signalOpportunities = signals
@@ -417,7 +438,8 @@ function buildOpportunityRadar(project, memories, signals) {
           quote: trimEvidence(signal.quote || signal.summary)
         }
       ],
-      source: "signal"
+      source: "signal",
+      ...targetLocator("signal", signal.id, "查看机会 Signal", "确认是否转为机会或行动")
     }));
 
   return [...explicitOpportunities, ...memoryOpportunities, ...signalOpportunities].slice(0, 5);
@@ -487,6 +509,21 @@ function normalizeEvidenceLinks(links = []) {
     note: link.note,
     confidence: link.confidence
   }));
+}
+
+function objectItems(value) {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === "object") : [];
+}
+
+function targetLocator(type, id, targetLabel, nextStepLabel) {
+  const targetId = id || `${type}-unknown`;
+  return {
+    targetId,
+    targetType: type,
+    targetAnchor: `#${type}-${targetId}`,
+    targetLabel,
+    nextStepLabel
+  };
 }
 
 function memoryReviewWeight(status) {

@@ -271,6 +271,10 @@ Data：
 absorbContext(project, input)
 generateBrief(project, actionId)
 recordActionResult(project, actionId, resultInput)
+updateMemoryStatus(project, memoryId, status)
+updateCommitmentStatus(project, commitmentId, status)
+updateRiskStatus(project, riskId, status)
+updateOpportunityStatus(project, opportunityId, status)
 ```
 
 v0.2 目标：
@@ -279,6 +283,7 @@ v0.2 目标：
 - 把内部逻辑迁移到 `src/domain/pipelines/*`。
 - 每次 pipeline 运行产生 `AgentRun`。
 - 每个 AI 或规则输出都能追溯 sourceReferences。
+- Wave 5 起，提供本地人工 review 状态推进函数，只更新本地 state，不触发外部执行。
 
 REC-01 当前进展：
 
@@ -398,6 +403,7 @@ Phase 3 Alpha Wave 4 已新增。
 - 汇总 inbox、memory、project、node、action、commitment、risk 和 opportunity。
 - 生成今日优先级队列。
 - 输出可追溯的 Dashboard 数据，不直接执行外部动作。
+- Wave 5 起，Priority Queue 输出只读定位字段，帮助 UI 从 Command Center 跳到 Action、Memory、Commitment、Risk、Opportunity 或 Source / Signal 证据。
 - 第一版使用本地规则生成 Command Center snapshot，后续 `COMMIT-01`、`RISK-01` 和 `PRIORITY-01` 会继续补齐输入和排序。
 
 ### `src/services/store.js`
@@ -410,6 +416,7 @@ Phase 3 Alpha Wave 4 已新增。
 - 从 localStorage 读取 state。
 - 保存 state。
 - 创建项目和 ID。
+- Wave 5 起，统一补齐旧 localStorage / partial project 的缺失数组、默认节点、对象状态和证据数组，避免空项目或坏数据白屏。
 
 v0.2 要求：
 
@@ -443,6 +450,7 @@ upsertProjectNode(projectId, node)
 addAction(projectId, action)
 addBrief(projectId, brief)
 addResult(projectId, result)
+updateAction(projectId, action)
 upsertCommitment(projectId, commitment)
 upsertRisk(projectId, risk)
 upsertOpportunity(projectId, opportunity)

@@ -47,6 +47,24 @@ const PROJECT_NODE_STATUS_ACTIONS = [
   { status: "archived", label: "归档" }
 ];
 
+const COMMITMENT_REVIEW_ACTIONS = [
+  { status: "done", label: "完成" },
+  { status: "blocked", label: "阻塞" },
+  { status: "archived", label: "归档" }
+];
+
+const RISK_REVIEW_ACTIONS = [
+  { status: "monitoring", label: "监控" },
+  { status: "mitigated", label: "缓解" },
+  { status: "archived", label: "归档" }
+];
+
+const OPPORTUNITY_REVIEW_ACTIONS = [
+  { status: "evaluating", label: "评估" },
+  { status: "pursuing", label: "推进" },
+  { status: "archived", label: "归档" }
+];
+
 const BRIEF_SECTION_LABELS = {
   goal: "目标",
   background: "已知背景",
@@ -132,7 +150,8 @@ const BRIEF_SECTION_ORDER = {
 };
 
 export function renderApp(state) {
-  const project = getActiveProject(state);
+  state = state && typeof state === "object" ? state : {};
+  const project = getRenderableProject(getActiveProject(state));
   const selectedAction = project?.actions.find((action) => action.id === state.selectedActionId);
   const selectedBrief = selectedAction
     ? project.briefs.find((brief) => brief.actionId === selectedAction.id)
@@ -260,13 +279,23 @@ function renderPriorityQueue(items) {
 
 function renderPriorityItem(item) {
   return `
-    <article class="priority-item">
+    <article
+      class="priority-item"
+      data-priority-target-type="${escapeHtml(item.targetType || item.type)}"
+      data-priority-target-id="${escapeHtml(item.targetId || "")}"
+      data-priority-anchor="${escapeHtml(item.targetAnchor || "")}"
+    >
       <div class="command-item-top">
         <span>${escapeHtml(priorityTypeLabel(item.type))}</span>
         <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.reason)}</p>
+      <div class="priority-route">
+        <span>下一步</span>
+        <strong>${escapeHtml(item.nextStepLabel || "打开对象处理")}</strong>
+      </div>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -295,13 +324,14 @@ function renderCommandList(items, emptyText, renderer) {
 
 function renderCommandInboxItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(item.type === "source" ? "Source" : "Signal")}</span>
         <span>${escapeHtml(item.status)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.summary)}</p>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -309,13 +339,14 @@ function renderCommandInboxItem(item) {
 
 function renderCommandActionItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(ACTION_TYPES[item.type] || item.type)}</span>
         <span>${escapeHtml(PRIORITY_LABELS[item.priority] || item.priority)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.reason || "等待补充 why now。")}</p>
+      ${renderCommandTargetLink(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -323,13 +354,15 @@ function renderCommandActionItem(item) {
 
 function renderCommandCommitmentItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(commitmentTypeLabel(item.type))}</span>
         <span>${escapeHtml(commitmentStatusLabel(item.status))}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(commitmentLine(item))}</p>
+      ${renderCommandTargetLink(item)}
+      ${renderCommitmentReviewActions(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -337,13 +370,15 @@ function renderCommandCommitmentItem(item) {
 
 function renderCommandMemoryItem(item) {
   return `
-    <article class="command-item">
+    <article class="command-item" ${commandTargetAttributes(item)}>
       <div class="command-item-top">
         <span>${escapeHtml(memoryTypeLabel(item.type))}</span>
         <span>${escapeHtml(memoryStatusLabel(item.status).label)}</span>
       </div>
       <strong>${escapeHtml(item.title)}</strong>
       <p>${escapeHtml(item.summary)}</p>
+      ${renderCommandTargetLink(item)}
+      ${renderCommandMemoryReviewActions(item)}
       ${renderCommandEvidence(item.evidenceLinks)}
     </article>
   `;
@@ -372,19 +407,52 @@ function renderRiskOpportunityPreview(snapshot) {
       ${items
         .map(
           (item) => `
-            <article class="command-item">
+            <article class="command-item" id="command-${escapeHtml(item.kind.toLowerCase())}-${escapeHtml(item.id)}" ${commandTargetAttributes(item)}>
               <div class="command-item-top">
                 <span>${escapeHtml(item.kind)}</span>
                 <span>${escapeHtml(item.meta)}</span>
               </div>
               <strong>${escapeHtml(item.title)}</strong>
               <p>${escapeHtml(item.description)}</p>
+              ${renderCommandTargetLink(item)}
+              ${item.kind === "Risk" ? renderRiskReviewActions(item) : renderOpportunityReviewActions(item)}
               ${renderCommandEvidence(item.evidenceLinks)}
             </article>
           `
         )
         .join("")}
     </div>
+  `;
+}
+
+function renderCommandTargetLink(item) {
+  if (!item?.targetAnchor || !item?.targetId) {
+    return "";
+  }
+
+  return `
+    <a
+      class="secondary-link compact-button command-target-link"
+      href="${escapeHtml(item.targetAnchor)}"
+      data-command-target
+      data-target-type="${escapeHtml(item.targetType || item.type)}"
+      data-target-id="${escapeHtml(item.targetId)}"
+      data-target-anchor="${escapeHtml(item.targetAnchor)}"
+    >
+      ${escapeHtml(item.targetLabel || "定位对象")}
+    </a>
+  `;
+}
+
+function commandTargetAttributes(item) {
+  if (!item?.targetId) {
+    return "";
+  }
+
+  return `
+    data-command-target-type="${escapeHtml(item.targetType || item.type)}"
+    data-command-target-id="${escapeHtml(item.targetId)}"
+    data-command-target-anchor="${escapeHtml(item.targetAnchor || "")}"
   `;
 }
 
@@ -401,7 +469,30 @@ function renderCommandEvidence(evidenceLinks = []) {
     firstEvidence.memoryId ? `Memory ${firstEvidence.memoryId}` : ""
   ].filter(Boolean);
 
-  return `<small class="command-evidence">${escapeHtml(parts.join(" · ") || firstEvidence.note || "有证据链")}</small>`;
+  const label = parts.join(" · ") || firstEvidence.note || "有证据链";
+  const href = commandEvidenceHref(firstEvidence);
+  const quote = firstEvidence.quote ? ` · "${trimInline(firstEvidence.quote, 48)}"` : "";
+  const evidence = href
+    ? `<a href="${escapeHtml(href)}">${escapeHtml(label)}</a>`
+    : `<span>${escapeHtml(label)}</span>`;
+
+  return `<small class="command-evidence">${evidence}${escapeHtml(quote)}</small>`;
+}
+
+function commandEvidenceHref(evidence) {
+  if (evidence?.signalId) {
+    return `#signal-${evidence.signalId}`;
+  }
+  if (evidence?.sourceId) {
+    return `#source-${evidence.sourceId}`;
+  }
+  if (evidence?.memoryId) {
+    return `#memory-${evidence.memoryId}`;
+  }
+  if (evidence?.contextId) {
+    return `#context-${evidence.contextId}`;
+  }
+  return "";
 }
 
 function renderSidebar(state, activeProject) {
@@ -424,10 +515,10 @@ function renderSidebar(state, activeProject) {
       </form>
 
       <div class="project-list" aria-label="项目列表">
-        ${state.projects
-          .map(
-            (project) => `
-              <button class="project-item ${project.id === activeProject?.id ? "active" : ""}" data-project-id="${project.id}" type="button">
+          ${(Array.isArray(state.projects) ? state.projects : [])
+            .map(
+              (project) => `
+                <button class="project-item ${project.id === activeProject?.id ? "active" : ""}" data-project-id="${project.id}" type="button">
                 <span>${escapeHtml(project.name)}</span>
                 <small>${escapeHtml(project.stage)}</small>
               </button>
@@ -1152,7 +1243,7 @@ function renderCommitmentCard(project, commitment) {
   const status = displayCommitmentStatus(commitment);
 
   return `
-    <article class="commitment-card" data-commitment-id="${escapeHtml(commitment.id)}">
+    <article class="commitment-card" id="commitment-${escapeHtml(commitment.id)}" data-commitment-id="${escapeHtml(commitment.id)}">
       <div class="context-item-top">
         <span class="context-type">${escapeHtml(commitmentTypeLabel(commitment.type))}</span>
         <span class="status ${escapeHtml(status)}">${escapeHtml(commitmentStatusLabel(status))}</span>
@@ -1164,6 +1255,8 @@ function renderCommitmentCard(project, commitment) {
         ${node ? `<span>Node: ${escapeHtml(node.title)}</span>` : ""}
         ${commitment.evidenceLinks?.length ? `<span>证据 ${commitment.evidenceLinks.length}</span>` : ""}
       </div>
+      ${renderCommitmentEditForm(commitment)}
+      ${renderCommitmentReviewActions(commitment)}
     </article>
   `;
 }
@@ -1225,7 +1318,7 @@ function renderRadarCard(project, item, kind) {
       : `${IMPACT_LABELS[item.potentialImpact] || item.potentialImpact} · ${opportunityStatusLabel(item.status)}`;
 
   return `
-    <article class="radar-card ${escapeHtml(kind)}" data-radar-id="${escapeHtml(item.id)}">
+    <article class="radar-card ${escapeHtml(kind)}" id="${escapeHtml(kind)}-${escapeHtml(item.id)}" data-radar-id="${escapeHtml(item.id)}">
       <div class="context-item-top">
         <span class="context-type">${escapeHtml(kind === "risk" ? "Risk" : "Opportunity")}</span>
         <span>${escapeHtml(meta)}</span>
@@ -1237,6 +1330,8 @@ function renderRadarCard(project, item, kind) {
         <span>证据 ${evidenceCount}</span>
         <span>建议 action ${actionCount}</span>
       </div>
+      ${kind === "risk" ? renderRiskEditForm(item) : renderOpportunityEditForm(item)}
+      ${kind === "risk" ? renderRiskReviewActions(item) : renderOpportunityReviewActions(item)}
     </article>
   `;
 }
@@ -1440,7 +1535,7 @@ function renderMemoryItem(project, memory, isSelected = false) {
   const sourceLabel = memorySourceLabel(memory);
 
   return `
-    <div class="memory-item ${isSelected ? "selected" : ""}" data-memory-open-id="${escapeHtml(memory.id)}">
+    <div class="memory-item ${isSelected ? "selected" : ""}" id="memory-${escapeHtml(memory.id)}" data-memory-open-id="${escapeHtml(memory.id)}">
       <div class="memory-item-top">
         <span class="memory-status ${escapeHtml(status.tone)}">${escapeHtml(status.label)}</span>
         <span>${escapeHtml(sourceCountLabel(sourceCount, sourceLabel))}</span>
@@ -1703,6 +1798,105 @@ function renderMemoryStatusActions(memory) {
   `;
 }
 
+function renderCommandMemoryReviewActions(memory) {
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Memory review 操作">
+      ${MEMORY_STATUS_ACTIONS.filter((action) => action.status !== (memory.status || "draft"))
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-memory-status"
+              data-memory-id="${escapeHtml(memory.id)}"
+              data-memory-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderCommitmentReviewActions(commitment) {
+  const currentStatus = commitment.status || "open";
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Commitment review 操作">
+      ${COMMITMENT_REVIEW_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-commitment-status"
+              data-commitment-id="${escapeHtml(commitment.id)}"
+              data-commitment-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderRiskReviewActions(risk) {
+  if ((risk.targetType || "risk") !== "risk") {
+    return "";
+  }
+
+  const currentStatus = risk.status || "open";
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Risk review 操作">
+      ${RISK_REVIEW_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-risk-status"
+              data-risk-id="${escapeHtml(risk.id)}"
+              data-risk-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderOpportunityReviewActions(opportunity) {
+  if ((opportunity.targetType || "opportunity") !== "opportunity") {
+    return "";
+  }
+
+  const currentStatus = opportunity.status || "new";
+  return `
+    <div class="memory-status-actions compact-review-actions" aria-label="Opportunity review 操作">
+      ${OPPORTUNITY_REVIEW_ACTIONS.filter((action) => action.status !== currentStatus)
+        .map(
+          (action) => `
+            <button
+              class="memory-status-action ${escapeHtml(action.status)}"
+              data-action="update-opportunity-status"
+              data-opportunity-id="${escapeHtml(opportunity.id)}"
+              data-opportunity-status="${escapeHtml(action.status)}"
+              type="button"
+            >
+              ${escapeHtml(action.label)}
+            </button>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
 function contextTitle(project, contextId) {
   return project.contexts.find((context) => context.id === contextId)?.title || "未知上下文";
 }
@@ -1830,7 +2024,7 @@ function renderActions(project, selectedActionId) {
 
 function renderActionCard(project, action, selectedActionId) {
   return `
-    <button class="action-card ${action.id === selectedActionId ? "selected" : ""}" data-action-id="${action.id}" type="button">
+    <button class="action-card ${action.id === selectedActionId ? "selected" : ""}" id="action-${escapeHtml(action.id)}" data-action-id="${action.id}" type="button">
       <div class="action-card-top">
         <span class="action-type">${escapeHtml(ACTION_TYPES[action.type] || action.type)}</span>
         <span class="status ${action.status}">${escapeHtml(ACTION_STATUS[action.status])}</span>
@@ -1876,6 +2070,7 @@ function renderBrief(project, action, brief) {
       }
     </article>
 
+    ${renderActionEditForm(action)}
     ${renderActionResultHistory(project, action)}
 
     <form class="result-form" data-form="record-result" data-action-id="${action.id}">
@@ -1915,6 +2110,97 @@ function renderBrief(project, action, brief) {
           <span>✓</span>
         </button>
       </div>
+    </form>
+  `;
+}
+
+function renderActionEditForm(action) {
+  return `
+    <form class="inline-edit-form" data-form="edit-action" data-action-id="${escapeHtml(action.id)}">
+      <label>
+        优先级
+        <select name="priority">
+          ${["high", "medium", "low"]
+            .map(
+              (priority) =>
+                `<option value="${escapeHtml(priority)}" ${priority === (action.priority || "medium") ? "selected" : ""}>${escapeHtml(PRIORITY_LABELS[priority] || priority)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <label>
+        状态
+        <select name="status">
+          ${Object.entries(ACTION_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (action.status || "pending") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存行动</button>
+    </form>
+  `;
+}
+
+function renderCommitmentEditForm(commitment) {
+  return `
+    <form class="inline-edit-form" data-form="edit-commitment" data-commitment-id="${escapeHtml(commitment.id)}">
+      <label>
+        状态
+        <select name="status">
+          ${Object.entries(COMMITMENT_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (commitment.status || "open") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <label>
+        截止日
+        <input name="dueAt" type="date" value="${escapeHtml(dateForInput(commitment.dueAt))}" />
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存承诺</button>
+    </form>
+  `;
+}
+
+function renderRiskEditForm(risk) {
+  return `
+    <form class="inline-edit-form" data-form="edit-risk" data-risk-id="${escapeHtml(risk.id)}">
+      <label>
+        风险状态
+        <select name="status">
+          ${Object.entries(RISK_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (risk.status || "open") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存风险</button>
+    </form>
+  `;
+}
+
+function renderOpportunityEditForm(opportunity) {
+  return `
+    <form class="inline-edit-form" data-form="edit-opportunity" data-opportunity-id="${escapeHtml(opportunity.id)}">
+      <label>
+        机会状态
+        <select name="status">
+          ${Object.entries(OPPORTUNITY_STATUS)
+            .map(
+              ([status, label]) =>
+                `<option value="${escapeHtml(status)}" ${status === (opportunity.status || "new") ? "selected" : ""}>${escapeHtml(label)}</option>`
+            )
+            .join("")}
+        </select>
+      </label>
+      <button class="secondary-button compact-button" type="submit">保存机会</button>
     </form>
   `;
 }
@@ -2078,7 +2364,40 @@ function emptyState(text) {
 }
 
 export function getActiveProject(state) {
-  return state.projects.find((project) => project.id === state.activeProjectId) || state.projects[0];
+  const projects = Array.isArray(state?.projects) ? state.projects : [];
+  return projects.find((project) => project.id === state.activeProjectId) || projects[0] || null;
+}
+
+function getRenderableProject(project) {
+  const safeProject = project && typeof project === "object" ? project : {};
+
+  return {
+    id: safeProject.id || "",
+    name: safeProject.name || "未选择项目",
+    stage: safeProject.stage || "待创建",
+    description: safeProject.description || "",
+    createdAt: safeProject.createdAt || "",
+    updatedAt: safeProject.updatedAt || "",
+    sources: safeItems(safeProject.sources),
+    signals: safeItems(safeProject.signals),
+    entities: safeItems(safeProject.entities),
+    entityRelations: safeItems(safeProject.entityRelations),
+    nodes: safeItems(safeProject.nodes),
+    contexts: safeItems(safeProject.contexts),
+    memories: safeItems(safeProject.memories),
+    actions: safeItems(safeProject.actions),
+    briefs: safeItems(safeProject.briefs),
+    results: safeItems(safeProject.results),
+    commitments: safeItems(safeProject.commitments),
+    risks: safeItems(safeProject.risks),
+    opportunities: safeItems(safeProject.opportunities),
+    reconciliationResults: safeItems(safeProject.reconciliationResults),
+    pendingMemoryUpdates: safeItems(safeProject.pendingMemoryUpdates)
+  };
+}
+
+function safeItems(value) {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === "object") : [];
 }
 
 function latestReconciliationResults(project) {
@@ -2300,6 +2619,24 @@ function formatDateOnly(value) {
 
 function todayForInput() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function dateForInput(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value).slice(0, 10);
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function trimInline(value, maxLength = 80) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
 function contextTypeLabel(kind) {

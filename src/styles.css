@@ -404,6 +404,41 @@ textarea:focus {
   line-height: 1.45;
 }
 
+.priority-route {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid rgba(15, 143, 123, 0.16);
+  border-radius: var(--radius);
+  background: #f6fbf8;
+}
+
+.priority-route span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.priority-route strong {
+  font-size: 12px;
+}
+
+.command-target-link {
+  min-height: 32px;
+  justify-self: start;
+  padding: 0 10px;
+  text-decoration: none;
+}
+
+.command-evidence a {
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+.command-evidence a:hover {
+  text-decoration: underline;
+}
+
 .command-metric {
   display: grid;
   gap: 2px;
@@ -1234,6 +1269,31 @@ textarea:focus {
   gap: 6px;
 }
 
+.compact-review-actions {
+  margin-top: 2px;
+}
+
+.inline-edit-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 8px;
+  border: 1px solid rgba(15, 143, 123, 0.16);
+  border-radius: var(--radius);
+  background: #f8fbf9;
+}
+
+.inline-edit-form label {
+  font-size: 12px;
+}
+
+.inline-edit-form select,
+.inline-edit-form input {
+  height: 34px;
+  padding: 0 9px;
+}
+
 .memory-status-action {
   min-height: 28px;
   border: 1px solid var(--line);
@@ -1265,6 +1325,21 @@ textarea:focus {
 
 .memory-status-action.archived {
   color: #64748b;
+}
+
+.memory-status-action.done,
+.memory-status-action.mitigated,
+.memory-status-action.pursuing {
+  color: var(--green);
+}
+
+.memory-status-action.blocked {
+  color: var(--red);
+}
+
+.memory-status-action.monitoring,
+.memory-status-action.evaluating {
+  color: var(--blue);
 }
 
 .memory-detail-panel {

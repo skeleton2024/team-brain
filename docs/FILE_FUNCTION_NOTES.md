@@ -753,6 +753,56 @@ Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
 - 要求验证 render output 包含 Wave 4 关键 UI。
 - 不引入浏览器 e2e 框架或真实外部服务。
 
+### `docs/issues/NAV-01-command-center-deep-links.md`
+
+Phase 3 Alpha Wave 5 的 Command Center 定位链路 issue。
+
+主要作用：
+
+- 要求 Priority Queue 和 Command Center 条目能定位到 Action、Memory、Commitment、Risk、Opportunity、Project Node 或 Source evidence。
+- 要求展示推荐原因、证据摘要和下一步处理入口。
+- 明确不引入复杂路由、不自动执行外部动作。
+
+### `docs/issues/REVIEW-01-human-review-actions.md`
+
+Phase 3 Alpha Wave 5 的人工 review 动作 issue。
+
+主要作用：
+
+- 要求 Memory Review、Commitment、Risk 和 Opportunity 支持最小状态推进。
+- 要求所有本地 review 动作保留已有证据链。
+- 明确不自动发送催办、邮件、Slack 或外部承诺。
+
+### `docs/issues/EDIT-01-alpha-manual-editing.md`
+
+Phase 3 Alpha Wave 5 的轻量手动编辑 issue。
+
+主要作用：
+
+- 要求 Action priority / status、Commitment status / dueAt、Risk / Opportunity status 提供轻量修改入口。
+- 要求修改结果同步影响 Command Center 和项目区展示。
+- 明确不做复杂表单系统或后端。
+
+### `docs/issues/RESILIENCE-01-local-storage-hardening.md`
+
+Phase 3 Alpha Wave 5 的 localStorage 兼容和空状态 hardening issue。
+
+主要作用：
+
+- 要求旧项目、空项目和缺字段项目仍能 migration 和渲染。
+- 要求 Command Center、证据链和项目区在异常数据下不白屏。
+- 明确不引入数据库迁移系统或 schema 校验库。
+
+### `docs/issues/QA-05-alpha-hardening-smoke.md`
+
+Phase 3 Alpha Wave 5 的 hardening smoke issue。
+
+主要作用：
+
+- 要求 smoke 覆盖 Command Center 定位、人工 review、轻量编辑和 legacy / partial project 兼容。
+- 要求 smoke summary 增加 Wave 5 关键计数或状态。
+- 不引入浏览器 e2e 框架或真实外部服务。
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -772,6 +822,7 @@ Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
 - 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
 - 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
 - Phase 3 Alpha Wave 3 起，覆盖 Memory Governance -> Scenario Brief -> Structured Result Feedback -> Memory Update / Follow-up Action / Project Node suggestion 的完整 action loop。
+- Phase 3 Alpha Wave 5 起，覆盖 Command Center 定位、人工 review、轻量编辑、legacy / empty / partial project hardening，并在 summary 输出 Wave 5 关键计数。
 
 修改时注意：
 
@@ -794,6 +845,9 @@ Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
 - 调用 store 层的 `loadState()`、`saveState()`、`resetState()`、`makeProject()`。
 - 管理 `activeProjectId` 和 `selectedActionId`。
 - 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
+- Phase 3 Alpha Wave 5 起，处理 Command Center 定位链接，把 priority queue 的 target 转成现有 selected action / memory / node state 并滚动到锚点。
+- Phase 3 Alpha Wave 5 起，绑定 Commitment、Risk 和 Opportunity 的本地 review 状态推进按钮。
+- Phase 3 Alpha Wave 5 起，绑定 Action、Commitment、Risk 和 Opportunity 的轻量手动编辑表单。
 
 修改时注意：
 
@@ -866,6 +920,7 @@ Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
 - 为 memory 生成 action。
 - 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
 - 处理结构化结果回流，保留 done action，生成 result learning memory、memory update 建议、node 状态建议和 follow-up actions。
+- Phase 3 Alpha Wave 5 起，提供 Memory、Commitment、Risk 和 Opportunity 的本地人工 review 状态推进函数，保留原有证据链。
 
 当前内部职责：
 
@@ -942,6 +997,7 @@ Command Center 聚合 pipeline。
 - 汇总 Source / Signal、Memory review、Open Action、Project Node、Risk 和 Opportunity。
 - 输出只读 `CommandCenterSnapshot`，供首页展示今日焦点。
 - 生成本地规则版 Priority Queue，每个队列项包含 reason 和证据链接。
+- Phase 3 Alpha Wave 5 起，Priority Queue 条目包含只读 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，用于定位到 Action、Memory、Commitment、Risk、Opportunity 或证据区。
 - 第一版使用本地规则，不写入 state，不执行外部动作。
 
 修改时注意：
@@ -964,6 +1020,8 @@ Command Center 聚合 pipeline。
 - 生成稳定 ID。
 - 兼容迁移 `commitments`，保证旧 localStorage 缺少字段时不会白屏。
 - 兼容迁移 `risks` 和 `opportunities`，保证 Command Center 输入稳定。
+- Phase 3 Alpha Wave 5 起，提供 Action priority / status、Commitment status / dueAt、Risk status 和 Opportunity status 的轻量本地编辑 helper。
+- Phase 3 Alpha Wave 5 起，导出 `normalizeStoredState()` 供 smoke 覆盖旧 localStorage 迁移，并补齐 partial project / malformed item 默认值。
 
 修改时注意：
 
@@ -981,6 +1039,10 @@ HTML 渲染层。
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
 - 渲染 Command Center 工作首页。
+- 渲染 Command Center / Priority Queue 的对象定位入口、目标锚点和证据链接。
+- 渲染 Command Center 和项目区里的 Memory / Commitment / Risk / Opportunity 最小 review 操作按钮。
+- 渲染 Action、Commitment、Risk 和 Opportunity 的轻量手动编辑表单。
+- 对空项目、缺字段项目和部分数组缺失状态提供渲染 fallback，避免白屏。
 - 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。

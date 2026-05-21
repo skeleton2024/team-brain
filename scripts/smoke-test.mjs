@@ -7,15 +7,26 @@ import {
   recordActionResult,
   reviewSignal,
   suggestSignalLinks,
+  updateCommitmentStatus,
   updateEntityStatus,
   updateMemoryStatus,
-  updateProjectNodeStatus
+  updateOpportunityStatus,
+  updateProjectNodeStatus,
+  updateRiskStatus
 } from "../src/domain/agentEngine.js";
 import { buildCommandCenter } from "../src/domain/pipelines/buildCommandCenter.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
 import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
-import { makeProject, updateMemory } from "../src/services/store.js";
+import {
+  makeProject,
+  normalizeStoredState,
+  updateAction,
+  updateCommitment,
+  updateMemory,
+  updateOpportunity,
+  updateRisk
+} from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
@@ -40,7 +51,15 @@ if (
   commandCenterProbe.opportunityRadar.length < 2 ||
   !Array.isArray(commandCenterProbe.priorityQueue) ||
   commandCenterProbe.priorityQueue.length < 5 ||
-  !commandCenterProbe.priorityQueue.every((item) => item.reason && item.targetId)
+  !commandCenterProbe.priorityQueue.every(
+    (item) =>
+      item.reason &&
+      item.targetId &&
+      item.targetType &&
+      item.targetAnchor?.startsWith("#") &&
+      item.targetLabel &&
+      item.nextStepLabel
+  )
 ) {
   throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
 }
@@ -56,9 +75,20 @@ if (
   throw new Error(`Expected Priority Queue to cover Wave 4 inputs: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
 }
 
+const commandCenterTargetTypes = new Set(commandCenterProbe.priorityQueue.map((item) => item.targetType));
+if (
+  !commandCenterTargetTypes.has("commitment") ||
+  !commandCenterTargetTypes.has("risk") ||
+  !commandCenterTargetTypes.has("action") ||
+  !commandCenterTargetTypes.has("memory") ||
+  !commandCenterTargetTypes.has("opportunity")
+) {
+  throw new Error(`Expected Priority Queue to expose Wave 5 target locators: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
+}
+
 const commandCenterHtml = renderApp({
   activeProjectId: project.id,
-  selectedActionId: null,
+  selectedActionId: "act-demo-customer",
   projects: [project]
 });
 if (
@@ -73,9 +103,103 @@ if (
   !commandCenterHtml.includes("记忆复核") ||
   !commandCenterHtml.includes("风险 / 机会") ||
   !commandCenterHtml.includes("试点前权限边界不清会阻塞客户推进") ||
-  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点")
+  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点") ||
+  !commandCenterHtml.includes("data-command-target") ||
+  !commandCenterHtml.includes("data-priority-target-type=") ||
+  !commandCenterHtml.includes("command-target-link") ||
+  !commandCenterHtml.includes('id="action-') ||
+  !commandCenterHtml.includes('id="memory-') ||
+  !commandCenterHtml.includes('id="commitment-') ||
+  !commandCenterHtml.includes('id="risk-') ||
+  !commandCenterHtml.includes('href="#source-') ||
+  !commandCenterHtml.includes('data-action="update-memory-status"') ||
+  !commandCenterHtml.includes('data-action="update-commitment-status"') ||
+  !commandCenterHtml.includes('data-action="update-risk-status"') ||
+  !commandCenterHtml.includes('data-action="update-opportunity-status"') ||
+  !commandCenterHtml.includes('data-form="edit-action"') ||
+  !commandCenterHtml.includes('data-form="edit-commitment"') ||
+  !commandCenterHtml.includes('data-form="edit-risk"') ||
+  !commandCenterHtml.includes('data-form="edit-opportunity"') ||
+  !commandCenterHtml.includes('name="dueAt"')
 ) {
   throw new Error("Expected Command Center dashboard to render in smoke HTML.");
+}
+
+let reviewProject = structuredClone(DEMO_PROJECT);
+const reviewMemoryBefore = reviewProject.memories.find((memory) => memory.id === "mem-demo-engineering");
+reviewProject = updateMemoryStatus(reviewProject, "mem-demo-engineering", "confirmed");
+const reviewMemoryAfter = reviewProject.memories.find((memory) => memory.id === "mem-demo-engineering");
+if (
+  reviewMemoryAfter.status !== "confirmed" ||
+  !reviewMemoryAfter.lastVerifiedAt ||
+  reviewMemoryAfter.sourceReferences.length !== reviewMemoryBefore.sourceReferences.length
+) {
+  throw new Error(`Expected memory review action to confirm without losing evidence: ${JSON.stringify(reviewMemoryAfter)}`);
+}
+
+const reviewCommitmentBefore = reviewProject.commitments.find((item) => item.id === "commit-demo-security-brief");
+reviewProject = updateCommitmentStatus(reviewProject, "commit-demo-security-brief", "done");
+const reviewCommitmentAfter = reviewProject.commitments.find((item) => item.id === "commit-demo-security-brief");
+if (
+  reviewCommitmentAfter.status !== "done" ||
+  reviewCommitmentAfter.evidenceLinks.length !== reviewCommitmentBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected commitment review action to mark done without losing evidence: ${JSON.stringify(reviewCommitmentAfter)}`);
+}
+
+const reviewRiskBefore = reviewProject.risks.find((item) => item.id === "risk-demo-security-boundary");
+reviewProject = updateRiskStatus(reviewProject, "risk-demo-security-boundary", "mitigated");
+const reviewRiskAfter = reviewProject.risks.find((item) => item.id === "risk-demo-security-boundary");
+if (
+  reviewRiskAfter.status !== "mitigated" ||
+  reviewRiskAfter.evidenceLinks.length !== reviewRiskBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected risk review action to mark mitigated without losing evidence: ${JSON.stringify(reviewRiskAfter)}`);
+}
+
+const reviewOpportunityBefore = reviewProject.opportunities.find((item) => item.id === "opp-demo-investor-materials");
+reviewProject = updateOpportunityStatus(reviewProject, "opp-demo-investor-materials", "pursuing");
+const reviewOpportunityAfter = reviewProject.opportunities.find((item) => item.id === "opp-demo-investor-materials");
+if (
+  reviewOpportunityAfter.status !== "pursuing" ||
+  reviewOpportunityAfter.evidenceLinks.length !== reviewOpportunityBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected opportunity review action to move to pursuing without losing evidence: ${JSON.stringify(reviewOpportunityAfter)}`);
+}
+
+let editProject = structuredClone(DEMO_PROJECT);
+editProject = updateAction(editProject, "act-demo-product", {
+  priority: "high",
+  status: "briefed"
+});
+const editedAction = editProject.actions.find((action) => action.id === "act-demo-product");
+if (editedAction.priority !== "high" || editedAction.status !== "briefed") {
+  throw new Error(`Expected action manual edit to update priority and status: ${JSON.stringify(editedAction)}`);
+}
+
+editProject = updateCommitment(editProject, "commit-demo-investor-follow-up", {
+  status: "waiting",
+  dueAt: "2026-06-01"
+});
+const editedCommitment = editProject.commitments.find(
+  (commitment) => commitment.id === "commit-demo-investor-follow-up"
+);
+if (editedCommitment.status !== "waiting" || editedCommitment.dueAt !== "2026-06-01") {
+  throw new Error(`Expected commitment manual edit to update status and dueAt: ${JSON.stringify(editedCommitment)}`);
+}
+
+editProject = updateRisk(editProject, "risk-demo-scope-creep", { status: "archived" });
+const editedRisk = editProject.risks.find((risk) => risk.id === "risk-demo-scope-creep");
+if (editedRisk.status !== "archived" || !editedRisk.evidenceLinks.length) {
+  throw new Error(`Expected risk manual edit to update status without losing evidence: ${JSON.stringify(editedRisk)}`);
+}
+
+editProject = updateOpportunity(editProject, "opp-demo-paid-pilot", { status: "pursuing" });
+const editedOpportunity = editProject.opportunities.find(
+  (opportunity) => opportunity.id === "opp-demo-paid-pilot"
+);
+if (editedOpportunity.status !== "pursuing" || !editedOpportunity.evidenceLinks.length) {
+  throw new Error(`Expected opportunity manual edit to update status without losing evidence: ${JSON.stringify(editedOpportunity)}`);
 }
 
 const demoMemoriesMissingSources = project.memories.filter(
@@ -100,6 +224,73 @@ if (
   !Array.isArray(freshProject.opportunities)
 ) {
   throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
+}
+
+const legacyState = normalizeStoredState({
+  projects: [
+    {
+      id: "legacy-hardening-project",
+      name: "Legacy Hardening",
+      memories: [
+        {
+          id: "legacy-hardening-memory",
+          title: "旧 memory 只有基础字段",
+          detail: "旧 localStorage 可能没有 status、sourceReferences 或 evidence links。"
+        }
+      ],
+      actions: [
+        {
+          id: "legacy-hardening-action",
+          title: "旧 action 只有标题"
+        }
+      ],
+      commitments: [{}],
+      risks: [{}],
+      opportunities: [{}]
+    }
+  ]
+});
+const legacyProject = legacyState.projects[0];
+if (
+  legacyState.schemaVersion !== 2 ||
+  legacyProject.nodes.length !== 1 ||
+  legacyProject.memories[0].status !== "draft" ||
+  legacyProject.actions[0].priority !== "medium" ||
+  legacyProject.commitments[0].status !== "open" ||
+  legacyProject.risks[0].status !== "open" ||
+  legacyProject.opportunities[0].status !== "new"
+) {
+  throw new Error(`Expected legacy state migration to fill Phase 3 defaults: ${JSON.stringify(legacyState)}`);
+}
+
+const emptyStateHtml = renderApp({ activeProjectId: null, projects: [] });
+if (!emptyStateHtml.includes("未选择项目") || !emptyStateHtml.includes("暂无公司记忆")) {
+  throw new Error("Expected empty state render to avoid blank screens.");
+}
+
+const partialProject = {
+  id: "partial-hardening-project",
+  name: "Partial Hardening",
+  sources: [null, { title: "缺字段 Source" }],
+  signals: [null, { title: "缺字段 Signal", type: "risk" }],
+  memories: null,
+  actions: undefined,
+  commitments: [{ title: "缺字段 Commitment" }],
+  risks: [{ title: "缺字段 Risk" }],
+  opportunities: [{ title: "缺字段 Opportunity" }]
+};
+const partialSnapshot = buildCommandCenter({ project: partialProject });
+const partialHtml = renderApp({
+  activeProjectId: partialProject.id,
+  projects: [partialProject]
+});
+if (
+  partialSnapshot.metrics.inbox < 2 ||
+  !partialHtml.includes("Partial Hardening") ||
+  !partialHtml.includes("缺字段 Source") ||
+  !partialHtml.includes("缺字段 Commitment")
+) {
+  throw new Error("Expected partial project data to render and aggregate without crashing.");
 }
 
 project = absorbContext(project, {
@@ -1219,10 +1410,34 @@ const summary = {
   priorityQueue: postResultCommandCenter.priorityQueue.length,
   commitments: postResultCommandCenter.commitmentFocus.length,
   risks: postResultCommandCenter.riskRadar.length,
-  opportunities: postResultCommandCenter.opportunityRadar.length
+  opportunities: postResultCommandCenter.opportunityRadar.length,
+  commandTargets: commandCenterProbe.priorityQueue.filter((item) => item.targetAnchor).length,
+  reviewActions: [
+    'data-action="update-memory-status"',
+    'data-action="update-commitment-status"',
+    'data-action="update-risk-status"',
+    'data-action="update-opportunity-status"'
+  ].filter((marker) => commandCenterHtml.includes(marker)).length,
+  manualEditForms: [
+    'data-form="edit-action"',
+    'data-form="edit-commitment"',
+    'data-form="edit-risk"',
+    'data-form="edit-opportunity"'
+  ].filter((marker) => commandCenterHtml.includes(marker)).length,
+  hardeningCases: 3
 };
 
-if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {
+if (
+  !summary.contexts ||
+  !summary.memories ||
+  !summary.actions ||
+  !summary.briefs ||
+  !summary.results ||
+  summary.commandTargets < 5 ||
+  summary.reviewActions < 4 ||
+  summary.manualEditForms < 4 ||
+  summary.hardeningCases < 3
+) {
   throw new Error(`Smoke test failed: ${JSON.stringify(summary)}`);
 }
 

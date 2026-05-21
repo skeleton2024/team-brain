@@ -178,6 +178,185 @@ docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md
 
 ## 9. 开发日志
 
+### 2026-05-21
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 5：`QA-05-alpha-hardening-smoke`
+
+分支：`issue/QA-05-alpha-hardening-smoke`
+
+状态：开发中，已完成 Wave 5 smoke summary 和文档收口
+
+改动文件：
+
+- `scripts/smoke-test.mjs`
+- `AI_HANDOFF.md`
+- `当前系统状态.md`
+- `docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md`
+- `docs/issues/README.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Smoke summary 新增 `commandTargets`、`reviewActions`、`manualEditForms` 和 `hardeningCases`。
+- Handoff、当前系统状态、阶段计划和 issue README 已同步 Wave 5 状态。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- Wave 5 合回 `integration/phase-3-alpha` 后需要最终 smoke、推送 alpha 并更新现有 draft PR #8。
+
+下一步：
+
+- 提交 QA-05，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 5：`RESILIENCE-01-local-storage-hardening`
+
+分支：`issue/RESILIENCE-01-local-storage-hardening`
+
+状态：开发中，已完成旧数据和 partial project hardening
+
+改动文件：
+
+- `src/services/store.js`
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- `normalizeStoredState()` 覆盖旧 localStorage 迁移，补齐 schemaVersion、默认节点和关键对象默认字段。
+- `buildCommandCenter()` 会过滤 malformed array item，partial project 仍能聚合。
+- `renderApp()` 对空 state、空项目和缺字段项目提供 fallback，不白屏。
+- Smoke 新增 legacy / empty / partial project case。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- QA-05 需要最终整理 Wave 5 smoke summary 和文档收口。
+
+下一步：
+
+- 提交 RESILIENCE-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 5：`EDIT-01-alpha-manual-editing`
+
+分支：`issue/EDIT-01-alpha-manual-editing`
+
+状态：开发中，已完成轻量手动编辑入口和 smoke
+
+改动文件：
+
+- `src/services/store.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Action 支持本地修改 priority / status。
+- Commitment 支持本地修改 status / dueAt。
+- Risk / Opportunity 支持本地修改 status。
+- Smoke 覆盖手动编辑 helper 和 UI 表单结构。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- RESILIENCE-01 需要继续加强旧 localStorage、空项目和缺字段项目兼容。
+
+下一步：
+
+- 提交 EDIT-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 5：`REVIEW-01-human-review-actions`
+
+分支：`issue/REVIEW-01-human-review-actions`
+
+状态：开发中，已完成本地人工 review 动作和 smoke
+
+改动文件：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Memory Review、Commitment、Risk 和 Opportunity 均有本地状态推进入口。
+- 状态推进只修改本地 state 和 `updatedAt`，不会发送外部消息或外部承诺。
+- Smoke 直接验证状态推进后原有 evidence links / source references 保留。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- EDIT-01 需要补 Action priority / status 和 Commitment dueAt 等轻量手动编辑入口。
+
+下一步：
+
+- 提交 REVIEW-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
+### 2026-05-21
+
+负责人：Codex
+
+范围：Phase 3 Alpha Wave 5：`NAV-01-command-center-deep-links`
+
+分支：`issue/NAV-01-command-center-deep-links`
+
+状态：开发中，已完成 Command Center / Priority Queue 定位链路和 smoke
+
+改动文件：
+
+- `src/domain/pipelines/buildCommandCenter.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+- `PROJECT_FUNCTION_STRUCTURE.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+- `docs/TEAM_DEV_LOG.md`
+
+验证结果：
+
+- Priority Queue 条目新增 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，可定位到 Action、Memory、Commitment、Risk、Opportunity 或证据区。
+- Command Center UI 新增定位按钮和证据链接，继续只做本地定位，不自动执行外部动作。
+- `node scripts/smoke-test.mjs` 通过。
+
+待决问题：
+
+- REVIEW-01 需要继续补 Memory / Commitment / Risk / Opportunity 的本地人工状态推进。
+
+下一步：
+
+- 提交 NAV-01，合回 `integration/phase-3-wave-05` 后再次运行 smoke。
+
 ### 2026-05-20
 
 负责人：Codex
