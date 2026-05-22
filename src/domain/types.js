@@ -17,6 +17,99 @@ export const CONTEXT_IMPORTANCE_LABELS = Object.fromEntries(
   CONTEXT_IMPORTANCE.map((item) => [item.id, item.label])
 );
 
+export const SOURCE_TYPES = [
+  { id: "email", label: "邮件" },
+  { id: "slack_message", label: "Slack 消息" },
+  { id: "meeting_note", label: "会议纪要" },
+  { id: "customer_feedback", label: "客户反馈" },
+  { id: "investor_question", label: "投资人问题" },
+  { id: "engineering_update", label: "工程进展" },
+  { id: "founder_note", label: "创始人笔记" },
+  { id: "sales_note", label: "销售记录" },
+  { id: "support_note", label: "支持记录" },
+  { id: "document", label: "文档" },
+  { id: "web_note", label: "网页摘录" },
+  { id: "manual_note", label: "手动笔记" },
+  { id: "result_feedback", label: "结果回流" },
+  { id: "other", label: "其他来源" }
+];
+
+export const SOURCE_TYPE_LABELS = Object.fromEntries(
+  SOURCE_TYPES.map((item) => [item.id, item.label])
+);
+
+export const SOURCE_STATUS = {
+  new: "待整理",
+  processed: "已整理",
+  ignored: "已忽略",
+  archived: "已归档"
+};
+
+export const SIGNAL_TYPES = {
+  customer_need: "客户需求",
+  investor_question: "投资人问题",
+  product_feedback: "产品反馈",
+  engineering_blocker: "工程阻塞",
+  team_constraint: "团队限制",
+  risk: "风险",
+  opportunity: "机会",
+  commitment: "承诺",
+  decision: "决策",
+  fact: "事实"
+};
+
+export const SIGNAL_STATUS = {
+  new: "待 review",
+  confirmed: "已确认",
+  ignored: "已忽略",
+  converted: "已转化"
+};
+
+export const ENTITY_TYPES = {
+  person: "人",
+  company: "公司",
+  investor: "投资人",
+  customer: "客户",
+  partner: "合作方",
+  team_member: "团队成员",
+  product: "产品",
+  market: "市场",
+  vendor: "供应商",
+  competitor: "竞争对手",
+  other: "其他对象"
+};
+
+export const ENTITY_STATUS = {
+  active: "活跃",
+  inactive: "不活跃",
+  watching: "待确认",
+  archived: "已归档"
+};
+
+export const PROJECT_NODE_STATUS = {
+  planned: "计划中",
+  active: "推进中",
+  blocked: "阻塞",
+  done: "已完成",
+  archived: "已归档"
+};
+
+export const COMMITMENT_TYPES = {
+  commitment: "承诺",
+  waiting: "等待项",
+  dependency: "依赖项",
+  follow_up: "Follow-up"
+};
+
+export const COMMITMENT_STATUS = {
+  open: "待处理",
+  waiting: "等待中",
+  blocked: "阻塞",
+  done: "已完成",
+  overdue: "已逾期",
+  archived: "已归档"
+};
+
 export const MEMORY_TYPES = {
   customer_concern: {
     label: "客户顾虑",
@@ -109,6 +202,28 @@ export const RISK_LABELS = {
   high: "高风险",
   medium: "中风险",
   low: "低风险"
+};
+
+export const RISK_STATUS = {
+  open: "待处理",
+  monitoring: "观察中",
+  mitigated: "已缓解",
+  archived: "已归档"
+};
+
+export const OPPORTUNITY_STATUS = {
+  new: "新机会",
+  evaluating: "评估中",
+  pursuing: "推进中",
+  won: "已赢得",
+  lost: "已丢失",
+  archived: "已归档"
+};
+
+export const IMPACT_LABELS = {
+  high: "高影响",
+  medium: "中影响",
+  low: "低影响"
 };
 
 export const ACTION_STATUS = {

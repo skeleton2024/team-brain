@@ -114,6 +114,21 @@ team-brain/
       QA-00-smoke-test-baseline.md
       DOC-00-current-system-status.md
       DOC-01-ai-handoff.md
+      INBOX-01-manual-source-inbox.md
+      PIPE-01-source-to-signal.md
+      LINK-01-project-entity-suggestion.md
+      UI-01-inbox-review-flow.md
+      QA-01-inbox-smoke-flow.md
+      ENTITY-01-entity-profile.md
+      ENTITY-02-entity-linking.md
+      PROJECT-01-project-nodes.md
+      PROJECT-02-node-detail-panel.md
+      QA-02-entity-project-flow.md
+      DASH-01-command-center.md
+      COMMIT-01-commitment-waiting.md
+      RISK-01-risk-opportunity-radar.md
+      PRIORITY-01-ai-priority-queue.md
+      QA-04-alpha-e2e-smoke.md
   scripts/
     smoke-test.mjs
   src/
@@ -126,7 +141,10 @@ team-brain/
       types.js
       pipelines/
         extractMemories.js
+        extractSignals.js
+        linkSignals.js
         reconcileMemories.js
+        buildCommandCenter.js
     services/
       store.js
     ui/
@@ -151,7 +169,7 @@ Domain Orchestrator
   src/domain/agentEngine.js
 
 Domain Pipelines
-  src/domain/pipelines/sourceToSignals.js
+  src/domain/pipelines/extractSignals.js
   src/domain/pipelines/extractMemories.js
   src/domain/pipelines/reconcileMemories.js
   src/domain/pipelines/linkSignals.js
@@ -253,6 +271,10 @@ Data：
 absorbContext(project, input)
 generateBrief(project, actionId)
 recordActionResult(project, actionId, resultInput)
+updateMemoryStatus(project, memoryId, status)
+updateCommitmentStatus(project, commitmentId, status)
+updateRiskStatus(project, riskId, status)
+updateOpportunityStatus(project, opportunityId, status)
 ```
 
 v0.2 目标：
@@ -261,6 +283,7 @@ v0.2 目标：
 - 把内部逻辑迁移到 `src/domain/pipelines/*`。
 - 每次 pipeline 运行产生 `AgentRun`。
 - 每个 AI 或规则输出都能追溯 sourceReferences。
+- Wave 5 起，提供本地人工 review 状态推进函数，只更新本地 state，不触发外部执行。
 
 REC-01 当前进展：
 
@@ -320,9 +343,9 @@ REC-02 已新增。
 - 判断 `new`、`duplicate`、`update`、`conflict`、`outdate`。
 - 输出 reconciliation result，由 orchestrator 决定如何写入 state。
 
-### `src/domain/pipelines/sourceToSignals.js`
+### `src/domain/pipelines/extractSignals.js`
 
-Phase 3 Alpha 计划新增。
+Phase 3 Alpha Wave 1 已新增。
 
 职责：
 
@@ -333,7 +356,7 @@ Phase 3 Alpha 计划新增。
 
 ### `src/domain/pipelines/linkSignals.js`
 
-Phase 3 Alpha 计划新增。
+Phase 3 Alpha Wave 1 已新增。
 
 职责：
 
@@ -373,13 +396,15 @@ v0.2 计划新增。
 
 ### `src/domain/pipelines/buildCommandCenter.js`
 
-Phase 3 Alpha 计划新增。
+Phase 3 Alpha Wave 4 已新增。
 
 职责：
 
 - 汇总 inbox、memory、project、node、action、commitment、risk 和 opportunity。
 - 生成今日优先级队列。
 - 输出可追溯的 Dashboard 数据，不直接执行外部动作。
+- Wave 5 起，Priority Queue 输出只读定位字段，帮助 UI 从 Command Center 跳到 Action、Memory、Commitment、Risk、Opportunity 或 Source / Signal 证据。
+- 第一版使用本地规则生成 Command Center snapshot，后续 `COMMIT-01`、`RISK-01` 和 `PRIORITY-01` 会继续补齐输入和排序。
 
 ### `src/services/store.js`
 
@@ -391,6 +416,7 @@ Phase 3 Alpha 计划新增。
 - 从 localStorage 读取 state。
 - 保存 state。
 - 创建项目和 ID。
+- Wave 5 起，统一补齐旧 localStorage / partial project 的缺失数组、默认节点、对象状态和证据数组，避免空项目或坏数据白屏。
 
 v0.2 要求：
 
@@ -424,6 +450,7 @@ upsertProjectNode(projectId, node)
 addAction(projectId, action)
 addBrief(projectId, brief)
 addResult(projectId, result)
+updateAction(projectId, action)
 upsertCommitment(projectId, commitment)
 upsertRisk(projectId, risk)
 upsertOpportunity(projectId, opportunity)
@@ -497,10 +524,15 @@ v0.2 demo 至少覆盖：
 职责：
 
 - 模拟上下文输入。
+- 模拟手动 Source 输入。
+- 验证 Source 能生成 Signal。
+- 验证 Signal 能建议 Entity / Project。
+- 验证 Signal review 可以转 Memory / Action。
 - 验证能生成记忆。
 - 验证能生成行动。
 - 验证能生成 Brief。
 - 验证结果回流能写入结果和新记忆。
+- 验证 Wave 3 action loop：memory governance、scenario brief、structured result feedback、memory update suggestion、follow-up action 和 Project Node status suggestion。
 
 每个 issue 完成后至少运行：
 
@@ -550,8 +582,8 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - `src/main.js`
 - `src/ui/render.js`
 - `src/domain/types.js`
-- 未来 `src/domain/pipelines/sourceToSignals.js`
-- 未来 `src/domain/pipelines/linkSignals.js`
+- `src/domain/pipelines/extractSignals.js`
+- `src/domain/pipelines/linkSignals.js`
 - `src/domain/pipelines/extractMemories.js`
 - `src/data/demo.js`
 
@@ -604,6 +636,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - Top 3 actions。
 - whyNow。
 - evidenceMemoryIds。
+- memory governance 权重：confirmed 优先，draft / disputed 需要人工复核，outdated / archived 默认不作为新行动证据。
 - owner/deadline suggestion。
 - blockedBy。
 - expectedArtifact。
@@ -624,6 +657,9 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - customer_followup Brief。
 - investor_reply Brief。
 - coding_brief Brief。
+- 根据 action type 生成不同 sections，例如客户跟进、投资人回复和工程 brief 使用不同结构。
+- Brief 消费相关 Entity、ProjectNode、Memory 和 success criteria，而不是只复述 action 标题。
+- memory governance summary：说明 brief 使用了哪些可参与推理的 memory、排除了哪些过期或归档证据。
 - 可编辑保存。
 - 风险和人工确认。
 
@@ -645,7 +681,12 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 - newEvidence。
 - followUpNeeded。
 - relatedMemoryUpdates。
+- projectNodeUpdates。
 - action history。
+- 结构化 Result Feedback 表单和 result history 展示。
+- 已完成 action 的保留和追溯，避免回流后丢失 result 入口。
+- result-to-memory update 建议：positive 可建议 confirm / update，blocked 可建议 dispute，neutral 可建议 update。
+- result-to-node status 建议：blocked 建议 node blocked，正向且无后续建议 done，否则继续 active；这些建议不自动应用。
 
 主要文件：
 
@@ -686,7 +727,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 
 主要文件：
 
-- 未来 `src/domain/pipelines/linkSignals.js`
+- `src/domain/pipelines/linkSignals.js`
 - `src/domain/types.js`
 - `src/ui/render.js`
 - `src/main.js`
@@ -724,7 +765,7 @@ Command Center: Project / Node / Action / Commitment / Risk / Opportunity -> Pri
 
 主要文件：
 
-- 未来 `src/domain/pipelines/buildCommandCenter.js`
+- `src/domain/pipelines/buildCommandCenter.js`
 - 未来 `src/domain/pipelines/processResult.js`
 - `src/ui/render.js`
 - `src/main.js`

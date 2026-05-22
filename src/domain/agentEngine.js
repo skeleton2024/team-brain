@@ -1,5 +1,7 @@
 import { ACTION_TYPES } from "./types.js";
 import { extractMemories, makeSourceReference, summarizeTitle } from "./pipelines/extractMemories.js";
+import { extractSignals } from "./pipelines/extractSignals.js";
+import { linkSignals } from "./pipelines/linkSignals.js";
 import { reconcileMemories } from "./pipelines/reconcileMemories.js";
 import { makeId } from "../services/store.js";
 
@@ -75,6 +77,251 @@ const MEMORY_TRANSITION_STATUS = new Set([
   "disputed",
   "archived"
 ]);
+const ENTITY_TRANSITION_STATUS = new Set(["active", "inactive", "watching", "archived"]);
+const PROJECT_NODE_TRANSITION_STATUS = new Set([
+  "planned",
+  "active",
+  "blocked",
+  "done",
+  "archived"
+]);
+const COMMITMENT_TRANSITION_STATUS = new Set([
+  "open",
+  "waiting",
+  "blocked",
+  "done",
+  "overdue",
+  "archived"
+]);
+const RISK_TRANSITION_STATUS = new Set(["open", "monitoring", "mitigated", "archived"]);
+const OPPORTUNITY_TRANSITION_STATUS = new Set([
+  "new",
+  "evaluating",
+  "pursuing",
+  "won",
+  "lost",
+  "archived"
+]);
+
+export function addManualSource(project, input) {
+  const now = new Date().toISOString();
+  const source = {
+    id: makeId("src"),
+    kind: input.kind || "manual_note",
+    title: input.title || "未命名来源",
+    body: input.body,
+    origin: "manual",
+    externalRef: input.externalRef || undefined,
+    occurredAt: input.occurredAt || now,
+    receivedAt: now,
+    participants: normalizeList(input.participants),
+    relatedEntityIds: [],
+    relatedProjectIds: [project.id],
+    tags: normalizeList(input.tags),
+    importance: normalizeImportance(input.importance),
+    status: "new",
+    createdAt: now,
+    updatedAt: now
+  };
+
+  return {
+    ...project,
+    updatedAt: now,
+    nodes: linkProjectNodes(project.nodes || [], {
+      sourceId: source.id,
+      projectId: project.id,
+      now
+    }),
+    sources: [source, ...(project.sources || [])]
+  };
+}
+
+export function processSource(project, sourceId) {
+  const source = (project.sources || []).find((item) => item.id === sourceId);
+  if (!source || source.status === "ignored" || source.status === "archived") {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const { signals } = extractSignals({ project, source, now });
+  const existingSignalKeys = new Set(
+    (project.signals || []).map((signal) => `${signal.sourceId}:${normalize(signal.summary)}`)
+  );
+  const newSignals = signals.filter(
+    (signal) => !existingSignalKeys.has(`${signal.sourceId}:${normalize(signal.summary)}`)
+  );
+
+  return {
+    ...project,
+    updatedAt: now,
+    nodes: linkProjectNodes(project.nodes || [], {
+      sourceId,
+      signalIds: newSignals.map((signal) => signal.id),
+      projectId: project.id,
+      now
+    }),
+    sources: (project.sources || []).map((item) =>
+      item.id === sourceId ? { ...item, status: "processed", updatedAt: now } : item
+    ),
+    signals: [...newSignals, ...(project.signals || [])]
+  };
+}
+
+export function suggestSignalLinks(project, signalId) {
+  const targetSignals = signalId
+    ? (project.signals || []).filter((signal) => signal.id === signalId)
+    : (project.signals || []).filter((signal) => signal.status === "new");
+
+  if (!targetSignals.length) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  const linking = linkSignals({ project, signals: targetSignals, now });
+  const entityIdsBySignal = new Map(
+    linking.signalUpdates.map((update) => [update.id, update.suggestedEntityIds])
+  );
+  const mergedEntities = mergeEntities(
+    linking.entities,
+    project.entities || []
+  ).map((entity) => {
+    const relatedSignals = targetSignals.filter((signal) =>
+      entityIdsBySignal.get(signal.id)?.includes(entity.id)
+    );
+
+    if (!relatedSignals.length) {
+      return entity;
+    }
+
+    return mergeEntityLinks(entity, {
+      sourceIds: relatedSignals.map((signal) => signal.sourceId),
+      signalIds: relatedSignals.map((signal) => signal.id),
+      projectIds: [project.id],
+      lastInteractionAt: now,
+      now
+    });
+  });
+
+  return {
+    ...project,
+    updatedAt: now,
+    sources: (project.sources || []).map((source) => {
+      const update = linking.sourceUpdates.find((item) => item.sourceId === source.id);
+      if (!update) {
+        return source;
+      }
+
+      return {
+        ...source,
+        relatedEntityIds: unique([...(source.relatedEntityIds || []), ...update.relatedEntityIds]),
+        relatedProjectIds: unique([...(source.relatedProjectIds || []), ...update.relatedProjectIds]),
+        updatedAt: now
+      };
+    }),
+    signals: (project.signals || []).map((signal) => {
+      const update = linking.signalUpdates.find((item) => item.id === signal.id);
+      if (!update) {
+        return signal;
+      }
+
+      return {
+        ...signal,
+        suggestedEntityIds: update.suggestedEntityIds,
+        suggestedProjectIds: update.suggestedProjectIds,
+        updatedAt: now
+      };
+    }).map((signal) => ({
+      ...signal,
+      suggestedEntityIds: unique(signal.suggestedEntityIds || []),
+      suggestedProjectIds: unique(signal.suggestedProjectIds || [])
+    })),
+    entities: mergedEntities
+  };
+}
+
+export function reviewSignal(project, signalId, reviewAction) {
+  const signal = (project.signals || []).find((item) => item.id === signalId);
+  if (!signal) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  if (reviewAction === "confirm" || reviewAction === "ignore") {
+    return {
+      ...project,
+      updatedAt: now,
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId
+          ? { ...item, status: reviewAction === "confirm" ? "confirmed" : "ignored", updatedAt: now }
+          : item
+      )
+    };
+  }
+
+  if (signal.status === "converted") {
+    return project;
+  }
+
+  if (reviewAction === "memory") {
+    const memory = buildMemoryFromSignal(project, signal, now);
+    return {
+      ...project,
+      updatedAt: now,
+      nodes: linkProjectNodes(project.nodes || [], {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        projectId: project.id,
+        now
+      }),
+      entities: linkEntitiesForSignal(project.entities || [], signal, {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        projectId: project.id,
+        lastInteractionAt: now,
+        now
+      }),
+      memories: [memory, ...project.memories],
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
+      )
+    };
+  }
+
+  if (reviewAction === "action") {
+    const memory = buildMemoryFromSignal(project, signal, now);
+    const action = buildActionFromSignal(signal, memory, now);
+    return {
+      ...project,
+      updatedAt: now,
+      nodes: linkProjectNodes(project.nodes || [], {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        actionId: action.id,
+        projectId: project.id,
+        now
+      }),
+      entities: linkEntitiesForSignal(project.entities || [], signal, {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        memoryId: memory.id,
+        actionId: action.id,
+        projectId: project.id,
+        lastInteractionAt: now,
+        now
+      }),
+      memories: [memory, ...project.memories],
+      actions: mergeActions([action], project.actions),
+      signals: (project.signals || []).map((item) =>
+        item.id === signalId ? { ...item, status: "converted", updatedAt: now } : item
+      )
+    };
+  }
+
+  return project;
+}
 
 export function absorbContext(project, input) {
   const now = new Date().toISOString();
@@ -110,6 +357,13 @@ export function absorbContext(project, input) {
   return {
     ...project,
     updatedAt: now,
+    nodes: linkProjectNodes(project.nodes || [], {
+      contextId: context.id,
+      memoryIds: context.memoryIds,
+      actionIds: context.actionIds,
+      projectId: project.id,
+      now
+    }),
     contexts: [context, ...project.contexts],
     memories: [...memories, ...project.memories],
     actions: mergeActions(actions, project.actions),
@@ -137,7 +391,7 @@ export function generateBrief(project, actionId) {
     };
   }
 
-  const memories = resolveMemories(project, action.sourceMemoryIds);
+  const memories = resolveActionBriefMemories(project, action);
   const brief = buildBrief(project, action, memories);
 
   return {
@@ -183,20 +437,189 @@ export function updateMemoryStatus(project, memoryId, status) {
   };
 }
 
+export function updateEntityStatus(project, entityId, status) {
+  if (!ENTITY_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const entities = (project.entities || []).map((entity) => {
+    if (entity.id !== entityId || entity.status === status) {
+      return entity;
+    }
+
+    changed = true;
+    return {
+      ...entity,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    entities
+  };
+}
+
+export function updateProjectNodeStatus(project, nodeId, status) {
+  if (!PROJECT_NODE_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const nodes = (project.nodes || []).map((node) => {
+    if (node.id !== nodeId || node.status === status) {
+      return node;
+    }
+
+    changed = true;
+    return {
+      ...node,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    nodes
+  };
+}
+
+export function updateCommitmentStatus(project, commitmentId, status) {
+  if (!COMMITMENT_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const commitments = (project.commitments || []).map((commitment) => {
+    if (commitment.id !== commitmentId || commitment.status === status) {
+      return commitment;
+    }
+
+    changed = true;
+    return {
+      ...commitment,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    commitments
+  };
+}
+
+export function updateRiskStatus(project, riskId, status) {
+  if (!RISK_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const risks = (project.risks || []).map((risk) => {
+    if (risk.id !== riskId || risk.status === status) {
+      return risk;
+    }
+
+    changed = true;
+    return {
+      ...risk,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    risks
+  };
+}
+
+export function updateOpportunityStatus(project, opportunityId, status) {
+  if (!OPPORTUNITY_TRANSITION_STATUS.has(status)) {
+    return project;
+  }
+
+  const now = new Date().toISOString();
+  let changed = false;
+
+  const opportunities = (project.opportunities || []).map((opportunity) => {
+    if (opportunity.id !== opportunityId || opportunity.status === status) {
+      return opportunity;
+    }
+
+    changed = true;
+    return {
+      ...opportunity,
+      status,
+      updatedAt: now
+    };
+  });
+
+  if (!changed) {
+    return project;
+  }
+
+  return {
+    ...project,
+    updatedAt: now,
+    opportunities
+  };
+}
+
 export function recordActionResult(project, actionId, resultInput) {
   const now = new Date().toISOString();
   const action = project.actions.find((item) => item.id === actionId);
   if (!action) {
     return project;
   }
+  const summary = resultInput.summary || resultInput.whatChanged || resultInput.newEvidence || "行动结果已回流。";
+  const whatChanged = resultInput.whatChanged || summary;
+  const newEvidence = resultInput.newEvidence || summary;
+  const resultContextBody = buildResultContextBody({
+    summary,
+    whatChanged,
+    newEvidence,
+    followUpNeeded: Boolean(resultInput.followUpNeeded)
+  });
 
   const result = {
     id: makeId("result"),
     actionId,
     outcome: resultInput.outcome,
-    summary: resultInput.summary,
-    whatChanged: resultInput.whatChanged || resultInput.summary,
-    newEvidence: resultInput.newEvidence || resultInput.summary,
+    summary,
+    whatChanged,
+    newEvidence,
     followUpNeeded: Boolean(resultInput.followUpNeeded),
     createdAt: now,
     memoryIds: [],
@@ -208,7 +631,7 @@ export function recordActionResult(project, actionId, resultInput) {
     id: makeId("ctx"),
     kind: "other",
     title: `行动结果：${action.title}`,
-    body: resultInput.summary,
+    body: resultContextBody,
     occurredAt: now,
     participants: [],
     tags: ["结果回流"],
@@ -230,15 +653,15 @@ export function recordActionResult(project, actionId, resultInput) {
   const resultMemory = {
     id: makeId("mem"),
     type: "result_learning",
-    title: summarizeTitle(resultInput.summary, "执行结果已回流"),
-    detail: resultInput.summary,
+    title: summarizeTitle(summary, "执行结果已回流"),
+    detail: summary,
     source: resultContext.title,
     confidence: resultConfidence,
     status: "draft",
     sourceReferences: [
       makeSourceReference({
         contextId: resultContext.id,
-        quote: resultInput.summary,
+        quote: summary,
         note: resultContext.title,
         confidence: resultConfidence
       })
@@ -260,14 +683,26 @@ export function recordActionResult(project, actionId, resultInput) {
     now
   });
   const newMemories = reconciliation.acceptedMemories;
+  const resultDrivenMemoryUpdates = buildResultDrivenMemoryUpdates({
+    project,
+    action,
+    result,
+    resultInput,
+    now
+  });
+  const memoryUpdates = mergeMemoryUpdates([
+    ...reconciliation.memoryUpdates,
+    ...resultDrivenMemoryUpdates
+  ]);
 
   result.memoryIds = newMemories.map((memory) => memory.id);
-  result.relatedMemoryUpdates = reconciliation.memoryUpdates;
+  result.relatedMemoryUpdates = memoryUpdates;
   result.reconciliationResultIds = reconciliation.reconciliationResults.map((item) => item.id);
 
   const followUpActions = proposeResultActions(project, action, resultInput, newMemories);
   result.actionIds = followUpActions.map((item) => item.id);
   result.followUpNeeded = result.followUpNeeded || followUpActions.length > 0;
+  result.projectNodeUpdates = buildResultNodeStatusSuggestions(project, action, result);
   resultContext.memoryIds = result.memoryIds;
   resultContext.actionIds = result.actionIds;
   resultContext.reconciliationResultIds = result.reconciliationResultIds;
@@ -275,6 +710,18 @@ export function recordActionResult(project, actionId, resultInput) {
   return {
     ...project,
     updatedAt: now,
+    nodes: linkProjectNodes(
+      project.nodes || [],
+      {
+        contextId: resultContext.id,
+        memoryIds: result.memoryIds,
+        actionIds: [actionId, ...result.actionIds],
+        resultId: result.id,
+        projectId: project.id,
+        now
+      },
+      { preferActionId: actionId }
+    ),
     contexts: [resultContext, ...project.contexts],
     memories: [...newMemories, ...project.memories],
     actions: mergeActions(
@@ -288,8 +735,115 @@ export function recordActionResult(project, actionId, resultInput) {
       ...reconciliation.reconciliationResults,
       ...(project.reconciliationResults || [])
     ],
-    pendingMemoryUpdates: [...reconciliation.memoryUpdates, ...(project.pendingMemoryUpdates || [])]
+    pendingMemoryUpdates: [...memoryUpdates, ...(project.pendingMemoryUpdates || [])]
   };
+}
+
+function buildResultContextBody(result) {
+  return [
+    `结果摘要：${result.summary}`,
+    `变化：${result.whatChanged}`,
+    `新证据：${result.newEvidence}`,
+    `需要后续动作：${result.followUpNeeded ? "是" : "否"}`
+  ].join("\n");
+}
+
+function buildResultDrivenMemoryUpdates({ project, action, result, resultInput, now }) {
+  const evidenceMemories = resolveActionBriefMemories(project, action);
+  return evidenceMemories
+    .map((memory) => {
+      const operation = memoryUpdateOperationForResult(memory, result);
+      if (!operation) {
+        return null;
+      }
+
+      return {
+        memoryId: memory.id,
+        operation,
+        reason: memoryUpdateReasonForResult(memory, result, resultInput),
+        suggestedContent:
+          operation === "update"
+            ? `${memory.content || memory.detail}\n\n结果回流：${result.whatChanged}`
+            : undefined,
+        createdAt: now
+      };
+    })
+    .filter(Boolean);
+}
+
+function memoryUpdateOperationForResult(memory, result) {
+  if (result.outcome === "blocked") {
+    return "dispute";
+  }
+
+  if (result.outcome === "positive") {
+    return (memory.status || "draft") === "confirmed" ? "update" : "confirm";
+  }
+
+  if (result.outcome === "neutral") {
+    return "update";
+  }
+
+  return null;
+}
+
+function memoryUpdateReasonForResult(memory, result, resultInput) {
+  if (result.outcome === "blocked") {
+    return `结果显示行动遇到阻塞，需要复核 memory“${memory.title}”：${result.newEvidence}`;
+  }
+
+  if (result.outcome === "positive") {
+    return `结果支持或推进了 memory“${memory.title}”：${result.whatChanged}`;
+  }
+
+  return `结果为中性观察，需要更新 memory“${memory.title}”的证据：${resultInput.newEvidence || result.summary}`;
+}
+
+function mergeMemoryUpdates(updates) {
+  const seenMemoryIds = new Set();
+  return updates.filter((update) => {
+    const key = update?.memoryId || update?.sourceMemoryId || update?.targetMemoryId;
+    if (!key) {
+      return true;
+    }
+
+    if (seenMemoryIds.has(key)) {
+      return false;
+    }
+
+    seenMemoryIds.add(key);
+    return true;
+  });
+}
+
+function buildResultNodeStatusSuggestions(project, action, result) {
+  const relatedNodes = (project.nodes || []).filter((node) =>
+    nodeLinkIds(node, "action").includes(action.id)
+  );
+
+  return relatedNodes.map((node) => {
+    if (result.outcome === "blocked") {
+      return {
+        nodeId: node.id,
+        suggestedStatus: "blocked",
+        reason: `行动结果出现阻塞：${result.summary}`
+      };
+    }
+
+    if (result.outcome === "positive" && !result.followUpNeeded) {
+      return {
+        nodeId: node.id,
+        suggestedStatus: "done",
+        reason: `行动结果为正向且暂无后续动作：${result.summary}`
+      };
+    }
+
+    return {
+      nodeId: node.id,
+      suggestedStatus: "active",
+      reason: `行动已有结果回流，仍需继续推进：${result.summary}`
+    };
+  });
 }
 
 function proposeActions(project, memories) {
@@ -401,6 +955,8 @@ function buildActionForMemoryType(memoryType, memories) {
     return null;
   }
   const statusNote = actionEvidenceStatusNote(sourceMemories);
+  const governedPriority = actionPriorityForMemoryGovernance(template.priority, sourceMemories);
+  const governedRiskLevel = actionRiskForMemoryGovernance(template.riskLevel, sourceMemories);
 
   return {
     id: makeId("act"),
@@ -408,12 +964,13 @@ function buildActionForMemoryType(memoryType, memories) {
     title: adaptActionTitle(template.title, lead),
     rationale: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
     whyNow: `${statusNote}来自记忆“${lead.title}”。${lead.detail}`,
-    priority: template.priority,
-    riskLevel: template.riskLevel,
+    priority: governedPriority,
+    riskLevel: governedRiskLevel,
     expectedOutput: template.expectedOutput,
     expectedArtifact: template.expectedOutput,
     sourceMemoryIds: sourceMemories.map((memory) => memory.id),
     evidenceMemoryIds: sourceMemories.map((memory) => memory.id),
+    humanConfirmationChecklist: actionMemoryGovernanceChecklist(sourceMemories),
     status: "pending",
     requiresHumanConfirmation: true,
     createdAt: new Date().toISOString()
@@ -423,6 +980,19 @@ function buildActionForMemoryType(memoryType, memories) {
 function buildBrief(project, action, memories) {
   const memoryText = memories.map((memory) => `- ${memory.title}: ${memory.detail}`).join("\n");
   const typeName = ACTION_TYPES[action.type] || action.type;
+  const governanceNotes = briefMemoryGovernanceNotes(project, action, memories);
+  const relatedEntities = entitiesForBrief(project, action, memories);
+  const relatedNodes = nodesForBrief(project, action, memories);
+  const sections = buildBriefSectionsForAction({
+    project,
+    action,
+    memories,
+    memoryText,
+    typeName,
+    governanceNotes,
+    relatedEntities,
+    relatedNodes
+  });
 
   return {
     id: makeId("brief"),
@@ -434,27 +1004,124 @@ function buildBrief(project, action, memories) {
     evidenceMemoryIds: memories.map((memory) => memory.id),
     sourceContextIds: sourceContextIdsForMemories(memories),
     createdBy: "ai",
-    sections: {
-      goal: `完成“${action.title}”，产出 ${action.expectedOutput}。`,
-      background:
-        memoryText ||
-        `${project.name} 当前处于 ${project.stage}，需要把上下文转成可执行动作。`,
-      strategy: buildStrategy(action),
-      draft: buildDraft(project, action, memories, typeName),
-      risks: buildRiskNotes(action),
-      successCriteria: [
-        "输出能被团队成员直接审阅和修改",
-        "没有自动发送、自动承诺或自动修改外部系统",
-        "关键假设、证据缺口和风险边界被写清楚",
-        "执行后可以把结果回填到 TeamMind"
+    sections
+  };
+}
+
+function buildBriefSectionsForAction(input) {
+  const {
+    project,
+    action,
+    memories,
+    memoryText,
+    typeName,
+    governanceNotes,
+    relatedEntities,
+    relatedNodes
+  } = input;
+  const background =
+    memoryText ||
+    `${project.name} 当前处于 ${project.stage || "推进中"}，需要把上下文转成可执行动作。`;
+  const entityContext = relatedEntities.length
+    ? relatedEntities.map((entity) => `${entity.name}${entity.role ? `（${entity.role}）` : ""}`)
+    : ["暂无明确关联 Entity"];
+  const nodeContext = relatedNodes.length
+    ? relatedNodes.map((node) => `${node.title}: ${node.goal || "目标待补"}`)
+    : ["暂无明确关联 Project Node"];
+  const successCriteria = [
+    "输出能被团队成员直接审阅和修改",
+    "没有自动发送、自动承诺或自动修改外部系统",
+    "关键假设、证据缺口和风险边界被写清楚",
+    "执行后可以把结果回填到 TeamMind"
+  ];
+  const checklist = [
+    "创始人确认事实是否准确",
+    "负责人确认下一步是否可执行",
+    "高风险承诺已删除或改成待确认表述",
+    "对外发送前完成最后人工审阅"
+  ];
+
+  if (action.type === "customer_followup") {
+    return {
+      background,
+      entityContext,
+      projectNodeContext: nodeContext,
+      memoryGovernance: governanceNotes,
+      customerConcern: memories.map((memory) => `${memory.title}: ${memory.detail}`),
+      replyStrategy: buildStrategy(action),
+      draftMessage: buildDraft(project, action, memories, typeName),
+      doNotPromise: buildRiskNotes(action),
+      nextQuestions: [
+        "客户是否接受小范围试点边界？",
+        "哪些数据可以进入试点，哪些必须排除？",
+        "试点成功后下一步由谁确认？"
       ],
-      checklist: [
-        "创始人确认事实是否准确",
-        "负责人确认下一步是否可执行",
-        "高风险承诺已删除或改成待确认表述",
-        "对外发送前完成最后人工审阅"
-      ]
-    }
+      successCriteria,
+      humanConfirmationChecklist: checklist
+    };
+  }
+
+  if (action.type === "investor_reply") {
+    return {
+      investorQuestion: memories.map((memory) => `${memory.title}: ${memory.detail}`),
+      shortAnswer: `围绕“${action.title}”给出基于现有证据的谨慎回答。`,
+      entityContext,
+      memoryGovernance: governanceNotes,
+      evidenceWeHave: memories.map((memory) => memory.detail),
+      evidenceMissing: [
+        "需要补充最新可验证指标或客户证据",
+        "需要区分事实、假设和仍在验证的判断",
+        "需要创始人确认哪些内容可以对外表达"
+      ],
+      suggestedWording: buildDraft(project, action, memories, typeName),
+      doNotSay: [
+        "不要承诺尚未验证的 ARR、留存或客户数量",
+        "不要把待确认 memory 写成确定事实",
+        "不要承诺融资、法务或客户合作结果"
+      ],
+      followUpMaterials: [
+        "客户访谈摘要",
+        "使用频率或留存证据",
+        "关键风险处理计划"
+      ],
+      founderConfirmationChecklist: checklist
+    };
+  }
+
+  if (action.type === "coding_brief") {
+    return {
+      goal: `完成“${action.title}”，产出 ${action.expectedOutput || action.expectedArtifact}。`,
+      background,
+      projectNodeContext: nodeContext,
+      memoryGovernance: governanceNotes,
+      scope: [
+        "实现界面内闭环状态更新",
+        "保持数据可追溯并通过本地 smoke test",
+        "同步必要文档和 demo 数据"
+      ],
+      nonGoals: [
+        "不接真实外部工具",
+        "不自动发送消息",
+        "不自动修改、提交或 merge 外部代码仓库"
+      ],
+      acceptanceCriteria: successCriteria,
+      testPlan: ["运行 node scripts/smoke-test.mjs", "必要时用 renderApp() 验证新增 UI 文案"],
+      risks: buildRiskNotes(action),
+      reviewChecklist: checklist
+    };
+  }
+
+  return {
+    goal: `完成“${action.title}”，产出 ${action.expectedOutput || action.expectedArtifact}。`,
+    background,
+    entityContext,
+    projectNodeContext: nodeContext,
+    memoryGovernance: governanceNotes,
+    strategy: buildStrategy(action),
+    draft: buildDraft(project, action, memories, typeName),
+    risks: buildRiskNotes(action),
+    successCriteria,
+    checklist
   };
 }
 
@@ -467,6 +1134,29 @@ function sourceContextIdsForMemories(memories) {
         .filter(Boolean)
     )
   ];
+}
+
+function entitiesForBrief(project, action, memories) {
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.entities || []).filter((entity) => {
+    const entityMemoryIds = entityLinkIds(entity, "memory");
+    return (
+      entity.nextSuggestedActionId === action.id ||
+      entityMemoryIds.some((memoryId) => memoryIds.has(memoryId))
+    );
+  });
+}
+
+function nodesForBrief(project, action, memories) {
+  const memoryIds = new Set(memories.map((memory) => memory.id));
+  return (project.nodes || []).filter((node) => {
+    const actionIds = nodeLinkIds(node, "action");
+    const nodeMemoryIds = nodeLinkIds(node, "memory");
+    return (
+      actionIds.includes(action.id) ||
+      nodeMemoryIds.some((memoryId) => memoryIds.has(memoryId))
+    );
+  });
 }
 
 function buildStrategy(action) {
@@ -514,6 +1204,110 @@ function buildStrategy(action) {
   };
 
   return strategies[action.type] || strategies.learning_loop;
+}
+
+function resolveActionBriefMemories(project, action) {
+  const memoryIds = unique([
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ]);
+
+  return resolveMemories(project, memoryIds)
+    .filter(isUsableActionMemory)
+    .sort(compareMemoryEvidenceStrength);
+}
+
+function actionPriorityForMemoryGovernance(basePriority, memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("confirmed") && !statuses.has("disputed")) {
+    return basePriority;
+  }
+
+  if (basePriority === "high") {
+    return "medium";
+  }
+
+  return basePriority;
+}
+
+function actionRiskForMemoryGovernance(baseRisk, memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  if (statuses.has("disputed")) {
+    return "high";
+  }
+
+  if (statuses.has("draft") && baseRisk === "low") {
+    return "medium";
+  }
+
+  return baseRisk;
+}
+
+function actionMemoryGovernanceChecklist(memories) {
+  const statuses = new Set(memories.map((memory) => memory.status || "draft"));
+  const checklist = [
+    "确认引用 memory 的来源片段仍然准确",
+    "确认对外内容只作为草稿，不自动执行"
+  ];
+
+  if (statuses.has("draft")) {
+    checklist.push("先确认待确认 memory，再把它作为强行动依据");
+  }
+
+  if (statuses.has("disputed")) {
+    checklist.push("先处理有争议 memory，避免把冲突判断写成确定事实");
+  }
+
+  if (!statuses.has("confirmed")) {
+    checklist.push("当前缺少已确认 memory，执行前需要负责人复核");
+  }
+
+  return checklist;
+}
+
+function briefMemoryGovernanceNotes(project, action, activeMemories) {
+  const referencedMemoryIds = unique([
+    ...(Array.isArray(action.sourceMemoryIds) ? action.sourceMemoryIds : []),
+    ...(Array.isArray(action.evidenceMemoryIds) ? action.evidenceMemoryIds : [])
+  ]);
+  const referencedMemories = resolveMemories(project, referencedMemoryIds);
+  const activeIds = new Set(activeMemories.map((memory) => memory.id));
+  const excludedMemories = referencedMemories.filter((memory) => !activeIds.has(memory.id));
+  const notes = [];
+
+  if (activeMemories.length) {
+    notes.push(
+      `本 brief 使用 ${activeMemories.length} 条可参与推理的 memory：${memoryStatusSummary(activeMemories)}。`
+    );
+  } else {
+    notes.push("当前 action 没有可参与推理的 memory，执行前必须人工补证据。");
+  }
+
+  if (excludedMemories.length) {
+    notes.push(
+      `已排除 ${excludedMemories.length} 条过期或归档 memory：${excludedMemories
+        .map((memory) => memory.title)
+        .join("、")}。`
+    );
+  }
+
+  if (activeMemories.some((memory) => (memory.status || "draft") !== "confirmed")) {
+    notes.push("含待确认或有争议 memory，发送或执行前需要人工复核。");
+  }
+
+  return notes;
+}
+
+function memoryStatusSummary(memories) {
+  const counts = memories.reduce((summary, memory) => {
+    const status = memory.status || "draft";
+    summary[status] = (summary[status] || 0) + 1;
+    return summary;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([status, count]) => `${status} ${count}`)
+    .join("、");
 }
 
 function buildDraft(project, action, memories, typeName) {
@@ -599,15 +1393,16 @@ function groupBy(items, key) {
 }
 
 function mergeActions(incoming, existing) {
-  return [...incoming, ...existing].filter(
-    (action, index, items) =>
-      items.findIndex(
-        (item) =>
-          normalize(item.title) === normalize(action.title) &&
-          item.status !== "done" &&
-          action.status !== "done"
-      ) === index
-  );
+  return [...incoming, ...existing].reduce((merged, action) => {
+    const duplicateOpenAction = merged.some(
+      (item) =>
+        normalize(item.title) === normalize(action.title) &&
+        item.status !== "done" &&
+        action.status !== "done"
+    );
+
+    return duplicateOpenAction ? merged : [...merged, action];
+  }, []);
 }
 
 function resolveMemories(project, memoryIds) {
@@ -643,6 +1438,228 @@ function hasSimilarAction(existing, action) {
   return existing.some(
     (item) => item.status !== "done" && normalize(item.title) === normalize(action.title)
   );
+}
+
+function mergeEntities(incoming, existing) {
+  return [...incoming, ...existing].filter(
+    (entity, index, items) =>
+      items.findIndex((item) => normalize(item.name) === normalize(entity.name)) === index
+  );
+}
+
+function linkEntitiesForSignal(entities, signal, links) {
+  const targetEntityIds = new Set(signal.suggestedEntityIds || []);
+  if (!targetEntityIds.size) {
+    return entities;
+  }
+
+  return entities.map((entity) =>
+    targetEntityIds.has(entity.id) ? mergeEntityLinks(entity, links) : entity
+  );
+}
+
+function mergeEntityLinks(entity, links) {
+  const sourceIds = unique([
+    ...entityLinkIds(entity, "source"),
+    ...(links.sourceIds || [links.sourceId])
+  ]);
+  const signalIds = unique([
+    ...entityLinkIds(entity, "signal"),
+    ...(links.signalIds || [links.signalId])
+  ]);
+  const memoryIds = unique([
+    ...entityLinkIds(entity, "memory"),
+    ...(links.memoryIds || [links.memoryId])
+  ]);
+  const projectIds = unique([
+    ...entityLinkIds(entity, "project"),
+    ...(links.projectIds || [links.projectId])
+  ]);
+
+  return {
+    ...entity,
+    sourceIds,
+    signalIds,
+    memoryIds,
+    projectIds,
+    relatedSourceIds: sourceIds,
+    relatedSignalIds: signalIds,
+    relatedMemoryIds: memoryIds,
+    relatedProjectIds: projectIds,
+    lastInteractionAt: links.lastInteractionAt || entity.lastInteractionAt || "",
+    nextSuggestedActionId: links.actionId || entity.nextSuggestedActionId || "",
+    updatedAt: links.now || entity.updatedAt
+  };
+}
+
+function entityLinkIds(entity, kind) {
+  const fields = {
+    source: ["sourceIds", "relatedSourceIds"],
+    signal: ["signalIds", "relatedSignalIds"],
+    memory: ["memoryIds", "relatedMemoryIds"],
+    project: ["projectIds", "relatedProjectIds"]
+  }[kind] || [];
+
+  return unique(fields.flatMap((field) => (Array.isArray(entity?.[field]) ? entity[field] : [])));
+}
+
+function linkProjectNodes(nodes, links, options = {}) {
+  if (!nodes.length) {
+    return nodes;
+  }
+
+  const targetNodeIds = projectNodeTargets(nodes, options.preferActionId);
+  return nodes.map((node) =>
+    targetNodeIds.has(node.id) ? mergeProjectNodeLinks(node, links) : node
+  );
+}
+
+function projectNodeTargets(nodes, preferActionId) {
+  if (preferActionId) {
+    const matchingNodes = nodes.filter((node) =>
+      nodeLinkIds(node, "action").includes(preferActionId)
+    );
+    if (matchingNodes.length) {
+      return new Set(matchingNodes.map((node) => node.id));
+    }
+  }
+
+  const activeNodes = nodes.filter((node) => node.status === "active");
+  if (activeNodes.length) {
+    return new Set(activeNodes.map((node) => node.id));
+  }
+
+  const firstOpenNode = nodes.find((node) => node.status !== "archived") || nodes[0];
+  return new Set(firstOpenNode ? [firstOpenNode.id] : []);
+}
+
+function mergeProjectNodeLinks(node, links) {
+  return {
+    ...node,
+    inputContextIds: unique([
+      ...nodeLinkIds(node, "context"),
+      ...(links.contextIds || [links.contextId])
+    ]),
+    sourceIds: unique([
+      ...nodeLinkIds(node, "source"),
+      ...(links.sourceIds || [links.sourceId])
+    ]),
+    signalIds: unique([
+      ...nodeLinkIds(node, "signal"),
+      ...(links.signalIds || [links.signalId])
+    ]),
+    memoryIds: unique([
+      ...nodeLinkIds(node, "memory"),
+      ...(links.memoryIds || [links.memoryId])
+    ]),
+    actionIds: unique([
+      ...nodeLinkIds(node, "action"),
+      ...(links.actionIds || [links.actionId])
+    ]),
+    resultIds: unique([
+      ...nodeLinkIds(node, "result"),
+      ...(links.resultIds || [links.resultId])
+    ]),
+    updatedAt: links.now || node.updatedAt
+  };
+}
+
+function nodeLinkIds(node, kind) {
+  const fields = {
+    context: ["inputContextIds"],
+    source: ["sourceIds"],
+    signal: ["signalIds"],
+    memory: ["memoryIds"],
+    action: ["actionIds"],
+    result: ["resultIds"]
+  }[kind] || [];
+
+  return unique(fields.flatMap((field) => (Array.isArray(node?.[field]) ? node[field] : [])));
+}
+
+function buildMemoryFromSignal(project, signal, now) {
+  const source = sourceForSignal(project, signal);
+  const suggested = signal.suggestedMemory || {};
+  const content = suggested.content || suggested.detail || signal.summary;
+  const confidence = confidenceLabel(suggested.confidence ?? signal.confidence);
+
+  return {
+    id: makeId("mem"),
+    type: suggested.type || "fact",
+    title: suggested.title || signal.title,
+    detail: content,
+    content,
+    source: source?.title || "Inbox Signal",
+    confidence,
+    status: "draft",
+    sourceReferences: [
+      {
+        sourceId: signal.sourceId,
+        signalId: signal.id,
+        quote: signal.quote || signal.summary,
+        note: source?.title || signal.title,
+        confidence: typeof signal.confidence === "number" ? signal.confidence : 0.5
+      }
+    ],
+    createdBy: "ai",
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function buildActionFromSignal(signal, memory, now) {
+  const suggested = signal.suggestedAction || {};
+  const type = suggested.type || "learning_loop";
+  const title = suggested.title || `处理 Signal：${signal.title}`;
+  const whyNow = suggested.whyNow || signal.summary;
+  const expectedArtifact = suggested.expectedArtifact || "人工确认后的下一步行动草稿";
+
+  return {
+    id: makeId("act"),
+    type,
+    title,
+    rationale: whyNow,
+    whyNow,
+    priority: suggested.priority || "medium",
+    riskLevel: suggested.riskLevel || "medium",
+    expectedOutput: expectedArtifact,
+    expectedArtifact,
+    sourceMemoryIds: [memory.id],
+    evidenceMemoryIds: [memory.id],
+    status: "pending",
+    requiresHumanConfirmation: true,
+    humanConfirmationChecklist: suggested.humanConfirmationChecklist || [
+      "确认 Signal 判断准确",
+      "确认对外内容只作为草稿",
+      "确认不会自动执行外部动作"
+    ],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function sourceForSignal(project, signal) {
+  return (project.sources || []).find((source) => source.id === signal.sourceId);
+}
+
+function confidenceLabel(confidence) {
+  if (typeof confidence === "number") {
+    if (confidence >= 0.8) {
+      return "high";
+    }
+
+    if (confidence >= 0.6) {
+      return "medium";
+    }
+
+    return "low";
+  }
+
+  return ["low", "medium", "high"].includes(confidence) ? confidence : "medium";
+}
+
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function adaptActionTitle(title, memory) {

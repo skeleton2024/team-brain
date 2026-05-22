@@ -1,16 +1,206 @@
 import { DEMO_PROJECT } from "../src/data/demo.js";
 import {
+  addManualSource,
   absorbContext,
   generateBrief,
+  processSource,
   recordActionResult,
-  updateMemoryStatus
+  reviewSignal,
+  suggestSignalLinks,
+  updateCommitmentStatus,
+  updateEntityStatus,
+  updateMemoryStatus,
+  updateOpportunityStatus,
+  updateProjectNodeStatus,
+  updateRiskStatus
 } from "../src/domain/agentEngine.js";
+import { buildCommandCenter } from "../src/domain/pipelines/buildCommandCenter.js";
 import { extractMemories } from "../src/domain/pipelines/extractMemories.js";
+import { extractSignals } from "../src/domain/pipelines/extractSignals.js";
 import { reconcileMemories } from "../src/domain/pipelines/reconcileMemories.js";
-import { updateMemory } from "../src/services/store.js";
+import {
+  makeProject,
+  normalizeStoredState,
+  updateAction,
+  updateCommitment,
+  updateMemory,
+  updateOpportunity,
+  updateRisk
+} from "../src/services/store.js";
 import { renderApp } from "../src/ui/render.js";
 
 let project = structuredClone(DEMO_PROJECT);
+
+const commandCenterNow = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+const commandCenterProbe = buildCommandCenter({ project, now: commandCenterNow });
+if (
+  commandCenterProbe.projectId !== project.id ||
+  !["needs_attention", "at_risk"].includes(commandCenterProbe.health.status) ||
+  !Array.isArray(commandCenterProbe.todayInbox) ||
+  commandCenterProbe.todayInbox.length < 1 ||
+  !Array.isArray(commandCenterProbe.actionFocus) ||
+  commandCenterProbe.actionFocus[0]?.priority !== "high" ||
+  !Array.isArray(commandCenterProbe.commitmentFocus) ||
+  commandCenterProbe.commitmentFocus.length < 1 ||
+  !commandCenterProbe.commitmentFocus.some((commitment) => commitment.status === "overdue") ||
+  !Array.isArray(commandCenterProbe.memoryReview) ||
+  commandCenterProbe.memoryReview.length < 1 ||
+  !Array.isArray(commandCenterProbe.riskRadar) ||
+  !commandCenterProbe.riskRadar.some((risk) => risk.id === "risk-demo-security-boundary") ||
+  !Array.isArray(commandCenterProbe.opportunityRadar) ||
+  commandCenterProbe.opportunityRadar.length < 2 ||
+  !Array.isArray(commandCenterProbe.priorityQueue) ||
+  commandCenterProbe.priorityQueue.length < 5 ||
+  !commandCenterProbe.priorityQueue.every(
+    (item) =>
+      item.reason &&
+      item.targetId &&
+      item.targetType &&
+      item.targetAnchor?.startsWith("#") &&
+      item.targetLabel &&
+      item.nextStepLabel
+  )
+) {
+  throw new Error(`Expected Command Center snapshot to aggregate Wave 4 dashboard inputs: ${JSON.stringify(commandCenterProbe)}`);
+}
+
+const commandCenterQueueTypes = new Set(commandCenterProbe.priorityQueue.map((item) => item.type));
+if (
+  !commandCenterQueueTypes.has("commitment") ||
+  !commandCenterQueueTypes.has("risk") ||
+  !commandCenterQueueTypes.has("action") ||
+  !commandCenterQueueTypes.has("memory_review") ||
+  !commandCenterQueueTypes.has("opportunity")
+) {
+  throw new Error(`Expected Priority Queue to cover Wave 4 inputs: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
+}
+
+const commandCenterTargetTypes = new Set(commandCenterProbe.priorityQueue.map((item) => item.targetType));
+if (
+  !commandCenterTargetTypes.has("commitment") ||
+  !commandCenterTargetTypes.has("risk") ||
+  !commandCenterTargetTypes.has("action") ||
+  !commandCenterTargetTypes.has("memory") ||
+  !commandCenterTargetTypes.has("opportunity")
+) {
+  throw new Error(`Expected Priority Queue to expose Wave 5 target locators: ${JSON.stringify(commandCenterProbe.priorityQueue)}`);
+}
+
+const commandCenterHtml = renderApp({
+  activeProjectId: project.id,
+  selectedActionId: "act-demo-customer",
+  projects: [project]
+});
+if (
+  !commandCenterHtml.includes('data-command-center') ||
+  !commandCenterHtml.includes('data-priority-queue') ||
+  !commandCenterHtml.includes("Command Center") ||
+  !commandCenterHtml.includes("AI Priority Queue") ||
+  !commandCenterHtml.includes("今天最该处理什么") ||
+  !commandCenterHtml.includes("今日 Inbox") ||
+  !commandCenterHtml.includes("行动焦点") ||
+  !commandCenterHtml.includes("承诺 / Waiting") ||
+  !commandCenterHtml.includes("记忆复核") ||
+  !commandCenterHtml.includes("风险 / 机会") ||
+  !commandCenterHtml.includes("试点前权限边界不清会阻塞客户推进") ||
+  !commandCenterHtml.includes("付费意向客户试点可成为 Alpha 证明点") ||
+  !commandCenterHtml.includes("data-command-target") ||
+  !commandCenterHtml.includes("data-priority-target-type=") ||
+  !commandCenterHtml.includes("command-target-link") ||
+  !commandCenterHtml.includes('id="action-') ||
+  !commandCenterHtml.includes('id="memory-') ||
+  !commandCenterHtml.includes('id="commitment-') ||
+  !commandCenterHtml.includes('id="risk-') ||
+  !commandCenterHtml.includes('href="#source-') ||
+  !commandCenterHtml.includes('data-action="update-memory-status"') ||
+  !commandCenterHtml.includes('data-action="update-commitment-status"') ||
+  !commandCenterHtml.includes('data-action="update-risk-status"') ||
+  !commandCenterHtml.includes('data-action="update-opportunity-status"') ||
+  !commandCenterHtml.includes('data-form="edit-action"') ||
+  !commandCenterHtml.includes('data-form="edit-commitment"') ||
+  !commandCenterHtml.includes('data-form="edit-risk"') ||
+  !commandCenterHtml.includes('data-form="edit-opportunity"') ||
+  !commandCenterHtml.includes('name="dueAt"')
+) {
+  throw new Error("Expected Command Center dashboard to render in smoke HTML.");
+}
+
+let reviewProject = structuredClone(DEMO_PROJECT);
+const reviewMemoryBefore = reviewProject.memories.find((memory) => memory.id === "mem-demo-engineering");
+reviewProject = updateMemoryStatus(reviewProject, "mem-demo-engineering", "confirmed");
+const reviewMemoryAfter = reviewProject.memories.find((memory) => memory.id === "mem-demo-engineering");
+if (
+  reviewMemoryAfter.status !== "confirmed" ||
+  !reviewMemoryAfter.lastVerifiedAt ||
+  reviewMemoryAfter.sourceReferences.length !== reviewMemoryBefore.sourceReferences.length
+) {
+  throw new Error(`Expected memory review action to confirm without losing evidence: ${JSON.stringify(reviewMemoryAfter)}`);
+}
+
+const reviewCommitmentBefore = reviewProject.commitments.find((item) => item.id === "commit-demo-security-brief");
+reviewProject = updateCommitmentStatus(reviewProject, "commit-demo-security-brief", "done");
+const reviewCommitmentAfter = reviewProject.commitments.find((item) => item.id === "commit-demo-security-brief");
+if (
+  reviewCommitmentAfter.status !== "done" ||
+  reviewCommitmentAfter.evidenceLinks.length !== reviewCommitmentBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected commitment review action to mark done without losing evidence: ${JSON.stringify(reviewCommitmentAfter)}`);
+}
+
+const reviewRiskBefore = reviewProject.risks.find((item) => item.id === "risk-demo-security-boundary");
+reviewProject = updateRiskStatus(reviewProject, "risk-demo-security-boundary", "mitigated");
+const reviewRiskAfter = reviewProject.risks.find((item) => item.id === "risk-demo-security-boundary");
+if (
+  reviewRiskAfter.status !== "mitigated" ||
+  reviewRiskAfter.evidenceLinks.length !== reviewRiskBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected risk review action to mark mitigated without losing evidence: ${JSON.stringify(reviewRiskAfter)}`);
+}
+
+const reviewOpportunityBefore = reviewProject.opportunities.find((item) => item.id === "opp-demo-investor-materials");
+reviewProject = updateOpportunityStatus(reviewProject, "opp-demo-investor-materials", "pursuing");
+const reviewOpportunityAfter = reviewProject.opportunities.find((item) => item.id === "opp-demo-investor-materials");
+if (
+  reviewOpportunityAfter.status !== "pursuing" ||
+  reviewOpportunityAfter.evidenceLinks.length !== reviewOpportunityBefore.evidenceLinks.length
+) {
+  throw new Error(`Expected opportunity review action to move to pursuing without losing evidence: ${JSON.stringify(reviewOpportunityAfter)}`);
+}
+
+let editProject = structuredClone(DEMO_PROJECT);
+editProject = updateAction(editProject, "act-demo-product", {
+  priority: "high",
+  status: "briefed"
+});
+const editedAction = editProject.actions.find((action) => action.id === "act-demo-product");
+if (editedAction.priority !== "high" || editedAction.status !== "briefed") {
+  throw new Error(`Expected action manual edit to update priority and status: ${JSON.stringify(editedAction)}`);
+}
+
+editProject = updateCommitment(editProject, "commit-demo-investor-follow-up", {
+  status: "waiting",
+  dueAt: "2026-06-01"
+});
+const editedCommitment = editProject.commitments.find(
+  (commitment) => commitment.id === "commit-demo-investor-follow-up"
+);
+if (editedCommitment.status !== "waiting" || editedCommitment.dueAt !== "2026-06-01") {
+  throw new Error(`Expected commitment manual edit to update status and dueAt: ${JSON.stringify(editedCommitment)}`);
+}
+
+editProject = updateRisk(editProject, "risk-demo-scope-creep", { status: "archived" });
+const editedRisk = editProject.risks.find((risk) => risk.id === "risk-demo-scope-creep");
+if (editedRisk.status !== "archived" || !editedRisk.evidenceLinks.length) {
+  throw new Error(`Expected risk manual edit to update status without losing evidence: ${JSON.stringify(editedRisk)}`);
+}
+
+editProject = updateOpportunity(editProject, "opp-demo-paid-pilot", { status: "pursuing" });
+const editedOpportunity = editProject.opportunities.find(
+  (opportunity) => opportunity.id === "opp-demo-paid-pilot"
+);
+if (editedOpportunity.status !== "pursuing" || !editedOpportunity.evidenceLinks.length) {
+  throw new Error(`Expected opportunity manual edit to update status without losing evidence: ${JSON.stringify(editedOpportunity)}`);
+}
 
 const demoMemoriesMissingSources = project.memories.filter(
   (memory) => !hasUsableSourceReference(memory)
@@ -21,6 +211,86 @@ if (demoMemoriesMissingSources.length) {
       .map((memory) => memory.id)
       .join(", ")}`
   );
+}
+
+const freshProject = makeProject("Smoke Project");
+if (
+  !Array.isArray(freshProject.nodes) ||
+  freshProject.nodes.length !== 1 ||
+  freshProject.nodes[0].status !== "active" ||
+  freshProject.nodes[0].projectId !== freshProject.id ||
+  !Array.isArray(freshProject.commitments) ||
+  !Array.isArray(freshProject.risks) ||
+  !Array.isArray(freshProject.opportunities)
+) {
+  throw new Error(`Expected new projects to include one default active node: ${JSON.stringify(freshProject)}`);
+}
+
+const legacyState = normalizeStoredState({
+  projects: [
+    {
+      id: "legacy-hardening-project",
+      name: "Legacy Hardening",
+      memories: [
+        {
+          id: "legacy-hardening-memory",
+          title: "旧 memory 只有基础字段",
+          detail: "旧 localStorage 可能没有 status、sourceReferences 或 evidence links。"
+        }
+      ],
+      actions: [
+        {
+          id: "legacy-hardening-action",
+          title: "旧 action 只有标题"
+        }
+      ],
+      commitments: [{}],
+      risks: [{}],
+      opportunities: [{}]
+    }
+  ]
+});
+const legacyProject = legacyState.projects[0];
+if (
+  legacyState.schemaVersion !== 2 ||
+  legacyProject.nodes.length !== 1 ||
+  legacyProject.memories[0].status !== "draft" ||
+  legacyProject.actions[0].priority !== "medium" ||
+  legacyProject.commitments[0].status !== "open" ||
+  legacyProject.risks[0].status !== "open" ||
+  legacyProject.opportunities[0].status !== "new"
+) {
+  throw new Error(`Expected legacy state migration to fill Phase 3 defaults: ${JSON.stringify(legacyState)}`);
+}
+
+const emptyStateHtml = renderApp({ activeProjectId: null, projects: [] });
+if (!emptyStateHtml.includes("未选择项目") || !emptyStateHtml.includes("暂无公司记忆")) {
+  throw new Error("Expected empty state render to avoid blank screens.");
+}
+
+const partialProject = {
+  id: "partial-hardening-project",
+  name: "Partial Hardening",
+  sources: [null, { title: "缺字段 Source" }],
+  signals: [null, { title: "缺字段 Signal", type: "risk" }],
+  memories: null,
+  actions: undefined,
+  commitments: [{ title: "缺字段 Commitment" }],
+  risks: [{ title: "缺字段 Risk" }],
+  opportunities: [{ title: "缺字段 Opportunity" }]
+};
+const partialSnapshot = buildCommandCenter({ project: partialProject });
+const partialHtml = renderApp({
+  activeProjectId: partialProject.id,
+  projects: [partialProject]
+});
+if (
+  partialSnapshot.metrics.inbox < 2 ||
+  !partialHtml.includes("Partial Hardening") ||
+  !partialHtml.includes("缺字段 Source") ||
+  !partialHtml.includes("缺字段 Commitment")
+) {
+  throw new Error("Expected partial project data to render and aggregate without crashing.");
 }
 
 project = absorbContext(project, {
@@ -57,6 +327,469 @@ if (
   project.memories.length !== memoryCountBeforePipelineProbe
 ) {
   throw new Error(`extractMemories pipeline contract failed: ${JSON.stringify(pipelineProbe)}`);
+}
+
+const sourceProbe = {
+  id: "src-smoke-1",
+  kind: "customer_feedback",
+  title: "客户预算和权限反馈",
+  body: "客户愿意下周试点，但担心预算审批和敏感数据权限。工程上 Slack 导入还没做，本周只能手动粘贴。",
+  origin: "manual",
+  occurredAt: "2026-05-13",
+  receivedAt: "2026-05-13T00:00:00.000Z",
+  participants: ["客户 A", "销售负责人"],
+  relatedEntityIds: [],
+  relatedProjectIds: [project.id],
+  tags: ["试点", "预算"],
+  importance: "high",
+  status: "new",
+  createdAt: "2026-05-13T00:00:00.000Z",
+  updatedAt: "2026-05-13T00:00:00.000Z"
+};
+const signalProbe = extractSignals({
+  project,
+  source: sourceProbe,
+  now: "2026-05-13T00:00:00.000Z"
+});
+
+if (
+  !Array.isArray(signalProbe.signals) ||
+  signalProbe.signals.length < 1 ||
+  typeof signalProbe.runSummary !== "string" ||
+  !signalProbe.runSummary.includes("Signal") ||
+  signalProbe.signals.some(
+    (signal) =>
+      signal.sourceId !== sourceProbe.id ||
+      signal.status !== "new" ||
+      signal.createdBy !== "ai" ||
+      signal.createdAt !== "2026-05-13T00:00:00.000Z" ||
+      !signal.summary ||
+      !signal.quote ||
+      typeof signal.confidence !== "number" ||
+      !Array.isArray(signal.suggestedProjectIds) ||
+      !signal.suggestedMemory
+  )
+) {
+  throw new Error(`extractSignals pipeline contract failed: ${JSON.stringify(signalProbe)}`);
+}
+
+let linkProbeProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [sourceProbe],
+  signals: signalProbe.signals,
+  entities: [],
+  entityRelations: []
+};
+linkProbeProject = suggestSignalLinks(linkProbeProject, signalProbe.signals[0].id);
+const linkedSignal = linkProbeProject.signals.find((signal) => signal.id === signalProbe.signals[0].id);
+const linkedSource = linkProbeProject.sources.find((source) => source.id === sourceProbe.id);
+
+if (
+  linkProbeProject.entities.length < 1 ||
+  !linkedSignal?.suggestedEntityIds?.length ||
+  !linkedSignal?.suggestedProjectIds?.includes(linkProbeProject.id) ||
+  !linkedSource?.relatedEntityIds?.length ||
+  linkProbeProject.entities.some(
+    (entity) =>
+      entity.status !== "watching" ||
+      !entity.relatedSourceIds.includes(sourceProbe.id) ||
+      !entity.sourceIds.includes(sourceProbe.id) ||
+      !entity.relatedSignalIds.includes(linkedSignal.id) ||
+      !entity.signalIds.includes(linkedSignal.id) ||
+      !entity.relatedProjectIds.includes(linkProbeProject.id) ||
+      !entity.projectIds.includes(linkProbeProject.id)
+  )
+) {
+  throw new Error(`Signal link suggestion failed: ${JSON.stringify(linkProbeProject)}`);
+}
+
+let existingEntityLinkProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [sourceProbe],
+  signals: signalProbe.signals,
+  entities: [
+    {
+      id: "ent-existing-customer-a",
+      type: "customer",
+      name: "客户 A",
+      status: "watching",
+      tags: [],
+      sourceIds: [],
+      signalIds: [],
+      memoryIds: [],
+      projectIds: [],
+      relatedSourceIds: [],
+      relatedSignalIds: [],
+      relatedMemoryIds: [],
+      relatedProjectIds: [],
+      createdAt: "2026-05-13T00:00:00.000Z",
+      updatedAt: "2026-05-13T00:00:00.000Z"
+    }
+  ],
+  entityRelations: []
+};
+existingEntityLinkProject = suggestSignalLinks(existingEntityLinkProject, signalProbe.signals[0].id);
+const existingLinkedEntity = existingEntityLinkProject.entities.find(
+  (entity) => entity.id === "ent-existing-customer-a"
+);
+if (
+  !existingLinkedEntity?.sourceIds.includes(sourceProbe.id) ||
+  !existingLinkedEntity?.signalIds.includes(signalProbe.signals[0].id) ||
+  !existingLinkedEntity?.projectIds.includes(existingEntityLinkProject.id)
+) {
+  throw new Error(`Expected existing Entity to receive Source / Signal / Project links: ${JSON.stringify(existingEntityLinkProject)}`);
+}
+
+const reviewSignalId = linkedSignal.id;
+let confirmedSignalProject = reviewSignal(linkProbeProject, reviewSignalId, "confirm");
+if (confirmedSignalProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "confirmed") {
+  throw new Error("Expected Signal review confirm to mark signal confirmed.");
+}
+
+let convertedMemoryProject = reviewSignal(linkProbeProject, reviewSignalId, "memory");
+const convertedMemory = convertedMemoryProject.memories[0];
+const convertedMemoryEntity = convertedMemoryProject.entities.find((entity) =>
+  entity.memoryIds?.includes(convertedMemory.id)
+);
+if (
+  convertedMemoryProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
+  convertedMemory.status !== "draft" ||
+  convertedMemory.createdBy !== "ai" ||
+  convertedMemory.sourceReferences[0]?.sourceId !== sourceProbe.id ||
+  convertedMemory.sourceReferences[0]?.signalId !== reviewSignalId ||
+  !convertedMemoryEntity
+) {
+  throw new Error(`Expected Signal to convert into traceable draft memory: ${JSON.stringify(convertedMemoryProject)}`);
+}
+
+let convertedActionProject = reviewSignal(linkProbeProject, reviewSignalId, "action");
+const convertedAction = convertedActionProject.actions[0];
+const convertedActionEntity = convertedActionProject.entities.find(
+  (entity) => entity.nextSuggestedActionId === convertedAction.id
+);
+if (
+  convertedActionProject.signals.find((signal) => signal.id === reviewSignalId)?.status !== "converted" ||
+  !convertedAction ||
+  convertedAction.status !== "pending" ||
+  !convertedAction.requiresHumanConfirmation ||
+  !Array.isArray(convertedAction.evidenceMemoryIds) ||
+  convertedAction.evidenceMemoryIds[0] !== convertedActionProject.memories[0].id ||
+  !convertedActionEntity?.memoryIds.includes(convertedActionProject.memories[0].id)
+) {
+  throw new Error(`Expected Signal to convert into evidence-backed action: ${JSON.stringify(convertedActionProject)}`);
+}
+
+let inboxFlowProject = {
+  ...structuredClone(DEMO_PROJECT),
+  sources: [],
+  signals: [],
+  entities: [],
+  entityRelations: [],
+  contexts: [],
+  memories: [],
+  actions: [],
+  briefs: [],
+  results: [],
+  reconciliationResults: [],
+  pendingMemoryUpdates: []
+};
+inboxFlowProject = addManualSource(inboxFlowProject, {
+  kind: "meeting_note",
+  title: "Wave 1 Inbox smoke",
+  body:
+    "客户 A 愿意下周试点，但担心预算审批和敏感数据权限。投资人 B 追问市场壁垒和 ARR 证据。工程确认 Slack API 暂不接入，本周只做手动录入闭环。",
+  occurredAt: "2026-05-14",
+  externalRef: "手动会议纪要",
+  participants: ["客户 A", "投资人 B", "工程负责人"],
+  tags: ["inbox", "smoke"],
+  importance: "high"
+});
+const inboxSource = inboxFlowProject.sources[0];
+if (
+  !inboxSource ||
+  inboxSource.status !== "new" ||
+  inboxSource.origin !== "manual" ||
+  inboxSource.body.includes("自动发送")
+) {
+  throw new Error(`Manual Source inbox flow failed at source creation: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+inboxFlowProject = processSource(inboxFlowProject, inboxSource.id);
+if (
+  inboxFlowProject.sources[0].status !== "processed" ||
+  inboxFlowProject.signals.length < 2 ||
+  inboxFlowProject.signals.some((signal) => signal.sourceId !== inboxSource.id)
+) {
+  throw new Error(`Manual Source inbox flow failed at signal extraction: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxSignalForMemory = inboxFlowProject.signals[0];
+inboxFlowProject = suggestSignalLinks(inboxFlowProject, inboxSignalForMemory.id);
+if (
+  inboxFlowProject.entities.length < 1 ||
+  !inboxFlowProject.signals.find((signal) => signal.id === inboxSignalForMemory.id)?.suggestedEntityIds.length
+) {
+  throw new Error(`Manual Source inbox flow failed at link suggestion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+inboxFlowProject = reviewSignal(inboxFlowProject, inboxSignalForMemory.id, "memory");
+const inboxMemory = inboxFlowProject.memories[0];
+if (
+  !inboxMemory ||
+  inboxMemory.status !== "draft" ||
+  inboxMemory.sourceReferences[0]?.sourceId !== inboxSource.id ||
+  inboxFlowProject.signals.find((signal) => signal.id === inboxSignalForMemory.id)?.status !== "converted"
+) {
+  throw new Error(`Manual Source inbox flow failed at memory conversion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxSignalForAction = inboxFlowProject.signals.find((signal) => signal.status === "new");
+inboxFlowProject = reviewSignal(inboxFlowProject, inboxSignalForAction.id, "action");
+const inboxAction = inboxFlowProject.actions[0];
+if (
+  !inboxAction ||
+  inboxAction.status !== "pending" ||
+  !inboxAction.evidenceMemoryIds.includes(inboxFlowProject.memories[0].id) ||
+  !inboxAction.requiresHumanConfirmation
+) {
+  throw new Error(`Manual Source inbox flow failed at action conversion: ${JSON.stringify(inboxFlowProject)}`);
+}
+
+const inboxFlowHtml = renderApp({
+  activeProjectId: inboxFlowProject.id,
+  selectedActionId: inboxAction.id,
+  projects: [inboxFlowProject]
+});
+if (
+  !inboxFlowHtml.includes('data-form="manual-source"') ||
+  !inboxFlowHtml.includes('data-action="process-source"') ||
+  !inboxFlowHtml.includes('data-action="suggest-signal-links"') ||
+  !inboxFlowHtml.includes('data-signal-review="memory"') ||
+  !inboxFlowHtml.includes("Company Inbox")
+) {
+  throw new Error("Expected Inbox review flow controls to render in smoke HTML.");
+}
+
+const entityProfileHtml = renderApp({
+  activeProjectId: DEMO_PROJECT.id,
+  selectedEntityId: "ent-demo-customer-team",
+  selectedActionId: null,
+  projects: [DEMO_PROJECT]
+});
+if (
+  !entityProfileHtml.includes("Entity Profile") ||
+  !entityProfileHtml.includes("业务对象画像") ||
+  !entityProfileHtml.includes("客户访谈小组") ||
+  !entityProfileHtml.includes("关联证据") ||
+  !entityProfileHtml.includes('data-entity-open-id="ent-demo-customer-team"') ||
+  !entityProfileHtml.includes('data-action="update-entity-status"') ||
+  !entityProfileHtml.includes("准备付费意向客户 follow-up 草稿")
+) {
+  throw new Error("Expected Entity Profile list and detail to render in smoke HTML.");
+}
+
+let entityStatusProject = structuredClone(DEMO_PROJECT);
+entityStatusProject = updateEntityStatus(entityStatusProject, "ent-demo-customer-team", "active");
+if (
+  entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.status !== "active" ||
+  !entityStatusProject.entities.find((entity) => entity.id === "ent-demo-customer-team")?.updatedAt
+) {
+  throw new Error("Expected Entity status governance action to update the profile locally.");
+}
+
+const projectNodeHtml = renderApp({
+  activeProjectId: DEMO_PROJECT.id,
+  selectedNodeId: "node-demo-customer-discovery",
+  selectedActionId: null,
+  projects: [DEMO_PROJECT]
+});
+if (
+  !projectNodeHtml.includes("Project Nodes") ||
+  !projectNodeHtml.includes("Commitment / Waiting") ||
+  !projectNodeHtml.includes('data-commitment-panel') ||
+  !projectNodeHtml.includes('data-commitment-id="commit-demo-security-brief"') ||
+  !projectNodeHtml.includes("给客户发送权限边界 follow-up 草稿") ||
+  !projectNodeHtml.includes("Risk / Opportunity Radar") ||
+  !projectNodeHtml.includes('data-risk-radar') ||
+  !projectNodeHtml.includes('data-opportunity-radar') ||
+  !projectNodeHtml.includes("试点前权限边界不清会阻塞客户推进") ||
+  !projectNodeHtml.includes("付费意向客户试点可成为 Alpha 证明点") ||
+  !projectNodeHtml.includes("Node Detail") ||
+  !projectNodeHtml.includes("项目推进节点") ||
+  !projectNodeHtml.includes("客户试点与权限边界确认") ||
+  !projectNodeHtml.includes("节点目标") ||
+  !projectNodeHtml.includes("输入上下文") ||
+  !projectNodeHtml.includes('data-action="update-project-node-status"') ||
+  !projectNodeHtml.includes('data-action="open-node-detail"') ||
+  !projectNodeHtml.includes('data-action-id="act-demo-customer"') ||
+  !projectNodeHtml.includes("Memory 2")
+) {
+  throw new Error("Expected Project Nodes list, detail panel, and status controls to render in smoke HTML.");
+}
+
+let nodeStatusProject = structuredClone(DEMO_PROJECT);
+nodeStatusProject = updateProjectNodeStatus(
+  nodeStatusProject,
+  "node-demo-customer-discovery",
+  "blocked"
+);
+if (
+  nodeStatusProject.nodes.find((node) => node.id === "node-demo-customer-discovery")?.status !==
+  "blocked"
+) {
+  throw new Error("Expected Project Node status governance action to update locally.");
+}
+
+let qaFlowProject = makeProject("QA Entity Project Flow");
+qaFlowProject = addManualSource(qaFlowProject, {
+  kind: "customer_feedback",
+  title: "QA 客户试点反馈",
+  body:
+    "客户 QA 愿意下周试点，但担心权限边界和预算审批。工程负责人确认本周只做手动录入和节点闭环，不接 Slack API。",
+  occurredAt: "2026-05-15",
+  participants: ["客户 QA", "工程负责人"],
+  tags: ["qa", "entity", "node"],
+  importance: "high"
+});
+const qaSource = qaFlowProject.sources[0];
+const qaDefaultNodeId = qaFlowProject.nodes[0].id;
+if (!qaFlowProject.nodes[0].sourceIds.includes(qaSource.id)) {
+  throw new Error("Expected manual Source to attach to the default Project Node.");
+}
+
+qaFlowProject = processSource(qaFlowProject, qaSource.id);
+const qaSignals = qaFlowProject.signals;
+if (
+  qaSignals.length < 2 ||
+  !qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId)?.signalIds.includes(qaSignals[0].id)
+) {
+  throw new Error("Expected extracted Signals to attach to the default Project Node.");
+}
+
+qaFlowProject = suggestSignalLinks(qaFlowProject, qaSignals[0].id);
+qaFlowProject = suggestSignalLinks(qaFlowProject, qaSignals[1].id);
+const qaEntity = qaFlowProject.entities.find((entity) => entity.name === "客户 QA");
+if (!qaEntity?.sourceIds.includes(qaSource.id) || !qaEntity.signalIds.includes(qaSignals[0].id)) {
+  throw new Error("Expected QA Entity to receive Source and Signal links.");
+}
+
+qaFlowProject = reviewSignal(qaFlowProject, qaSignals[0].id, "memory");
+const qaMemory = qaFlowProject.memories[0];
+const qaEntityAfterMemory = qaFlowProject.entities.find((entity) => entity.id === qaEntity.id);
+const qaNodeAfterMemory = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (
+  !qaEntityAfterMemory.memoryIds.includes(qaMemory.id) ||
+  !qaNodeAfterMemory.memoryIds.includes(qaMemory.id)
+) {
+  throw new Error("Expected Signal -> Memory conversion to update Entity and Project Node links.");
+}
+
+qaFlowProject = reviewSignal(qaFlowProject, qaSignals[1].id, "action");
+const qaAction = qaFlowProject.actions[0];
+const qaEntityAfterAction = qaFlowProject.entities.find((entity) => entity.id === qaEntity.id);
+const qaNodeAfterAction = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (
+  !qaAction ||
+  qaEntityAfterAction.nextSuggestedActionId !== qaAction.id ||
+  !qaNodeAfterAction.actionIds.includes(qaAction.id)
+) {
+  throw new Error("Expected Signal -> Action conversion to update Entity next action and Project Node action links.");
+}
+
+qaFlowProject = recordActionResult(qaFlowProject, qaAction.id, {
+  outcome: "positive",
+  summary: "客户 QA 同意继续试点，但要求权限边界先确认。"
+});
+const qaResult = qaFlowProject.results[0];
+const qaNodeAfterResult = qaFlowProject.nodes.find((node) => node.id === qaDefaultNodeId);
+if (!qaNodeAfterResult.resultIds.includes(qaResult.id)) {
+  throw new Error("Expected Action Result to attach back to the Project Node.");
+}
+
+const qaFlowHtml = renderApp({
+  activeProjectId: qaFlowProject.id,
+  selectedEntityId: qaEntity.id,
+  selectedNodeId: qaDefaultNodeId,
+  selectedActionId: qaAction.id,
+  projects: [qaFlowProject]
+});
+if (
+  !qaFlowHtml.includes("QA Entity Project Flow") ||
+  !qaFlowHtml.includes("客户 QA") ||
+  !qaFlowHtml.includes("Node Detail") ||
+  !qaFlowHtml.includes("Entity Profile") ||
+  !qaFlowHtml.includes("客户 QA 同意继续试点")
+) {
+  throw new Error("Expected QA entity/project flow to render linked Entity and Node details.");
+}
+
+let actionLoopProject = makeProject("QA Action Loop");
+actionLoopProject = addManualSource(actionLoopProject, {
+  kind: "customer_feedback",
+  title: "QA Action Loop 客户反馈",
+  body:
+    "客户 Loop 同意下周试点，但担心预算审批和权限边界。工程负责人需要准备权限说明，客户希望先看到删除机制和成功标准。",
+  occurredAt: "2026-05-16",
+  participants: ["客户 Loop", "工程负责人"],
+  tags: ["qa", "action-loop"],
+  importance: "high"
+});
+const actionLoopSource = actionLoopProject.sources[0];
+actionLoopProject = processSource(actionLoopProject, actionLoopSource.id);
+const actionLoopSignals = actionLoopProject.signals;
+actionLoopSignals.forEach((signal) => {
+  actionLoopProject = suggestSignalLinks(actionLoopProject, signal.id);
+});
+actionLoopProject = reviewSignal(actionLoopProject, actionLoopSignals[0].id, "memory");
+actionLoopProject = reviewSignal(actionLoopProject, actionLoopSignals[1].id, "action");
+const actionLoopAction = actionLoopProject.actions[0];
+const actionLoopEvidenceMemoryId = actionLoopAction.evidenceMemoryIds[0];
+actionLoopProject = updateMemoryStatus(actionLoopProject, actionLoopEvidenceMemoryId, "confirmed");
+actionLoopProject = generateBrief(actionLoopProject, actionLoopAction.id);
+const actionLoopBrief = actionLoopProject.briefs.find((brief) => brief.actionId === actionLoopAction.id);
+if (
+  !actionLoopBrief ||
+  !Array.isArray(actionLoopBrief.sections.memoryGovernance) ||
+  !Object.keys(actionLoopBrief.sections).some((key) =>
+    ["customerConcern", "scope", "investorQuestion", "strategy"].includes(key)
+  )
+) {
+  throw new Error(`Expected action loop brief to include governance and scenario sections: ${JSON.stringify(actionLoopBrief)}`);
+}
+
+actionLoopProject = recordActionResult(actionLoopProject, actionLoopAction.id, {
+  outcome: "positive",
+  summary: "客户 Loop 同意继续试点，但要求先收到权限说明和删除机制。",
+  whatChanged: "客户从观望转为愿意推进下周试点。",
+  newEvidence: "客户明确把权限说明和删除机制作为继续推进条件。",
+  followUpNeeded: true
+});
+const actionLoopResult = actionLoopProject.results[0];
+const actionLoopNode = actionLoopProject.nodes[0];
+if (
+  !actionLoopResult.relatedMemoryUpdates.some((update) => ["confirm", "update"].includes(update.operation)) ||
+  !actionLoopResult.actionIds.length ||
+  !actionLoopResult.projectNodeUpdates.some((update) => update.suggestedStatus === "active") ||
+  !actionLoopNode.resultIds.includes(actionLoopResult.id)
+) {
+  throw new Error(`Expected action loop result to create memory updates, follow-up action, and node suggestions: ${JSON.stringify(actionLoopResult)}`);
+}
+
+const actionLoopHtml = renderApp({
+  activeProjectId: actionLoopProject.id,
+  selectedActionId: actionLoopAction.id,
+  selectedNodeId: actionLoopNode.id,
+  projects: [actionLoopProject]
+});
+if (
+  !actionLoopHtml.includes("QA Action Loop") ||
+  !actionLoopHtml.includes("记忆治理影响") ||
+  !actionLoopHtml.includes("结果记录") ||
+  !actionLoopHtml.includes("Memory updates") ||
+  !actionLoopHtml.includes("node active") ||
+  !actionLoopHtml.includes("Node Detail")
+) {
+  throw new Error("Expected full action loop smoke UI to render governance, brief, result, memory update, and node suggestion.");
 }
 
 const priceConcernMemory = {
@@ -270,10 +1003,16 @@ if (
       !item.expectedArtifact ||
       !Array.isArray(item.sourceMemoryIds) ||
       item.sourceMemoryIds.length < 1 ||
-      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds)
+      JSON.stringify(item.evidenceMemoryIds) !== JSON.stringify(item.sourceMemoryIds) ||
+      !Array.isArray(item.humanConfirmationChecklist) ||
+      !item.humanConfirmationChecklist.some((entry) => entry.includes("待确认"))
   )
 ) {
   throw new Error(`Generated actions should include Phase 3 evidence fields: ${JSON.stringify(generatedActions)}`);
+}
+
+if (generatedActions.some((item) => item.priority === "high")) {
+  throw new Error("Draft-only memories should lower generated action priority until memory governance confirms evidence.");
 }
 
 project = updateMemoryStatus(project, newestMemory.id, "confirmed");
@@ -294,9 +1033,11 @@ const memoryActionsHtml = renderApp({
 
 if (
   !memoryActionsHtml.includes('data-action="update-memory-status"') ||
-  !memoryActionsHtml.includes('data-memory-status="archived"')
+  !memoryActionsHtml.includes('data-memory-status="archived"') ||
+  !memoryActionsHtml.includes('data-memory-governance-summary') ||
+  !memoryActionsHtml.includes('data-action-memory-governance')
 ) {
-  throw new Error("Expected memory cards to render quick status actions.");
+  throw new Error("Expected memory cards to render quick status actions and governance summary.");
 }
 
 const memoryDetailHtml = renderApp({
@@ -440,9 +1181,57 @@ if (
   !Array.isArray(generatedBrief.evidenceMemoryIds) ||
   generatedBrief.evidenceMemoryIds.length < 1 ||
   !Array.isArray(generatedBrief.sourceContextIds) ||
-  generatedBrief.sourceContextIds.length < 1
+  generatedBrief.sourceContextIds.length < 1 ||
+  !Array.isArray(generatedBrief.sections.memoryGovernance) ||
+  !generatedBrief.sections.memoryGovernance.some((entry) => entry.includes("可参与推理"))
 ) {
   throw new Error(`Generated brief should include evidence and source context links: ${JSON.stringify(generatedBrief)}`);
+}
+
+const briefEvidenceStatuses = generatedBrief.evidenceMemoryIds.map(
+  (memoryId) => project.memories.find((memory) => memory.id === memoryId)?.status || "draft"
+);
+if (briefEvidenceStatuses.some((status) => ["outdated", "archived"].includes(status))) {
+  throw new Error("Brief evidence should exclude outdated and archived memories by default.");
+}
+
+let customerBriefProject = generateBrief(structuredClone(DEMO_PROJECT), "act-demo-customer");
+const customerBrief = customerBriefProject.briefs.find((brief) => brief.actionId === "act-demo-customer");
+if (
+  !customerBrief ||
+  !Array.isArray(customerBrief.sections.customerConcern) ||
+  !customerBrief.sections.draftMessage ||
+  !Array.isArray(customerBrief.sections.doNotPromise) ||
+  !Array.isArray(customerBrief.sections.entityContext) ||
+  !Array.isArray(customerBrief.sections.projectNodeContext)
+) {
+  throw new Error(`Expected customer follow-up brief to include scenario sections: ${JSON.stringify(customerBrief)}`);
+}
+
+const customerBriefHtml = renderApp({
+  activeProjectId: customerBriefProject.id,
+  selectedActionId: "act-demo-customer",
+  projects: [customerBriefProject]
+});
+if (
+  !customerBriefHtml.includes("客户顾虑") ||
+  !customerBriefHtml.includes("相关 Entity") ||
+  !customerBriefHtml.includes("相关节点") ||
+  !customerBriefHtml.includes("不要承诺")
+) {
+  throw new Error("Expected customer brief UI to render scenario-specific sections.");
+}
+
+let codingBriefProject = generateBrief(structuredClone(DEMO_PROJECT), "act-demo-engineering");
+const codingBrief = codingBriefProject.briefs.find((brief) => brief.actionId === "act-demo-engineering");
+if (
+  !codingBrief ||
+  !Array.isArray(codingBrief.sections.scope) ||
+  !Array.isArray(codingBrief.sections.nonGoals) ||
+  !Array.isArray(codingBrief.sections.testPlan) ||
+  !Array.isArray(codingBrief.sections.reviewChecklist)
+) {
+  throw new Error(`Expected coding brief to include implementation sections: ${JSON.stringify(codingBrief)}`);
 }
 
 project = recordActionResult(project, action.id, {
@@ -458,6 +1247,51 @@ if (
   !Array.isArray(latestResult.relatedMemoryUpdates)
 ) {
   throw new Error(`Action result should include Phase 3 result fields: ${JSON.stringify(latestResult)}`);
+}
+
+let structuredResultProject = recordActionResult(structuredClone(DEMO_PROJECT), "act-demo-customer", {
+  outcome: "blocked",
+  summary: "客户试点被预算审批卡住。",
+  whatChanged: "客户确认 CFO 需要先看权限边界和预算审批材料。",
+  newEvidence: "客户明确说没有 CFO 批准就不能进入试点。",
+  followUpNeeded: true
+});
+const structuredResult = structuredResultProject.results[0];
+if (
+  structuredResult.whatChanged !== "客户确认 CFO 需要先看权限边界和预算审批材料。" ||
+  structuredResult.newEvidence !== "客户明确说没有 CFO 批准就不能进入试点。" ||
+  structuredResult.followUpNeeded !== true ||
+  !structuredResult.relatedMemoryUpdates.some((update) => update.operation === "dispute") ||
+  !structuredResult.projectNodeUpdates.some((update) => update.suggestedStatus === "blocked") ||
+  !structuredResultProject.pendingMemoryUpdates.some((update) => update.operation === "dispute")
+) {
+  throw new Error(`Expected structured result feedback fields to persist: ${JSON.stringify(structuredResult)}`);
+}
+
+const structuredResultSourceContext = structuredResultProject.contexts.find((context) =>
+  context.title.includes("行动结果")
+);
+if (
+  !structuredResultSourceContext?.body.includes("变化：客户确认 CFO") ||
+  !structuredResultSourceContext?.body.includes("新证据：客户明确说")
+) {
+  throw new Error("Expected structured result feedback to be preserved in source context body.");
+}
+
+const structuredResultHtml = renderApp({
+  activeProjectId: structuredResultProject.id,
+  selectedActionId: "act-demo-customer",
+  projects: [structuredResultProject]
+});
+if (
+  !structuredResultHtml.includes('name="whatChanged"') ||
+  !structuredResultHtml.includes('name="newEvidence"') ||
+  !structuredResultHtml.includes('name="followUpNeeded"') ||
+  !structuredResultHtml.includes("结果记录") ||
+  !structuredResultHtml.includes("新证据：客户明确说") ||
+  !structuredResultHtml.includes("node blocked")
+) {
+  throw new Error("Expected structured result feedback form and history to render.");
 }
 
 const resultContext = project.contexts.find(
@@ -513,6 +1347,20 @@ if (allMemoriesMissingSources.length) {
   );
 }
 
+const postResultCommandCenter = buildCommandCenter({
+  project,
+  now: commandCenterNow
+});
+if (
+  postResultCommandCenter.priorityQueue.length < 5 ||
+  !postResultCommandCenter.actionFocus.length ||
+  !postResultCommandCenter.memoryReview.length ||
+  !postResultCommandCenter.riskRadar.length ||
+  !postResultCommandCenter.opportunityRadar.length
+) {
+  throw new Error(`Expected post-result project to still produce a full Command Center: ${JSON.stringify(postResultCommandCenter)}`);
+}
+
 const legacyHtml = renderApp({
   activeProjectId: "legacy-project",
   selectedActionId: null,
@@ -548,16 +1396,48 @@ if (!legacyHtml.includes("待确认") || !legacyHtml.includes("旧来源") || le
 
 const summary = {
   contexts: project.contexts.length,
+  sources: inboxFlowProject.sources.length,
+  signals: inboxFlowProject.signals.length,
+  entities: inboxFlowProject.entities.length,
+  nodes: project.nodes.length,
   memories: project.memories.length,
   actions: project.actions.length,
   briefs: project.briefs.length,
   results: project.results.length,
   openActions: project.actions.filter((item) => item.status !== "done").length,
   sourceReferencedMemories: project.memories.filter((memory) => hasUsableSourceReference(memory)).length,
-  resultSourceContextId: resultContext.id
+  resultSourceContextId: resultContext.id,
+  priorityQueue: postResultCommandCenter.priorityQueue.length,
+  commitments: postResultCommandCenter.commitmentFocus.length,
+  risks: postResultCommandCenter.riskRadar.length,
+  opportunities: postResultCommandCenter.opportunityRadar.length,
+  commandTargets: commandCenterProbe.priorityQueue.filter((item) => item.targetAnchor).length,
+  reviewActions: [
+    'data-action="update-memory-status"',
+    'data-action="update-commitment-status"',
+    'data-action="update-risk-status"',
+    'data-action="update-opportunity-status"'
+  ].filter((marker) => commandCenterHtml.includes(marker)).length,
+  manualEditForms: [
+    'data-form="edit-action"',
+    'data-form="edit-commitment"',
+    'data-form="edit-risk"',
+    'data-form="edit-opportunity"'
+  ].filter((marker) => commandCenterHtml.includes(marker)).length,
+  hardeningCases: 3
 };
 
-if (!summary.contexts || !summary.memories || !summary.actions || !summary.briefs || !summary.results) {
+if (
+  !summary.contexts ||
+  !summary.memories ||
+  !summary.actions ||
+  !summary.briefs ||
+  !summary.results ||
+  summary.commandTargets < 5 ||
+  summary.reviewActions < 4 ||
+  summary.manualEditForms < 4 ||
+  summary.hardeningCases < 3
+) {
   throw new Error(`Smoke test failed: ${JSON.stringify(summary)}`);
 }
 

@@ -416,6 +416,393 @@ AI handoff 维护 issue。
 - 让下一个 Codex 对话能从 Wave 1 的 Inbox / Source / Signal 起点接手。
 - 同步 `docs/TEAM_DEV_LOG.md`。
 
+### `docs/issues/INBOX-01-manual-source-inbox.md`
+
+Phase 3 Alpha Wave 1 的手动 Source Inbox issue。
+
+主要作用：
+
+- 要求落地 `Project.sources` 和 `Source` 的本地持久化。
+- 要求 Company Inbox 支持用户手动录入邮件、会议纪要、网页摘录或业务碎片。
+- 明确本 issue 不做 Signal 抽取、外部 API 接入或自动外部动作。
+
+通常会改：
+
+- `src/domain/types.js`
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+
+### `docs/issues/PIPE-01-source-to-signal.md`
+
+Phase 3 Alpha Wave 1 的 Source 到 Signal pipeline issue。
+
+主要作用：
+
+- 要求新增本地 `extractSignals()` pipeline。
+- 要求 Source 可以被处理成结构化 Signal。
+- 明确本 issue 不做人工 review、转 memory、转 action 或真实外部 AI provider。
+
+通常会改：
+
+- `src/domain/pipelines/extractSignals.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+
+### `docs/issues/LINK-01-project-entity-suggestion.md`
+
+Phase 3 Alpha Wave 1 的 Signal 到 Entity / Project 建议关联 issue。
+
+主要作用：
+
+- 要求新增本地 `linkSignals()` pipeline。
+- 要求 Signal 能产生 `suggestedEntityIds` 和 `suggestedProjectIds`。
+- 要求 Source 同步保留 `relatedEntityIds` 和 `relatedProjectIds`。
+- 明确本 issue 不做复杂关系图、CRM 集成或自动确认为事实。
+
+通常会改：
+
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/UI-01-inbox-review-flow.md`
+
+Phase 3 Alpha Wave 1 的 Inbox review flow issue。
+
+主要作用：
+
+- 要求 Signal 支持确认、忽略、转 Memory、转 Action。
+- 要求 Signal 转化后的 Memory 能追溯到 Source 和 Signal。
+- 要求转 Action 时保留人工确认边界，不自动执行外部动作。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `DATA_MODEL.md`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+### `docs/issues/QA-01-inbox-smoke-flow.md`
+
+Phase 3 Alpha Wave 1 的 Inbox smoke test issue。
+
+主要作用：
+
+- 要求 `scripts/smoke-test.mjs` 覆盖手动 Source、Signal 抽取、Entity / Project 建议和 Signal review。
+- 确认 Inbox 相关 UI 控件可以由 `renderApp()` 渲染。
+- 不新增产品功能或外部 API。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `docs/FILE_FUNCTION_NOTES.md`
+
+### `docs/issues/ENTITY-01-entity-profile.md`
+
+Phase 3 Alpha Wave 2 的 Entity Profile issue。
+
+主要作用：
+
+- 要求把 Wave 1 的 Entity 建议升级为可查看、可治理的画像。
+- 要求 Entity Profile 展示基础信息、状态、来源、Signal、Memory、Project 和下一步建议。
+- 要求兼容目标字段 `sourceIds` / `signalIds` / `memoryIds` / `projectIds` 与 Wave 1 的 `related*` 字段。
+- 明确本 issue 不做复杂关系图、外部 CRM / Gmail / Slack 同步或完整编辑表单。
+
+通常会改：
+
+- `src/data/demo.js`
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+
+### `docs/issues/ENTITY-02-entity-linking.md`
+
+Phase 3 Alpha Wave 2 的 Entity Linking issue。
+
+主要作用：
+
+- 要求 Signal 建议关联后回写 Entity 的 Source / Signal / Project 链接。
+- 要求 Signal 转 Memory 后把新 Memory 挂回相关 Entity。
+- 要求 Signal 转 Action 后把下一步建议挂回相关 Entity。
+- 明确本 issue 不做复杂实体合并 UI、关系图或外部系统同步。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/linkSignals.js`
+- `src/ui/render.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/PROJECT-01-project-nodes.md`
+
+Phase 3 Alpha Wave 2 的 Project Nodes issue。
+
+主要作用：
+
+- 要求落地 `Project.nodes` 和默认单节点。
+- 要求 Project Nodes 面板展示节点目标、状态、成功标准和关联对象数量。
+- 要求用户可以切换节点状态，但不自动执行节点动作。
+- 明确 Node Detail Panel 留给 `PROJECT-02`。
+
+通常会改：
+
+- `src/data/demo.js`
+- `src/domain/agentEngine.js`
+- `src/domain/types.js`
+- `src/services/store.js`
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+- `DATA_MODEL.md`
+
+### `docs/issues/PROJECT-02-node-detail-panel.md`
+
+Phase 3 Alpha Wave 2 的 Node Detail Panel issue。
+
+主要作用：
+
+- 要求用户可以打开单个 Project Node 详情。
+- 要求详情展示节点目标、输入上下文、成功标准、Source / Signal / Memory / Action / Result 关联。
+- 要求相关 Action 沿用现有 action 选择逻辑，继续只生成 Brief 和人工确认项。
+- 明确本 issue 不做节点编辑表单、自动拆分节点或自动执行动作。
+
+通常会改：
+
+- `src/ui/render.js`
+- `src/main.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/QA-02-entity-project-flow.md`
+
+Phase 3 Alpha Wave 2 的 Entity / Project flow smoke issue。
+
+主要作用：
+
+- 要求 smoke test 覆盖手动 Source -> Signal -> Entity -> Memory / Action -> Project Node -> Result 的核心路径。
+- 要求 ProjectNode 自动维护 Source、Signal、Memory、Action 和 Result 链接。
+- 要求 Entity Profile 与 Node Detail Panel 能在同一条 flow 中展示关联证据。
+- 明确本 issue 不做外部 API、自动执行或浏览器 e2e 框架。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+
+### `docs/issues/MEM-05-memory-governance-live.md`
+
+Phase 3 Alpha Wave 3 的 Memory Governance Live issue。
+
+主要作用：
+
+- 要求 memory 状态真实影响展示、行动建议、brief 证据和优先级。
+- 要求 confirmed memory 更积极参与 action loop。
+- 要求 outdated / archived memory 默认不作为新行动强证据。
+- 明确本 issue 不自动删除或覆盖 memory，不接外部 API。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/ACTION-01-brief-generation.md`
+
+Phase 3 Alpha Wave 3 的 Action Brief Generation issue。
+
+主要作用：
+
+- 要求 Brief 从通用说明升级为场景化执行包。
+- 要求 Brief 消费 action、entity、node、memory、风险和成功标准。
+- 要求高风险 brief 保留人工确认和不要承诺项。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `src/data/demo.js`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/ACTION-02-result-feedback.md`
+
+Phase 3 Alpha Wave 3 的 Result Feedback issue。
+
+主要作用：
+
+- 要求完善 result feedback 输入和记录。
+- 要求 result 保存 what changed、new evidence、follow-up needed 和相关 memory updates。
+- 要求 result 能挂回 action、memory 和 Project Node。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/main.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/REC-03-result-to-memory-update.md`
+
+Phase 3 Alpha Wave 3 的 Result to Memory Update issue。
+
+主要作用：
+
+- 要求根据 result 生成 memory update 建议。
+- 要求需要后续动作时生成 pending follow-up action。
+- 要求 Project Node 展示 result 带来的下一步建议或状态变化。
+- 明确关键 memory update 仍需人工确认，不自动覆盖旧判断。
+
+通常会改：
+
+- `src/domain/agentEngine.js`
+- `src/domain/pipelines/reconcileMemories.js`
+- `src/ui/render.js`
+- `src/styles.css`
+- `scripts/smoke-test.mjs`
+
+### `docs/issues/QA-03-action-loop-smoke.md`
+
+Phase 3 Alpha Wave 3 的 Action Loop smoke issue。
+
+主要作用：
+
+- 要求 smoke 覆盖 Memory Governance -> Action Brief -> Result Feedback -> Memory Update / Follow-up Action / Project Node 的完整路径。
+- 要求验证 Wave 3 UI 渲染和核心对象链接。
+- 不新增产品功能或外部 API。
+
+通常会改：
+
+- `scripts/smoke-test.mjs`
+- `src/domain/agentEngine.js`
+- `src/ui/render.js`
+
+### `docs/issues/DASH-01-command-center.md`
+
+Phase 3 Alpha Wave 4 的 Command Center 首页 issue。
+
+主要作用：
+
+- 要求新增公司级 Command Center 视图。
+- 要求聚合 Inbox、Memory、Project、Node、Action、Risk 和 Opportunity。
+- 明确 Command Center 是工作首页，不是营销 landing page 或聊天入口。
+
+### `docs/issues/COMMIT-01-commitment-waiting.md`
+
+Phase 3 Alpha Wave 4 的 Commitment / Waiting / Dependency issue。
+
+主要作用：
+
+- 要求落地承诺、等待项、依赖项和 follow-up 的第一版展示。
+- 要求 Command Center 能识别逾期承诺和阻塞等待。
+- 明确不自动发送催办、不代表用户承诺。
+
+### `docs/issues/RISK-01-risk-opportunity-radar.md`
+
+Phase 3 Alpha Wave 4 的 Risk / Opportunity Radar issue。
+
+主要作用：
+
+- 要求展示风险和机会雷达。
+- 要求每条风险 / 机会能追溯证据。
+- 明确不做复杂图谱、外部任务同步或自动业务结论。
+
+### `docs/issues/PRIORITY-01-ai-priority-queue.md`
+
+Phase 3 Alpha Wave 4 的 AI Priority Queue issue。
+
+主要作用：
+
+- 要求用本地规则生成可解释的优先级队列。
+- 要求聚合 action、commitment、risk 和 memory review。
+- 明确不自动执行队列项或外部动作。
+
+### `docs/issues/QA-04-alpha-e2e-smoke.md`
+
+Phase 3 Alpha Wave 4 的 Alpha 端到端 smoke issue。
+
+主要作用：
+
+- 要求 smoke test 覆盖 Command Center、Priority Queue、Commitment、Risk 和 Opportunity。
+- 要求验证 render output 包含 Wave 4 关键 UI。
+- 不引入浏览器 e2e 框架或真实外部服务。
+
+### `docs/issues/NAV-01-command-center-deep-links.md`
+
+Phase 3 Alpha Wave 5 的 Command Center 定位链路 issue。
+
+主要作用：
+
+- 要求 Priority Queue 和 Command Center 条目能定位到 Action、Memory、Commitment、Risk、Opportunity、Project Node 或 Source evidence。
+- 要求展示推荐原因、证据摘要和下一步处理入口。
+- 明确不引入复杂路由、不自动执行外部动作。
+
+### `docs/issues/REVIEW-01-human-review-actions.md`
+
+Phase 3 Alpha Wave 5 的人工 review 动作 issue。
+
+主要作用：
+
+- 要求 Memory Review、Commitment、Risk 和 Opportunity 支持最小状态推进。
+- 要求所有本地 review 动作保留已有证据链。
+- 明确不自动发送催办、邮件、Slack 或外部承诺。
+
+### `docs/issues/EDIT-01-alpha-manual-editing.md`
+
+Phase 3 Alpha Wave 5 的轻量手动编辑 issue。
+
+主要作用：
+
+- 要求 Action priority / status、Commitment status / dueAt、Risk / Opportunity status 提供轻量修改入口。
+- 要求修改结果同步影响 Command Center 和项目区展示。
+- 明确不做复杂表单系统或后端。
+
+### `docs/issues/RESILIENCE-01-local-storage-hardening.md`
+
+Phase 3 Alpha Wave 5 的 localStorage 兼容和空状态 hardening issue。
+
+主要作用：
+
+- 要求旧项目、空项目和缺字段项目仍能 migration 和渲染。
+- 要求 Command Center、证据链和项目区在异常数据下不白屏。
+- 明确不引入数据库迁移系统或 schema 校验库。
+
+### `docs/issues/QA-05-alpha-hardening-smoke.md`
+
+Phase 3 Alpha Wave 5 的 hardening smoke issue。
+
+主要作用：
+
+- 要求 smoke 覆盖 Command Center 定位、人工 review、轻量编辑和 legacy / partial project 兼容。
+- 要求 smoke summary 增加 Wave 5 关键计数或状态。
+- 不引入浏览器 e2e 框架或真实外部服务。
+
 ## 4. `scripts/` 文件
 
 ### `scripts/smoke-test.mjs`
@@ -434,6 +821,8 @@ AI handoff 维护 issue。
 - 检查新生成 action 的 `whyNow`、`evidenceMemoryIds`、`expectedArtifact`。
 - 检查新生成 brief 的 `evidenceMemoryIds` 和 `sourceContextIds`。
 - 检查 result feedback 的 `whatChanged`、`newEvidence`、`followUpNeeded` 和 memory update 结构。
+- Phase 3 Alpha Wave 3 起，覆盖 Memory Governance -> Scenario Brief -> Structured Result Feedback -> Memory Update / Follow-up Action / Project Node suggestion 的完整 action loop。
+- Phase 3 Alpha Wave 5 起，覆盖 Command Center 定位、人工 review、轻量编辑、legacy / empty / partial project hardening，并在 summary 输出 Wave 5 关键计数。
 
 修改时注意：
 
@@ -455,6 +844,10 @@ AI handoff 维护 issue。
 - 调用 domain 层的 `absorbContext()`、`generateBrief()`、`recordActionResult()`。
 - 调用 store 层的 `loadState()`、`saveState()`、`resetState()`、`makeProject()`。
 - 管理 `activeProjectId` 和 `selectedActionId`。
+- 读取结构化 Result Feedback 表单字段：summary、whatChanged、newEvidence、followUpNeeded。
+- Phase 3 Alpha Wave 5 起，处理 Command Center 定位链接，把 priority queue 的 target 转成现有 selected action / memory / node state 并滚动到锚点。
+- Phase 3 Alpha Wave 5 起，绑定 Commitment、Risk 和 Opportunity 的本地 review 状态推进按钮。
+- Phase 3 Alpha Wave 5 起，绑定 Action、Commitment、Risk 和 Opportunity 的轻量手动编辑表单。
 
 修改时注意：
 
@@ -494,7 +887,7 @@ AI handoff 维护 issue。
 修改时注意：
 
 - 每次数据模型新增字段，都要同步 demo 数据。
-- demo 应覆盖新增能力，例如 memory status、sourceReferences、context metadata。
+- demo 应覆盖新增能力，例如 memory status、sourceReferences、context metadata、commitment / waiting、risk / opportunity。
 - demo 不应包含真实敏感信息。
 
 ### `src/domain/types.js`
@@ -507,6 +900,8 @@ AI handoff 维护 issue。
 - 定义 `MEMORY_TYPES` 及其标签、短标签和色调。
 - 定义 `ACTION_TYPES`。
 - 定义 priority、risk、action status、result outcome 的展示标签。
+- 定义 commitment type / status 的展示标签。
+- 定义 risk / opportunity status 和 impact 展示标签。
 
 修改时注意：
 
@@ -523,8 +918,9 @@ AI handoff 维护 issue。
 - 暴露核心闭环入口：`absorbContext(project, input)`、`generateBrief(project, actionId)`、`recordActionResult(project, actionId, resultInput)`。
 - 调用 `extractMemories()` pipeline 把上下文转成候选 memory。
 - 为 memory 生成 action。
-- 为 action 生成通用 Brief。
-- 处理结果回流并生成 result learning memory 和 follow-up actions。
+- 为 action 生成场景化 Brief，按客户跟进、投资人回复、工程 brief 等类型组织 sections。
+- 处理结构化结果回流，保留 done action，生成 result learning memory、memory update 建议、node 状态建议和 follow-up actions。
+- Phase 3 Alpha Wave 5 起，提供 Memory、Commitment、Risk 和 Opportunity 的本地人工 review 状态推进函数，保留原有证据链。
 
 当前内部职责：
 
@@ -556,6 +952,59 @@ AI handoff 维护 issue。
 - 后续接真实 AI provider 时，应保持输出结构稳定并补 schema 校验。
 - 每条 AI 生成的 memory 必须能追溯到 `context.id`。
 
+### `src/domain/pipelines/extractSignals.js`
+
+Source 到 Signal pipeline。
+
+主要作用：
+
+- 暴露 `extractSignals({ project, source, now })`。
+- 用本地关键词规则把 `Source.body` 拆成候选 `Signal`。
+- 为每条 Signal 补齐 `sourceId`、`type`、`summary`、`quote`、`confidence`、`suggestedMemory`、`suggestedAction`、`status`、`createdBy` 和时间字段。
+- 返回 `{ signals, runSummary }`，不直接保存或修改 project state。
+
+修改时注意：
+
+- 不在这里做人工确认、转 memory 或转 action。
+- 不调用真实外部 provider，也不执行 Gmail / Slack 等外部动作。
+- 后续可替换为真实 AI provider，但输出结构必须保持稳定。
+
+### `src/domain/pipelines/linkSignals.js`
+
+Signal 到 Entity / Project 建议关联 pipeline。
+
+主要作用：
+
+- 暴露 `linkSignals({ project, signals, now })`。
+- 基于 Source 参与对象建议 Entity。
+- 为 Signal 补齐 `suggestedEntityIds` 和 `suggestedProjectIds`。
+- 为 Source 生成 `relatedEntityIds` 和 `relatedProjectIds` 更新建议。
+- 返回结构化更新，不直接写入 project state。
+
+修改时注意：
+
+- 不把建议自动确认为事实，Entity 默认 `watching`。
+- 不做复杂实体合并或关系图可视化。
+- 不接 CRM、Gmail、Slack 等外部系统。
+
+### `src/domain/pipelines/buildCommandCenter.js`
+
+Command Center 聚合 pipeline。
+
+主要作用：
+
+- 暴露 `buildCommandCenter({ project, now })`。
+- 汇总 Source / Signal、Memory review、Open Action、Project Node、Risk 和 Opportunity。
+- 输出只读 `CommandCenterSnapshot`，供首页展示今日焦点。
+- 生成本地规则版 Priority Queue，每个队列项包含 reason 和证据链接。
+- Phase 3 Alpha Wave 5 起，Priority Queue 条目包含只读 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，用于定位到 Action、Memory、Commitment、Risk、Opportunity 或证据区。
+- 第一版使用本地规则，不写入 state，不执行外部动作。
+
+修改时注意：
+
+- 新增 commitment、risk、opportunity 或 priority 规则时，保持输出可追溯。
+- 不在这里触发 DOM、localStorage 或外部 SaaS。
+
 ### `src/services/store.js`
 
 本地持久化服务。
@@ -569,6 +1018,10 @@ AI handoff 维护 issue。
 - 重置 demo state。
 - 创建新 project。
 - 生成稳定 ID。
+- 兼容迁移 `commitments`，保证旧 localStorage 缺少字段时不会白屏。
+- 兼容迁移 `risks` 和 `opportunities`，保证 Command Center 输入稳定。
+- Phase 3 Alpha Wave 5 起，提供 Action priority / status、Commitment status / dueAt、Risk status 和 Opportunity status 的轻量本地编辑 helper。
+- Phase 3 Alpha Wave 5 起，导出 `normalizeStoredState()` 供 smoke 覆盖旧 localStorage 迁移，并补齐 partial project / malformed item 默认值。
 
 修改时注意：
 
@@ -585,6 +1038,12 @@ HTML 渲染层。
 
 - `renderApp(state)` 根据当前 state 输出完整页面 HTML。
 - 渲染 sidebar、topbar、pipeline、上下文输入、memory 列表、action 列表、brief 面板和结果回流表单。
+- 渲染 Command Center 工作首页。
+- 渲染 Command Center / Priority Queue 的对象定位入口、目标锚点和证据链接。
+- 渲染 Command Center 和项目区里的 Memory / Commitment / Risk / Opportunity 最小 review 操作按钮。
+- 渲染 Action、Commitment、Risk 和 Opportunity 的轻量手动编辑表单。
+- 对空项目、缺字段项目和部分数组缺失状态提供渲染 fallback，避免白屏。
+- 渲染 action result history、what changed、new evidence 和 follow-up 标记。
 - 暴露 `getActiveProject(state)` 给 controller 使用。
 - 提供 `escapeHtml()` 防止用户输入直接破坏 HTML。
 
@@ -592,6 +1051,8 @@ HTML 渲染层。
 
 - `renderSidebar()`
 - `renderTopbar()`
+- `renderCommandCenter()`
+- `renderPriorityQueue()`
 - `renderPipeline()`
 - `renderContextIntake()`
 - `renderMemories()`

@@ -200,6 +200,8 @@ other
 ```text
 SourceReference
   contextId: string
+  sourceId?: string
+  signalId?: string
   quote: string
   note?: string
   confidence?: number
@@ -208,6 +210,8 @@ SourceReference
 字段说明：
 
 - `contextId`：来源上下文 ID。
+- `sourceId`：Phase 3 Alpha Source ID。用于从 Inbox Signal 转成 Memory 时追溯原始 Source。
+- `signalId`：Phase 3 Alpha Signal ID。用于记录该 Memory 是由哪条 Signal 转化而来。
 - `quote`：原文片段，帮助用户验证 AI 判断。
 - `note`：AI 或人工补充说明。
 - `confidence`：这条引用支持该判断的强度，范围 `0-1`。
@@ -375,6 +379,8 @@ archived
 - 每个行动必须有 `whyNow`。
 - 每个行动必须有至少一个 `evidenceMemoryIds`，除非是人工创建。
 - 高风险 action 必须有 `humanConfirmationChecklist`。
+- Phase 3 Alpha Wave 3 起，action planning 必须受 memory governance 影响：`confirmed` memory 优先作为强证据，`draft` 和 `disputed` memory 需要人工复核，`outdated` 和 `archived` memory 默认不参与新 action 证据。
+- 当 action 只依赖待确认或有争议 memory 时，应降低优先级或提高风险提示，并在 `humanConfirmationChecklist` 中提示先处理 memory governance。
 
 ## 9. Brief
 
@@ -395,10 +401,21 @@ Brief
 
 `BriefSections` 根据 action type 不同而不同。
 
+通用可选 section：
+
+```text
+entityContext
+projectNodeContext
+memoryGovernance
+```
+
 ### customer_followup
 
 ```text
 background
+entityContext
+projectNodeContext
+memoryGovernance
 customerConcern
 replyStrategy
 draftMessage
@@ -413,6 +430,8 @@ humanConfirmationChecklist
 ```text
 investorQuestion
 shortAnswer
+entityContext
+memoryGovernance
 evidenceWeHave
 evidenceMissing
 suggestedWording
@@ -426,6 +445,8 @@ founderConfirmationChecklist
 ```text
 goal
 background
+projectNodeContext
+memoryGovernance
 scope
 nonGoals
 acceptanceCriteria
@@ -440,6 +461,7 @@ reviewChecklist
 - Brief 必须能被人工编辑。
 - Brief 必须能追溯证据记忆。
 - 高风险内容必须有不要承诺或人工确认项。
+- Phase 3 Alpha Wave 3 起，Brief 只默认引用可参与推理的 memory，并在 `sections.memoryGovernance` 中说明使用了哪些状态的 memory、排除了哪些过期或归档证据，以及是否需要人工复核。
 
 ## 10. ActionResult
 
@@ -453,6 +475,7 @@ ActionResult
   newEvidence: string
   followUpNeeded: boolean
   relatedMemoryUpdates: RelatedMemoryUpdate[]
+  projectNodeUpdates?: ProjectNodeUpdateSuggestion[]
   createdAt: string
 ```
 
@@ -462,6 +485,14 @@ RelatedMemoryUpdate
   operation: "confirm" | "update" | "dispute" | "outdate" | "archive"
   reason: string
   suggestedContent?: string
+  createdAt?: string
+```
+
+```text
+ProjectNodeUpdateSuggestion
+  nodeId: string
+  suggestedStatus: "planned" | "active" | "blocked" | "done" | "archived"
+  reason: string
 ```
 
 开发要求：
@@ -470,6 +501,9 @@ RelatedMemoryUpdate
 - 结果回流应触发 `processResult`。
 - 如果结果改变旧判断，应产生 memory update 建议。
 - 当前本地实现会把结果摘要同步为一个 `ContextItem`，供结果生成的 memory 通过 `sourceReferences` 回溯原文。
+- Phase 3 Alpha Wave 3 起，Result Feedback 表单分别记录 `summary`、`whatChanged`、`newEvidence` 和 `followUpNeeded`；同步生成的 `ContextItem.body` 应保留这些结构化字段，方便后续 memory update 追溯。
+- 已完成 action 必须保留在 `actions` 中，以便 result history、memory detail 和 Project Node detail 继续追溯。
+- Phase 3 Alpha Wave 3 起，result 可以生成 `relatedMemoryUpdates` 和 `projectNodeUpdates`，但这些都是建议：不自动覆盖 memory，也不自动关闭或阻塞 node。
 - 不要只把结果作为一段文本保存后结束。
 
 ## 11. AgentRun
@@ -680,6 +714,7 @@ competitor
 - Entity Profile 用于长期业务对象画像，不是简单标签。
 - 轻量 detail 可以先挂在 Entity 上，重要信息再提升为 Memory。
 - Entity 与 Project / Memory / Action 的关联必须可追溯。
+- Wave 2 起代码优先消费 `sourceIds`、`signalIds`、`memoryIds`、`projectIds`；为兼容 Wave 1 本地数据，store 会同步保留 `relatedSourceIds`、`relatedSignalIds`、`relatedMemoryIds`、`relatedProjectIds`。
 
 ### 13.5 EntityRelation
 
@@ -753,6 +788,7 @@ Commitment
 - Commitment 是 Command Center 的关键输入。
 - 逾期判断可以先本地规则实现。
 - 不自动代表用户发送催办或承诺内容。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示 `commitment` / `waiting` / `dependency` / `follow_up`，逾期状态可由 `dueAt` 派生但不自动写回外部系统。
 
 ### 13.8 Risk
 
@@ -777,6 +813,7 @@ Risk
 
 - Risk 必须能追溯证据。
 - Risk 可以生成 action 建议，但高风险 action 仍然只是草稿和人工确认项。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.risks`，并继续兼容从 memory 派生的风险信号。
 
 ### 13.9 Opportunity
 
@@ -801,12 +838,39 @@ Opportunity
 
 - Opportunity 不是销售承诺，只是机会判断。
 - 多个 Source / Signal 指向同一需求时，应优先合并为一个可追溯机会。
+- Phase 3 Alpha Wave 4 起，本地实现会在 demo、store migration、Command Center 和项目区展示显式 `Project.opportunities`，不自动承诺销售、融资或产品结论。
+
+### 13.10 PriorityQueueItem
+
+```text
+PriorityQueueItem
+  id: string
+  type: "commitment" | "risk" | "action" | "memory_review" | "opportunity"
+  title: string
+  reason: string
+  priority: "low" | "medium" | "high"
+  targetId: string
+  targetType: string
+  targetAnchor?: string
+  targetLabel?: string
+  nextStepLabel?: string
+  evidenceLinks: EvidenceLink[]
+```
+
+开发要求：
+
+- PriorityQueueItem 是 Command Center 的只读派生对象，不需要直接持久化。
+- 每个队列项必须说明 `reason`，避免黑盒排序。
+- 队列项必须能追溯到 commitment、risk、action、memory 或 opportunity。
+- Wave 5 起，队列项可以带 `targetAnchor`、`targetLabel` 和 `nextStepLabel`，用于从 Command Center 定位到对应对象或证据区；这些字段仍是派生 UI 定位信息，不持久化。
+- Priority Queue 只排序和提示，不自动执行任何外部动作。
 
 ## 14. 当前与目标模型的差异
 
 当前 v0.1 到 v0.2 过渡代码已经有：
 
 - Project。
+- ProjectNode，包括默认单节点、节点状态和关联 Source / Signal / Memory / Action / Result ID。
 - Context。
 - Memory。
 - Memory status 基础字段和默认值。
@@ -828,7 +892,6 @@ Phase 3 Alpha 合同已经定义但尚未完整落地：
 
 - Source / Signal 统一 Inbox 数据层。
 - Entity / EntityRelation 长期对象画像。
-- ProjectNode 项目节点。
 - Commitment / Risk / Opportunity 的 Command Center 输入。
 - EvidenceLink 对 Source、Signal、Memory、Context 的统一证据引用。
 

@@ -1,8 +1,17 @@
 import {
+  addManualSource,
   absorbContext,
   generateBrief,
+  processSource,
   recordActionResult,
-  updateMemoryStatus
+  reviewSignal,
+  suggestSignalLinks,
+  updateCommitmentStatus,
+  updateEntityStatus,
+  updateMemoryStatus,
+  updateOpportunityStatus,
+  updateProjectNodeStatus,
+  updateRiskStatus
 } from "./domain/agentEngine.js";
 import {
   createInitialState,
@@ -10,7 +19,11 @@ import {
   makeProject,
   resetState,
   saveState,
-  updateMemory
+  updateAction,
+  updateCommitment,
+  updateMemory,
+  updateOpportunity,
+  updateRisk
 } from "./services/store.js";
 import { getActiveProject, renderApp } from "./ui/render.js";
 
@@ -27,10 +40,43 @@ function render() {
 
 function bindEvents() {
   app.querySelector('[data-form="create-project"]')?.addEventListener("submit", handleCreateProject);
+  app.querySelector('[data-form="manual-source"]')?.addEventListener("submit", handleManualSource);
   app.querySelector('[data-form="absorb-context"]')?.addEventListener("submit", handleAbsorbContext);
   app.querySelector('[data-form="record-result"]')?.addEventListener("submit", handleRecordResult);
   app.querySelectorAll('[data-form="edit-memory"]').forEach((form) => {
     form.addEventListener("submit", handleEditMemory);
+  });
+  app.querySelectorAll('[data-form="edit-action"]').forEach((form) => {
+    form.addEventListener("submit", handleEditAction);
+  });
+  app.querySelectorAll('[data-form="edit-commitment"]').forEach((form) => {
+    form.addEventListener("submit", handleEditCommitment);
+  });
+  app.querySelectorAll('[data-form="edit-risk"]').forEach((form) => {
+    form.addEventListener("submit", handleEditRisk);
+  });
+  app.querySelectorAll('[data-form="edit-opportunity"]').forEach((form) => {
+    form.addEventListener("submit", handleEditOpportunity);
+  });
+
+  app.querySelectorAll('[data-action="process-source"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) => processSource(project, button.dataset.sourceId));
+    });
+  });
+
+  app.querySelectorAll('[data-action="suggest-signal-links"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) => suggestSignalLinks(project, button.dataset.signalId));
+    });
+  });
+
+  app.querySelectorAll("[data-signal-review]").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        reviewSignal(project, button.dataset.signalId, button.dataset.signalReview)
+      );
+    });
   });
 
   app.querySelectorAll('[data-action="update-memory-status"]').forEach((button) => {
@@ -41,13 +87,66 @@ function bindEvents() {
     });
   });
 
+  app.querySelectorAll('[data-action="update-entity-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateEntityStatus(project, button.dataset.entityId, button.dataset.entityStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-project-node-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateProjectNodeStatus(project, button.dataset.nodeId, button.dataset.nodeStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-commitment-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateCommitmentStatus(project, button.dataset.commitmentId, button.dataset.commitmentStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-risk-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateRiskStatus(project, button.dataset.riskId, button.dataset.riskStatus)
+      );
+    });
+  });
+
+  app.querySelectorAll('[data-action="update-opportunity-status"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      updateActiveProject((project) =>
+        updateOpportunityStatus(
+          project,
+          button.dataset.opportunityId,
+          button.dataset.opportunityStatus
+        )
+      );
+    });
+  });
+
+  app.querySelectorAll("[data-command-target]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      focusCommandTarget(link.dataset.targetType, link.dataset.targetId, link.dataset.targetAnchor);
+    });
+  });
+
   app.querySelectorAll("[data-project-id]").forEach((button) => {
     button.addEventListener("click", () => {
       setState({
         ...state,
         activeProjectId: button.dataset.projectId,
         editingMemoryId: null,
+        selectedEntityId: null,
         selectedMemoryId: null,
+        selectedNodeId: null,
         selectedActionId:
           state.projects.find((project) => project.id === button.dataset.projectId)?.actions[0]?.id ??
           null
@@ -65,6 +164,38 @@ function bindEvents() {
         ...state,
         selectedActionId: button.dataset.actionId
       });
+    });
+  });
+
+  app.querySelectorAll("[data-entity-open-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedEntityId: button.dataset.entityOpenId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-entity-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedEntityId: null
+    });
+  });
+
+  app.querySelectorAll('[data-action="open-node-detail"]').forEach((button) => {
+    button.addEventListener("click", () => {
+      setState({
+        ...state,
+        selectedNodeId: button.dataset.nodeId
+      });
+    });
+  });
+
+  app.querySelector('[data-action="close-node-detail"]')?.addEventListener("click", () => {
+    setState({
+      ...state,
+      selectedNodeId: null
     });
   });
 
@@ -145,7 +276,9 @@ function handleCreateProject(event) {
     ...state,
     activeProjectId: project.id,
     editingMemoryId: null,
+    selectedEntityId: null,
     selectedMemoryId: null,
+    selectedNodeId: null,
     selectedActionId: null,
     projects: [project, ...state.projects]
   });
@@ -174,8 +307,41 @@ function handleAbsorbContext(event) {
     state = {
       ...state,
       editingMemoryId: null,
+      selectedEntityId: null,
       selectedMemoryId: next.contexts[0]?.memoryIds[0] ?? state.selectedMemoryId,
+      selectedNodeId: null,
       selectedActionId: newActionId
+    };
+    return next;
+  });
+}
+
+function handleManualSource(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const input = {
+    kind: String(form.get("kind") || "manual_note"),
+    title: String(form.get("title") || "").trim(),
+    body: String(form.get("body") || "").trim(),
+    externalRef: String(form.get("externalRef") || "").trim(),
+    occurredAt: String(form.get("occurredAt") || "").trim(),
+    participants: parseList(form.get("participants")),
+    tags: parseList(form.get("tags")),
+    importance: String(form.get("importance") || "medium")
+  };
+
+  if (!input.body) {
+    return;
+  }
+
+  updateActiveProject((project) => {
+    const next = addManualSource(project, input);
+    state = {
+      ...state,
+      editingMemoryId: null,
+      selectedEntityId: null,
+      selectedMemoryId: null,
+      selectedNodeId: null
     };
     return next;
   });
@@ -206,19 +372,80 @@ function handleEditMemory(event) {
   });
 }
 
+function handleEditAction(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const actionId = event.currentTarget.dataset.actionId;
+
+  updateActiveProject(
+    (project) =>
+      updateAction(project, actionId, {
+        priority: String(form.get("priority") || "medium"),
+        status: String(form.get("status") || "pending")
+      }),
+    actionId
+  );
+}
+
+function handleEditCommitment(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const commitmentId = event.currentTarget.dataset.commitmentId;
+
+  updateActiveProject((project) =>
+    updateCommitment(project, commitmentId, {
+      status: String(form.get("status") || "open"),
+      dueAt: String(form.get("dueAt") || "")
+    })
+  );
+}
+
+function handleEditRisk(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const riskId = event.currentTarget.dataset.riskId;
+
+  updateActiveProject((project) =>
+    updateRisk(project, riskId, {
+      status: String(form.get("status") || "open")
+    })
+  );
+}
+
+function handleEditOpportunity(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const opportunityId = event.currentTarget.dataset.opportunityId;
+
+  updateActiveProject((project) =>
+    updateOpportunity(project, opportunityId, {
+      status: String(form.get("status") || "new")
+    })
+  );
+}
+
 function handleRecordResult(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const actionId = event.currentTarget.dataset.actionId;
   const summary = String(form.get("summary") || "").trim();
   const outcome = String(form.get("outcome") || "neutral");
+  const whatChanged = String(form.get("whatChanged") || "").trim();
+  const newEvidence = String(form.get("newEvidence") || "").trim();
+  const followUpNeeded = form.get("followUpNeeded") === "true";
 
   if (!summary) {
     return;
   }
 
   updateActiveProject((project) => {
-    const next = recordActionResult(project, actionId, { summary, outcome });
+    const next = recordActionResult(project, actionId, {
+      summary,
+      outcome,
+      whatChanged,
+      newEvidence,
+      followUpNeeded
+    });
     const nextAction =
       next.actions.find((action) => action.status !== "done" && action.id !== actionId) ||
       next.actions.find((action) => action.status !== "done");
@@ -251,6 +478,35 @@ function setState(nextState) {
   state = nextState;
   saveState(state);
   render();
+}
+
+function focusCommandTarget(targetType, targetId, targetAnchor) {
+  const nextState = {
+    ...state,
+    selectedActionId: targetType === "action" ? targetId : state.selectedActionId,
+    selectedMemoryId: targetType === "memory" ? targetId : state.selectedMemoryId,
+    selectedNodeId: targetType === "node" ? targetId : state.selectedNodeId
+  };
+
+  setState(nextState);
+  scrollToAnchor(targetAnchor);
+}
+
+function scrollToAnchor(anchor) {
+  const id = String(anchor || "").replace(/^#/, "");
+  if (!id) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    const target = document.getElementById(id);
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({ block: "center", behavior: "smooth" });
+    window.history.replaceState(null, "", `#${id}`);
+  });
 }
 
 function exportState() {

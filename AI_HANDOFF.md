@@ -2,7 +2,7 @@
 
 用途：给新的 Codex / AI 对话框快速接手项目，减少重复解释和上下文丢失。
 
-最后更新：2026-05-18
+最后更新：2026-05-20
 
 ## 1. 当前产品判断
 
@@ -53,6 +53,24 @@ Wave 0 本地集成分支：
 integration/phase-3-wave-00
 ```
 
+Wave 1 本地集成分支：
+
+```text
+integration/phase-3-wave-01
+```
+
+Wave 2 本地集成分支：
+
+```text
+integration/phase-3-wave-02
+```
+
+Wave 3 本地集成分支：
+
+```text
+integration/phase-3-wave-03
+```
+
 历史 memory foundation 分支仍可作为上下文参考，但不再作为后续开发主 base：
 
 ```text
@@ -81,9 +99,9 @@ DOC-01：AI handoff
 - result 已带 `whatChanged`、`newEvidence`、`followUpNeeded`。
 - 每个 issue 分支完成后和合回 wave 后均运行 `node scripts/smoke-test.mjs` 通过。
 
-## 6. 下一步：Wave 1
+## 6. Phase 3 Alpha Wave 1 状态
 
-下一轮应从 Wave 1 开始：
+Wave 1 已完成 Inbox 到 Source / Signal 的第一版闭环：
 
 ```text
 INBOX-01-manual-source-inbox
@@ -93,16 +111,14 @@ UI-01-inbox-review-flow
 QA-01-inbox-smoke-flow
 ```
 
-Wave 1 目标：
+关键结果：
 
-```text
-用户手动录入真实业务信息
--> 生成 Source
--> 抽取 Signal
--> 建议关联 Entity / Project
--> 人工 review
--> 转为 Memory / Action
-```
+- 用户可以手动录入真实业务信息并生成 `Source`。
+- `Source` 可以通过本地规则提取为结构化 `Signal`。
+- `Signal` 可以建议关联 Entity / Project，Entity 默认保持 `watching`，不自动确认为事实。
+- Inbox review flow 支持确认、忽略、转 Memory、转 Action。
+- 转 Action 仍保留 `requiresHumanConfirmation`，不执行任何外部动作。
+- `scripts/smoke-test.mjs` 已覆盖 `addManualSource -> processSource -> suggestSignalLinks -> reviewSignal -> renderApp`。
 
 Wave 1 明确不做：
 
@@ -111,7 +127,143 @@ Wave 1 明确不做：
 - 不自动发送消息或承诺。
 - 不把主界面改成聊天产品。
 
-## 7. 不要做
+本轮 issue 分支：
+
+```text
+issue/INBOX-01-manual-source-inbox
+issue/PIPE-01-source-to-signal
+issue/LINK-01-project-entity-suggestion
+issue/UI-01-inbox-review-flow
+issue/QA-01-inbox-smoke-flow
+```
+
+每个 issue 完成后、每次合回 `integration/phase-3-wave-01` 后均运行 `node scripts/smoke-test.mjs` 通过。
+
+## 7. Phase 3 Alpha Wave 2 状态
+
+Wave 2 已完成 Entity Profile 与 Project Node 的第一版可用闭环：
+
+```text
+ENTITY-01-entity-profile
+ENTITY-02-entity-linking
+PROJECT-01-project-nodes
+PROJECT-02-node-detail-panel
+QA-02-entity-project-flow
+```
+
+关键结果：
+
+- Entity 建议已升级为可查看的 `Entity Profile` 面板，支持状态治理。
+- Entity Profile 展示 Source / Signal / Memory / Project / Action 关联，并兼容 Wave 1 的 `related*` 字段与目标 `sourceIds` 等字段。
+- Signal 建议关联、Signal 转 Memory、Signal 转 Action 会持续回写 Entity 的证据链和下一步建议。
+- `Project.nodes` 已落地；新项目和旧项目都会有默认单节点。
+- Project Nodes 面板支持节点状态切换，Node Detail Panel 展示目标、成功标准、输入上下文、证据链、相关 action 和 result。
+- QA smoke 覆盖手动 Source -> Signal -> Entity -> Memory / Action -> Project Node -> Result 的贯通路径。
+- 每个 issue 完成后、每次合回 `integration/phase-3-wave-02` 后均运行 `node scripts/smoke-test.mjs` 通过。
+
+Wave 2 明确不做：
+
+- 不接 Gmail / Slack API。
+- 不自动执行外部动作。
+- 不自动拆分复杂多节点。
+- 不做复杂关系图、CRM 同步或聊天界面。
+
+本轮 issue 分支：
+
+```text
+issue/ENTITY-01-entity-profile
+issue/ENTITY-02-entity-linking
+issue/PROJECT-01-project-nodes
+issue/PROJECT-02-node-detail-panel
+issue/QA-02-entity-project-flow
+```
+
+## 8. Phase 3 Alpha Wave 3 状态
+
+Wave 3 已完成 Memory Governance 与 Action Loop 的第一版可用闭环：
+
+```text
+MEM-05-memory-governance-live
+ACTION-01-brief-generation
+ACTION-02-result-feedback
+REC-03-result-to-memory-update
+QA-03-action-loop-smoke
+```
+
+关键结果：
+
+- Memory governance 已进入 action / brief：confirmed 优先，draft / disputed 需要人工复核，outdated / archived 默认不作为新 brief 证据。
+- Action Brief 已按 customer follow-up、investor reply、coding brief 等场景输出不同 sections，并消费 Entity、Project Node、Memory 和成功标准。
+- Result Feedback 表单已结构化保存 summary、whatChanged、newEvidence 和 followUpNeeded。
+- Result 会生成待确认 memory update 建议、follow-up action 和 Project Node 状态建议，但不自动覆盖 memory 或自动修改 node 状态。
+- 已完成 action 会保留在 actions 中，便于 result history、memory detail 和 node detail 继续追溯。
+- QA smoke 覆盖 Manual Source -> Signal -> Memory / Action -> Memory Governance -> Scenario Brief -> Structured Result -> Memory Update -> Follow-up Action -> Project Node suggestion。
+- 每个 issue 完成后、每次合回 `integration/phase-3-wave-03` 后均运行 `node scripts/smoke-test.mjs` 通过。
+
+Wave 3 明确不做：
+
+- 不接 Gmail / Slack API。
+- 不自动执行外部动作。
+- 不自动发送消息、邮件或承诺。
+- 不把主界面改成聊天产品。
+
+本轮 issue 分支：
+
+```text
+issue/MEM-05-memory-governance-live
+issue/ACTION-01-brief-generation
+issue/ACTION-02-result-feedback
+issue/REC-03-result-to-memory-update
+issue/QA-03-action-loop-smoke
+```
+
+## 9. Phase 3 Alpha Wave 4 / Wave 5 状态
+
+Wave 4 已从 Command Center Alpha 开始：
+
+```text
+DASH-01-command-center
+COMMIT-01-commitment-waiting
+RISK-01-risk-opportunity-radar
+PRIORITY-01-ai-priority-queue
+QA-04-alpha-e2e-smoke
+```
+
+Wave 4 重点：
+
+- 把 inbox、memory、project、node、action、commitment、risk 和 opportunity 聚合成公司级工作首页。
+- 展示今日最需要处理的 inbox、action、waiting、risk 和 memory review。
+- 形成 priority queue，但继续保持人工确认和不自动外部执行边界。
+
+Wave 4 当前状态（2026-05-20）：
+
+- `DASH-01` 已完成本地 Command Center 聚合 pipeline 和首页展示。
+- `COMMIT-01` 已完成 commitment / waiting / dependency / follow-up 的 demo、migration、Command Center 和项目区展示。
+- `RISK-01` 已完成显式 risk / opportunity demo、migration、雷达展示和 smoke 断言。
+- `PRIORITY-01` 已完成本地规则版 Priority Queue，队列项包含 reason、targetId 和证据链。
+- `QA-04` 已扩展 Alpha 端到端 smoke，覆盖 Command Center、Priority Queue、Commitment、Risk 和 Opportunity。
+- 每个已完成 issue 分支和合回 Wave 4 后均运行 `node scripts/smoke-test.mjs` 通过。
+- Wave 4 已合入 `integration/phase-3-alpha` 并更新现有 draft PR #8。
+
+Wave 5 当前状态（2026-05-21）：
+
+```text
+NAV-01-command-center-deep-links
+REVIEW-01-human-review-actions
+EDIT-01-alpha-manual-editing
+RESILIENCE-01-local-storage-hardening
+QA-05-alpha-hardening-smoke
+```
+
+- `NAV-01` 已完成 Command Center / Priority Queue 到 Action、Memory、Commitment、Risk、Opportunity 和证据区的定位链路。
+- `REVIEW-01` 已完成 Memory、Commitment、Risk、Opportunity 的本地人工 review 状态推进。
+- `EDIT-01` 已完成 Action priority / status、Commitment status / dueAt、Risk status、Opportunity status 的轻量本地编辑。
+- `RESILIENCE-01` 已完成旧 localStorage、空项目、partial project 和 malformed item 的兼容保护。
+- `QA-05` 已扩展 smoke summary，覆盖 Wave 5 command targets、review actions、manual edit forms 和 hardening cases。
+- 每个 issue 分支和合回 `integration/phase-3-wave-05` 后均运行 `node scripts/smoke-test.mjs` 通过。
+- Wave 5 已合入 `integration/phase-3-alpha`。后续继续更新现有 draft PR #8，不新建重复 PR，不直接合 main。
+
+## 10. 不要做
 
 - 不要把主界面改成聊天产品。
 - 不要优先接 Gmail / Slack / Notion / Linear / GitHub 自动执行。
@@ -121,7 +273,7 @@ Wave 1 明确不做：
 - 不要修改核心数据结构但不更新 `DATA_MODEL.md`。
 - 不要新增文件但不更新 `docs/FILE_FUNCTION_NOTES.md`。
 
-## 8. 完成后必须记录
+## 11. 完成后必须记录
 
 完成一个 issue 或一个 Wave 后，至少记录：
 

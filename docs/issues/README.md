@@ -205,7 +205,125 @@ DOC-01-ai-handoff.md
 - `DOC-00` 和 `DOC-01` 在 Wave 结束时记录最终状态。
 - 每个 issue 完成后运行 `node scripts/smoke-test.mjs`。
 
-## 10. 推荐开工提示词
+## 10. Phase 3 Alpha Wave 1 issue
+
+Wave 1 的目标是落地 Inbox -> Source / Signal 的第一版可用闭环。当前已按以下顺序完成：
+
+```text
+INBOX-01-manual-source-inbox.md
+PIPE-01-source-to-signal.md
+LINK-01-project-entity-suggestion.md
+UI-01-inbox-review-flow.md
+QA-01-inbox-smoke-flow.md
+```
+
+执行原则：
+
+- `INBOX-01` 先落地手动 Source Inbox 和 `Project.sources`。
+- `PIPE-01` 在 Source 合同稳定后落地 `extractSignals()`。
+- `LINK-01` 在 Signal 合同稳定后落地 `linkSignals()` 和 Entity / Project 建议。
+- `UI-01` 消费前面三个 issue 的能力，补 review flow。
+- `QA-01` 最后增强 smoke，覆盖录入、提取、建议、review 和渲染断言。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 11. Phase 3 Alpha Wave 2 issue
+
+Wave 2 的目标是落地 Entity Profile 与 Project Node，让长期业务对象和项目推进节点成为可查看、可治理的一等对象。当前建议按以下顺序串行执行：
+
+```text
+ENTITY-01-entity-profile.md
+ENTITY-02-entity-linking.md
+PROJECT-01-project-nodes.md
+PROJECT-02-node-detail-panel.md
+QA-02-entity-project-flow.md
+```
+
+执行原则：
+
+- `ENTITY-01` 先把 Entity 建议升级为可查看的 Profile，并兼容 Wave 1 的 `related*` 字段。
+- `ENTITY-02` 再展示 Inbox / Signal / Memory / Project 与 Entity 的关联。
+- `PROJECT-01` 定义 Project Node 的最小结构、状态和列表展示。
+- `PROJECT-02` 在 Node 合同稳定后补 Node Detail Panel。
+- `QA-02` 最后覆盖 Entity 与 Project Node 的核心路径。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 12. Phase 3 Alpha Wave 3 issue
+
+Wave 3 的目标是落地 Memory Governance 与 Action Loop，让 memory 状态、Action Brief、Result Feedback 和 result-to-memory update 真正进入业务闭环。当前已按以下顺序串行完成：
+
+```text
+MEM-05-memory-governance-live.md
+ACTION-01-brief-generation.md
+ACTION-02-result-feedback.md
+REC-03-result-to-memory-update.md
+QA-03-action-loop-smoke.md
+```
+
+执行结果：
+
+- `MEM-05` 让 memory 状态影响展示、行动建议和优先级。
+- `ACTION-01` 把 Action Brief 场景化，消费 Entity / Node / Memory / Risk / Success Criteria。
+- `ACTION-02` 完整化 Result Feedback 输入和记录。
+- `REC-03` 根据 result 生成 memory update、follow-up action 和 project / node 状态建议。
+- `QA-03` 覆盖 Action Brief -> Result Feedback -> Memory Update 的完整闭环。
+- 本 Wave 全程串行；每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都已运行 `node scripts/smoke-test.mjs` 通过。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 13. Phase 3 Alpha Wave 4 issue
+
+Wave 4 的目标是落地公司级 Command Center Alpha，让用户打开产品后能知道今天最应该处理什么。当前建议按以下顺序串行执行：
+
+```text
+DASH-01-command-center.md
+COMMIT-01-commitment-waiting.md
+RISK-01-risk-opportunity-radar.md
+PRIORITY-01-ai-priority-queue.md
+QA-04-alpha-e2e-smoke.md
+```
+
+执行原则：
+
+- `DASH-01` 先建立 Command Center 视图和聚合 pipeline。
+- `COMMIT-01` 落地承诺、等待项和依赖项，作为首页关键输入。
+- `RISK-01` 再补风险 / 机会雷达。
+- `PRIORITY-01` 基于上述输入生成可解释优先级队列。
+- `QA-04` 最后扩展 smoke，覆盖 Alpha 端到端闭环。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs`。
+- 不接 Gmail / Slack API，不自动执行外部动作，不把主界面改成聊天产品。
+
+## 14. Phase 3 Alpha Wave 5 issue
+
+Wave 5 的目标是 Alpha Hardening / Human Review Loop / Usability Polish，让现有 Alpha 从“能展示闭环”变成“更像用户可以每天使用的工作台”。当前已按以下顺序串行完成：
+
+```text
+NAV-01-command-center-deep-links.md
+REVIEW-01-human-review-actions.md
+EDIT-01-alpha-manual-editing.md
+RESILIENCE-01-local-storage-hardening.md
+QA-05-alpha-hardening-smoke.md
+```
+
+执行原则：
+
+- `NAV-01` 先补 Command Center / Priority Queue 到具体对象的定位和证据链路。
+- `REVIEW-01` 再补 Memory、Commitment、Risk、Opportunity 的最小人工 review 动作。
+- `EDIT-01` 在 review 动作稳定后补 Action / Commitment / Risk / Opportunity 的轻量手动修改。
+- `RESILIENCE-01` 加强旧 localStorage、缺字段、空状态和异常状态兼容。
+- `QA-05` 最后扩展 smoke，覆盖 Wave 5 hardening 行为和文档收口。
+- 每个 issue 单独分支、单独提交；每个 issue 完成后和合回 wave 后都运行 `node scripts/smoke-test.mjs` 通过。
+- 不接 Gmail / Slack / Notion / Linear / GitHub 等真实外部 API，不自动发送消息，不把主界面改成聊天产品。
+
+执行结果：
+
+- `NAV-01` 让 Priority Queue 条目带 `targetAnchor`、`targetLabel` 和 `nextStepLabel`。
+- `REVIEW-01` 让 Memory、Commitment、Risk、Opportunity 能本地状态推进并保留证据链。
+- `EDIT-01` 让 Action、Commitment、Risk、Opportunity 有轻量手动编辑入口。
+- `RESILIENCE-01` 增强旧 localStorage、空项目和 partial project 兼容。
+- `QA-05` 在 smoke summary 中加入 `commandTargets`、`reviewActions`、`manualEditForms` 和 `hardeningCases`。
+
+## 15. 推荐开工提示词
 
 ```text
 请按照 docs/AI_DEVELOPMENT_GUIDE.md 和 docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md 工作。
