@@ -1,6 +1,40 @@
 # TeamMind
 
-TeamMind is a zero-backend MVP for a company-specific context agent. It helps an early team turn scattered notes into structured company memory, proposed next actions, executable briefs, and result-driven memory updates.
+TeamMind is a local-first AI context agent for turning scattered team context into structured memory, proposed actions, executable briefs, and result-driven updates.
+
+The project explores a practical question: how can an AI system operate inside a long-running workflow instead of only answering isolated prompts?
+
+## Core Loop
+
+```text
+source
+-> signal
+-> memory / action
+-> action brief
+-> result
+-> memory update / follow-up
+```
+
+## What It Does
+
+- Ingests team context such as meeting notes, customer feedback, investor questions, engineering progress, and founder notes.
+- Extracts structured signals from raw sources.
+- Converts signals into durable company memory and proposed next actions.
+- Generates action briefs with goals, background, strategy, draft output, risks, success criteria, and confirmation checklist.
+- Records execution outcomes and feeds results back into memory and follow-up actions.
+- Ships with demo data so the workflow can be inspected locally.
+
+## Why This Project Matters
+
+TeamMind is a systems prototype for AI agents in persistent organizational workflows. It focuses on context intake, memory governance, action suggestion, and result feedback rather than one-off chat interactions.
+
+This makes it useful evidence for:
+
+- AI agent workflow design
+- context engineering
+- long-running memory/action loops
+- product-oriented AI system prototyping
+- local-first interaction design
 
 ## MVP Scope
 
@@ -11,6 +45,21 @@ TeamMind is a zero-backend MVP for a company-specific context agent. It helps an
 - Action briefs with goal, known background, strategy, draft, risks, success criteria, and confirmation checklist.
 - Result loop: record execution outcome, update memory, and generate new actions.
 - Built-in demo data.
+
+## Architecture
+
+```text
+src/
+  main.js                 App state and event wiring
+  styles.css              Interface styles
+  data/demo.js            Demo workspace
+  domain/agentEngine.js   Replaceable local agent engine
+  domain/types.js         Shared constants and labels
+  services/store.js       Local persistence
+  ui/render.js            HTML rendering helpers
+```
+
+The current agent engine is deterministic and local. It is designed as a clean boundary for future LLM providers, vector search, and external tool integrations.
 
 ## Product Docs
 
@@ -45,21 +94,6 @@ python -m http.server 4173
 ```
 
 This MVP is a static app, so it can also be hosted on GitHub Pages, Netlify, Vercel, Cloudflare Pages, or any static file server.
-
-## Architecture
-
-```text
-src/
-  main.js                 App state and event wiring
-  styles.css              Interface styles
-  data/demo.js            Demo workspace
-  domain/agentEngine.js   Replaceable local agent engine
-  domain/types.js         Shared constants and labels
-  services/store.js       Local persistence
-  ui/render.js            HTML rendering helpers
-```
-
-The current agent engine is deterministic and local. It is designed as a placeholder boundary for a future LLM provider, vector search, and external tool integrations.
 
 ## Not Implemented In V1
 
