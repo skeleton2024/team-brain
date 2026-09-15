@@ -1,107 +1,40 @@
-# TeamMind
+# TeamMind · 从团队上下文到下一步行动
 
-TeamMind is a local-first AI context agent for turning scattered team context into structured memory, proposed actions, executable briefs, and result-driven updates.
+本地确定性工作流原型。把会议纪要、客户反馈与工程进度收进同一个工作台，关联长期记忆、行动简报和执行结果。
 
-The project explores a practical question: how can an AI system operate inside a long-running workflow instead of only answering isolated prompts?
+我围绕“下一步行动能否保留它的来由”设计信息模型与产品流程：来源进入收件箱，提取信号，关联实体与项目，形成可编辑 Brief；执行结果再写回记忆和后续行动。记忆支持确认、过期、争议与归档，行动保留来源和人工检查项。
 
-## Core Loop
+## 体验
 
-```text
-source
--> signal
--> memory / action
--> action brief
--> result
--> memory update / follow-up
-```
-
-## What It Does
-
-- Ingests team context such as meeting notes, customer feedback, investor questions, engineering progress, and founder notes.
-- Extracts structured signals from raw sources.
-- Converts signals into durable company memory and proposed next actions.
-- Generates action briefs with goals, background, strategy, draft output, risks, success criteria, and confirmation checklist.
-- Records execution outcomes and feeds results back into memory and follow-up actions.
-- Ships with demo data so the workflow can be inspected locally.
-
-## Why This Project Matters
-
-TeamMind is a systems prototype for AI agents in persistent organizational workflows. It focuses on context intake, memory governance, action suggestion, and result feedback rather than one-off chat interactions.
-
-This makes it useful evidence for:
-
-- AI agent workflow design
-- context engineering
-- long-running memory/action loops
-- product-oriented AI system prototyping
-- local-first interaction design
-
-## MVP Scope
-
-- Project spaces for teams or startup projects.
-- Context intake for meeting notes, customer feedback, investor questions, engineering progress, and founder notes.
-- Structured memory extraction across customer concerns, investor questions, product decisions, engineering blockers, team constraints, risks, opportunities, and facts.
-- Action suggestions with priority, risk level, expected output, and human confirmation.
-- Action briefs with goal, known background, strategy, draft, risks, success criteria, and confirmation checklist.
-- Result loop: record execution outcome, update memory, and generate new actions.
-- Built-in demo data.
-
-## Architecture
-
-```text
-src/
-  main.js                 App state and event wiring
-  styles.css              Interface styles
-  data/demo.js            Demo workspace
-  domain/agentEngine.js   Replaceable local agent engine
-  domain/types.js         Shared constants and labels
-  services/store.js       Local persistence
-  ui/render.js            HTML rendering helpers
-```
-
-The current agent engine is deterministic and local. It is designed as a clean boundary for future LLM providers, vector search, and external tool integrations.
-
-## Product Docs
-
-- [最终产品形态.md](./最终产品形态.md)
-- [AI_HANDOFF.md](./AI_HANDOFF.md)
-- [当前系统状态.md](./当前系统状态.md)
-- [PRD.md](./PRD.md)
-- [PROJECT_FUNCTION_STRUCTURE.md](./PROJECT_FUNCTION_STRUCTURE.md)
-- [DATA_MODEL.md](./DATA_MODEL.md)
-- [docs/AI_DEVELOPMENT_GUIDE.md](./docs/AI_DEVELOPMENT_GUIDE.md)
-- [docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md](./docs/PHASE3_ALPHA_DEVELOPMENT_PLAN.md)
-- [docs/TEAM_DEV_LOG.md](./docs/TEAM_DEV_LOG.md)
-- [docs/FILE_FUNCTION_NOTES.md](./docs/FILE_FUNCTION_NOTES.md)
-- [docs/issues/README.md](./docs/issues/README.md)
-
-## Run Locally
+需要 Node.js 22（测试）和 Python 3（本地服务）。项目使用原生 JavaScript，无需安装 npm 依赖。
 
 ```bash
-npm run dev
-```
-
-Then open:
-
-```text
-http://localhost:4173
-```
-
-On Windows PowerShell, if `npm.ps1` is blocked by execution policy, run the server directly:
-
-```bash
+git clone https://github.com/skeleton2024/team-brain.git
+cd team-brain
+node scripts/smoke-test.mjs
 python -m http.server 4173
 ```
 
-This MVP is a static app, so it can also be hosted on GitHub Pages, Netlify, Vercel, Cloudflare Pages, or any static file server.
+打开 http://localhost:4173 。加载示例工作区，依次查看收件箱、记忆、行动 Brief，再记录一次执行结果并回到总览。浏览器 localStorage 保存当前工作区。
 
-## Not Implemented In V1
+![行动总览 · 示例工作区](docs/screenshots/command-center.png)
 
-- Authentication and multi-member permissions
-- Real email sending
-- GitHub, Notion, Slack, Gmail, Linear/Jira integrations
-- Automatic code changes, merges, or external commitments
-- Vector database or server-side background jobs
-- Production database
+![收件箱 · 示例工作区](docs/screenshots/inbox.png)
 
-All high-risk actions remain draft-only and require manual confirmation.
+## 实现与取舍
+
+- Source、Signal、Memory、Entity、Project、Action、Brief、Result 分别建模，沿来源串起处理过程。
+- 本地规则引擎生成建议，便于反复检查状态迁移和界面反馈。
+- 客户跟进、投资人回复、开发任务使用不同简报结构。
+- localStorage 支持持久化、旧数据迁移及异常恢复。
+
+## 代码与设计
+
+- [产品定义](PRD.md) · [数据模型](DATA_MODEL.md)
+- [功能结构](PROJECT_FUNCTION_STRUCTURE.md) · [迭代记录](docs/TEAM_DEV_LOG.md)
+- 核心引擎：`src/domain/agentEngine.js`；持久化：`src/services/store.js`
+- 验证入口：`scripts/smoke-test.mjs`
+
+## 许可
+
+见 [RIGHTS.md](RIGHTS.md)。
